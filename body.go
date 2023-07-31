@@ -12,10 +12,10 @@ import (
 
 // 构造一个文件
 type File struct {
-	Key     string //字段的key
-	Name    string //文件名
-	Content []byte //文件的内容
-	Type    string //文件类型
+	Name        string //字段的key
+	FileName    string //文件名
+	Content     []byte //文件的内容
+	ContentType string //文件类型
 }
 type bodyType = int
 

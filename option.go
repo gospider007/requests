@@ -81,11 +81,11 @@ func (obj *RequestOption) initBody() (err error) {
 		escapeQuotes := strings.NewReplacer("\\", "\\\\", `"`, "\\\"")
 		for _, file := range obj.Files {
 			h := make(textproto.MIMEHeader)
-			h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`, escapeQuotes.Replace(file.Key), escapeQuotes.Replace(file.Name)))
-			if file.Type == "" {
+			h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`, escapeQuotes.Replace(file.Name), escapeQuotes.Replace(file.FileName)))
+			if file.ContentType == "" {
 				h.Set("Content-Type", "application/octet-stream")
 			} else {
-				h.Set("Content-Type", file.Type)
+				h.Set("Content-Type", file.ContentType)
 			}
 			if wp, err := writer.CreatePart(h); err != nil {
 				return err
@@ -106,11 +106,11 @@ func (obj *RequestOption) initBody() (err error) {
 		escapeQuotes := strings.NewReplacer("\\", "\\\\", `"`, "\\\"")
 		for _, file := range obj.Files {
 			h := make(textproto.MIMEHeader)
-			h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`, escapeQuotes.Replace(file.Key), escapeQuotes.Replace(file.Name)))
-			if file.Type == "" {
+			h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`, escapeQuotes.Replace(file.Name), escapeQuotes.Replace(file.FileName)))
+			if file.ContentType == "" {
 				h.Set("Content-Type", "application/octet-stream")
 			} else {
-				h.Set("Content-Type", file.Type)
+				h.Set("Content-Type", file.ContentType)
 			}
 			if wp, err := writer.CreatePart(h); err != nil {
 				return err

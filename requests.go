@@ -307,14 +307,16 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 		ctxData.disBody = true
 	}
 	ctxData.disProxy = option.DisProxy
-	if option.Proxy != "" { //代理相关构造
-		tempProxy, err := verifyProxy(option.Proxy)
-		if err != nil {
-			return response, tools.WrapError(ErrFatal, errors.New("tempRequest 构造代理失败"), err)
+	if !ctxData.disProxy {
+		if option.Proxy != "" { //代理相关构造
+			tempProxy, err := verifyProxy(option.Proxy)
+			if err != nil {
+				return response, tools.WrapError(ErrFatal, errors.New("tempRequest 构造代理失败"), err)
+			}
+			ctxData.proxy = tempProxy
+		} else if tempProxy := obj.dialer.Proxy(); tempProxy != nil {
+			ctxData.proxy = tempProxy
 		}
-		ctxData.proxy = tempProxy
-	} else if tempProxy := obj.dialer.Proxy(); tempProxy != nil {
-		ctxData.proxy = tempProxy
 	}
 	if option.RedirectNum != 0 { //重定向次数
 		ctxData.redirectNum = option.RedirectNum

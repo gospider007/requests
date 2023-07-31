@@ -33,15 +33,17 @@ type ClientOption struct {
 	H2Ja3                 bool                //开启h2指纹
 	H2Ja3Spec             ja3.H2Ja3Spec       //h2指纹
 
-	RedirectNum    int                                                  //重定向次数,小于0为禁用,0:不限制
-	DisDecode      bool                                                 //关闭自动编码
-	DisRead        bool                                                 //关闭默认读取请求体
-	DisUnZip       bool                                                 //关闭自动解压
-	TryNum         int64                                                //重试次数
-	OptionCallBack func(context.Context, *Client, *RequestOption) error //请求参数回调,用于对请求参数进行修改。返回error,中断重试请求,返回nil继续
-	ResultCallBack func(context.Context, *Client, *Response) error      //结果回调,用于对结果进行校验。返回nil，直接返回,返回err的话，如果有errCallBack 走errCallBack，没有继续try
-	ErrCallBack    func(context.Context, *Client, error) error          //错误回调,返回error,中断重试请求,返回nil继续
-
+	RedirectNum       int  //重定向次数,小于0为禁用,0:不限制
+	DisDecode         bool //关闭自动编码
+	DisableKeepAlives bool
+	DisRead           bool                                                 //关闭默认读取请求体
+	DisUnZip          bool                                                 //关闭自动解压
+	TryNum            int64                                                //重试次数
+	OptionCallBack    func(context.Context, *Client, *RequestOption) error //请求参数回调,用于对请求参数进行修改。返回error,中断重试请求,返回nil继续
+	ResultCallBack    func(context.Context, *Client, *Response) error      //结果回调,用于对结果进行校验。返回nil，直接返回,返回err的话，如果有errCallBack 走errCallBack，没有继续try
+	ErrCallBack       func(context.Context, *Client, error) error          //错误回调,返回error,中断重试请求,返回nil继续
+	// Http3          bool                                                 //http3
+	Http0   bool          //http3
 	Timeout time.Duration //请求超时时间
 	Headers any           //请求头
 	Bar     bool          //是否开启请求进度条
@@ -146,6 +148,7 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 		TLSHandshakeTimeout:   option.TLSHandshakeTimeout,
 		ResponseHeaderTimeout: option.ResponseHeaderTimeout,
 		DisableCompression:    option.DisCompression,
+		DisableKeepAlives:     option.DisableKeepAlives,
 		TLSClientConfig:       tlsConfig,
 		IdleConnTimeout:       option.IdleConnTimeout, //空闲连接在连接池中的超时时间
 		DialContext:           dialClient.requestHttpDialContext,
@@ -166,7 +169,7 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 					return nil, err
 				}
 			}
-			if option.Ja3 || ctxData.disProxy { //ja3 或 关闭代理，走自实现代理
+			if ctxData.disProxy || (option.Ja3 && ctxData.url.Scheme == "https") { //ja3 或 关闭代理，走自实现代理
 				return nil, nil
 			}
 			if ctxData.proxy != nil { //走官方代理
@@ -176,9 +179,23 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 		},
 	}
 	var http2Upg *http2.Upg
-	// h3Round := &http3.RoundTripper{
-	// 	TLSClientConfig: tlsConfig,
+	// var http3Transport *http3.RoundTripper
+	// if option.Http3 {
+	// 	http3Transport = &http3.RoundTripper{
+	// 		TLSClientConfig: tlsConfig,
+	// 		QuicConfig: &quic.Config{
+	// 			EnableDatagrams:      true,
+	// 			HandshakeIdleTimeout: option.TLSHandshakeTimeout,
+	// 			MaxIdleTimeout:       option.IdleConnTimeout,
+	// 			KeepAlivePeriod:      option.KeepAlive,
+	// 		},
+	// 		EnableDatagrams: true,
+	// 	}
 	// }
+	var http0Transport *RoundTripper
+	if option.Http0 {
+		http0Transport = NewRoundTripper(dialClient)
+	}
 	if option.H2Ja3 || option.H2Ja3Spec.IsSet() {
 		http2Upg = http2.NewUpg(transport, http2.UpgOption{
 			H2Ja3Spec:             option.H2Ja3Spec,
@@ -192,14 +209,10 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 			"h2": func(authority string, c *tls.Conn) http.RoundTripper {
 				return http2Upg.UpgradeFn(authority, c)
 			},
-			// "h3": func(authority string, c *tls.Conn) http.RoundTripper {
-			// 	return h3Round
-			// },
 		}
 	}
 	client := &http.Client{
-		Transport: transport,
-		Jar:       jar,
+		Jar: jar,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			ctxData := req.Context().Value(keyPrincipalID).(*reqCtxData)
 			if ctxData.responseCallBack != nil {
@@ -216,6 +229,11 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 			}
 			return http.ErrUseLastResponse
 		},
+	}
+	if option.Http0 {
+		client.Transport = http0Transport
+	} else {
+		client.Transport = transport
 	}
 	var noJarClient *http.Client
 	if client.Jar != nil {
