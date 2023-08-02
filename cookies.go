@@ -2,8 +2,9 @@ package requests
 
 import (
 	"errors"
-	"net/http"
 	_ "unsafe"
+
+	"net/http"
 
 	"gitee.com/baixudong/tools"
 	"github.com/tidwall/gjson"

@@ -4,10 +4,11 @@ import (
 	"context"
 	"crypto/tls"
 	"net"
-	"net/http"
-	"net/http/cookiejar"
 	"net/url"
 	"time"
+
+	"net/http"
+	"net/http/cookiejar"
 
 	"gitee.com/baixudong/http2"
 	"gitee.com/baixudong/ja3"
@@ -193,14 +194,11 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	// 	}
 	// }
 	var http0Transport *RoundTripper
-	if option.Http0 {
-		http0Transport = NewRoundTripper(dialClient)
-	}
 	if option.H2Ja3 || option.H2Ja3Spec.IsSet() {
-		http2Upg = http2.NewUpg(transport, http2.UpgOption{
+		http2Upg = http2.NewUpg(http2.UpgOption{
 			H2Ja3Spec:             option.H2Ja3Spec,
 			DialTLSContext:        dialClient.requestHttp2DialTlsContext,
-			IdleConnTimeout:       option.TLSHandshakeTimeout,
+			IdleConnTimeout:       option.IdleConnTimeout,
 			TLSHandshakeTimeout:   option.TLSHandshakeTimeout,
 			ResponseHeaderTimeout: option.ResponseHeaderTimeout,
 			TlsConfig:             tlsConfig,
@@ -210,6 +208,9 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 				return http2Upg.UpgradeFn(authority, c)
 			},
 		}
+	}
+	if option.Http0 {
+		http0Transport = NewRoundTripper(ctx, dialClient, http2Upg, option)
 	}
 	client := &http.Client{
 		Jar: jar,

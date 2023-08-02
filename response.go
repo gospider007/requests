@@ -8,10 +8,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+
+	"net/http"
 
 	"gitee.com/baixudong/bar"
 	"gitee.com/baixudong/bs4"

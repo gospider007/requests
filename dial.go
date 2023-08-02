@@ -7,11 +7,12 @@ import (
 	"errors"
 	"io"
 	"net"
-	"net/http"
 	"net/url"
 	"strings"
 	"sync"
 	"time"
+
+	"net/http"
 
 	"gitee.com/baixudong/ja3"
 	"gitee.com/baixudong/tools"
