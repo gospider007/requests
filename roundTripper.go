@@ -5,7 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"log"
+	"io"
 	"net"
 	"net/url"
 	"sync"
@@ -14,10 +14,10 @@ import (
 
 	"net/http"
 
-	h2ja3 "gitee.com/baixudong/http2"
-	"golang.org/x/net/http2"
-
+	h2ja3 "gitee.com/baixudong/net/http2"
+	"gitee.com/baixudong/tools"
 	utls "github.com/refraction-networking/utls"
+	"golang.org/x/net/http2"
 )
 
 type roundTripper interface {
@@ -25,29 +25,32 @@ type roundTripper interface {
 }
 
 type connecotr struct {
-	ctx     context.Context
-	cnl     context.CancelFunc
-	rawConn net.Conn
-	h2      bool
-	r       *bufio.Reader
-	t2      *http2.Transport
-	t22     *h2ja3.Upg
+	ctx      context.Context
+	ctx2     context.Context
+	cnl      context.CancelFunc
+	rawConn  net.Conn
+	h2       bool
+	r        *bufio.Reader
+	rawConn2 roundTripper
+}
 
-	c2 roundTripper
+func (obj *connecotr) Close() error {
+	obj.cnl()
+	return obj.rawConn.Close()
 }
 
 type reqTask struct {
-	ctx context.Context //控制请求的生命周期
-	cnl context.CancelFunc
-	req *http.Request  //发送的请求
-	res *http.Response //接收的请求
-
+	ctx       context.Context //控制请求的生命周期
+	cnl       context.CancelFunc
+	req       *http.Request  //发送的请求
+	res       *http.Response //接收的请求
+	oneConn   bool
 	emptyPool chan struct{}
 	err       error
 }
 
 type connPool struct {
-	ctx   context.Context
+	ctx   context.Context //控制请求的生命周期
 	cnl   context.CancelFunc
 	key   string
 	total atomic.Int64
@@ -55,6 +58,9 @@ type connPool struct {
 	rt    *RoundTripper
 }
 
+func (obj *connPool) Close() {
+	obj.cnl()
+}
 func getAddr(uurl *url.URL) string {
 	if uurl == nil {
 		return ""
@@ -86,8 +92,7 @@ func getHost(req *http.Request) string {
 	}
 	return host
 }
-func getKey(req *http.Request) string {
-	ctxData := req.Context().Value(keyPrincipalID).(*reqCtxData)
+func getKey(ctxData *reqCtxData, req *http.Request) string {
 	return fmt.Sprintf("%s@%s", getAddr(ctxData.proxy), getAddr(req.URL))
 }
 func (obj *RoundTripper) newConnPool(key string, conn *connecotr) *connPool {
@@ -120,10 +125,15 @@ func (obj *RoundTripper) putConnPool(key string, conn *connecotr) {
 		obj.connPools[key] = obj.newConnPool(key, conn)
 	}
 }
-func (obj *RoundTripper) dial(key string, req *http.Request) (conn *connecotr, err error) {
-	ctxData := req.Context().Value(keyPrincipalID).(*reqCtxData)
+func (obj *RoundTripper) TlsConfig() *tls.Config {
+	return obj.tlsConfig.Clone()
+}
+func (obj *RoundTripper) UtlsConfig() *utls.Config {
+	return obj.utlsConfig.Clone()
+}
+func (obj *RoundTripper) dial(ctxData *reqCtxData, key string, req *http.Request) (conn *connecotr, err error) {
 	if !ctxData.disProxy && ctxData.proxy == nil { //确定代理
-		if ctxData.proxy, err = obj.dialer.GetProxy(req.Context(), req.URL); err != nil {
+		if ctxData.proxy, err = obj.GetProxy(req.Context(), req.URL); err != nil {
 			return nil, err
 		}
 	}
@@ -133,7 +143,7 @@ func (obj *RoundTripper) dial(key string, req *http.Request) (conn *connecotr, e
 	if ctxData.proxy == nil {
 		netConn, err = obj.dialer.DialContext(req.Context(), "tcp", addr)
 	} else {
-		netConn, err = obj.dialer.DialContextWithProxy(req.Context(), "tcp", req.URL.Scheme, addr, host, ctxData.proxy)
+		netConn, err = obj.dialer.DialContextWithProxy(req.Context(), "tcp", req.URL.Scheme, addr, host, ctxData.proxy, obj.TlsConfig())
 	}
 	if err != nil {
 		return nil, err
@@ -142,32 +152,31 @@ func (obj *RoundTripper) dial(key string, req *http.Request) (conn *connecotr, e
 	conne.ctx, conne.cnl = context.WithCancel(obj.ctx)
 	var h2 bool
 	if req.URL.Scheme == "https" {
-		ctx, cnl := context.WithTimeout(req.Context(), obj.dialer.tlsHandshakeTimeout)
+		ctx, cnl := context.WithTimeout(req.Context(), obj.tlsHandshakeTimeout)
 		defer cnl()
-		netConn, err = obj.dialer.AddTls(ctx, netConn, host, ctxData.ws)
-		if err != nil {
-			return nil, err
-		}
-		if tlsConn, ok := netConn.(interface {
-			ConnectionState() utls.ConnectionState
-		}); ok {
+		if ctxData.ja3Spec.IsSet() {
+			tlsConn, err := obj.dialer.AddJa3Tls(ctx, netConn, host, ctxData.ws, ctxData.ja3Spec, obj.UtlsConfig())
+			if err != nil {
+				return conne, err
+			}
 			h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
-		} else if tlsConn, ok := netConn.(interface {
-			ConnectionState() tls.ConnectionState
-		}); ok {
+			netConn = tlsConn
+		} else {
+			tlsConn, err := obj.dialer.AddTls(ctx, netConn, host, ctxData.ws, obj.TlsConfig())
+			if err != nil {
+				return conne, err
+			}
 			h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
+			netConn = tlsConn
 		}
 	}
-
 	conne.rawConn = netConn
 	if h2 {
 		conne.h2 = h2
-		conne.t2 = obj.t2
-		conne.t22 = obj.t22
-		if conne.t22 != nil {
-			conne.c2, err = conne.t22.ClientConn(netConn)
+		if ctxData.h2Ja3Spec.IsSet() {
+			conne.rawConn2, err = h2ja3.NewClientConn(netConn, ctxData.h2Ja3Spec)
 		} else {
-			conne.c2, err = conne.t2.NewClientConn(netConn)
+			conne.rawConn2, err = (&http2.Transport{}).NewClientConn(netConn)
 		}
 		if err != nil {
 			return conne, err
@@ -181,6 +190,40 @@ func (obj *connecotr) ping() error {
 	_, err := obj.rawConn.Read(make([]byte, 0))
 	return err
 }
+
+type ReadWriteCloser struct {
+	ctx  context.Context
+	cnl  context.CancelFunc
+	cnl2 context.CancelFunc
+	body io.ReadCloser
+	conn net.Conn
+}
+
+func (obj *ReadWriteCloser) Conn() net.Conn {
+	return obj.conn
+}
+func (obj *ReadWriteCloser) Read(p []byte) (n int, err error) {
+	return obj.body.Read(p)
+}
+func (obj *ReadWriteCloser) Close() error {
+	defer obj.cnl()
+	return obj.body.Close()
+}
+func (obj *ReadWriteCloser) Delete() {
+	obj.cnl2()
+}
+
+func wrapBody(conn *connecotr, task *reqTask) {
+	body := new(ReadWriteCloser)
+	conn.ctx2, body.cnl = context.WithCancel(conn.ctx)
+	body.cnl2 = conn.cnl
+	body.body = task.res.Body
+	if task.res.StatusCode == 101 {
+		body.conn = conn.rawConn
+		task.oneConn = true
+	}
+	task.res.Body = body
+}
 func http1Req(conn *connecotr, task *reqTask) {
 	defer task.cnl()
 	err := task.req.Write(conn.rawConn)
@@ -188,20 +231,29 @@ func http1Req(conn *connecotr, task *reqTask) {
 		task.err = err
 	} else {
 		task.res, task.err = http.ReadResponse(conn.r, task.req)
+		if task.res != nil {
+			wrapBody(conn, task)
+		}
 	}
 }
+
 func http2Req(conn *connecotr, task *reqTask) {
 	defer task.cnl()
-	task.res, task.err = conn.c2.RoundTrip(task.req)
+	task.res, task.err = conn.rawConn2.RoundTrip(task.req)
+	if task.res != nil {
+		wrapBody(conn, task)
+	}
 }
+
 func (obj *connPool) rwMain(conn *connecotr) {
+	conn.ctx, conn.cnl = context.WithCancel(obj.ctx)
 	defer func() {
 		if obj.total.Load() == 0 {
 			obj.rt.delConnPool(obj.key)
 		}
 	}()
 	defer obj.total.Add(-1)
-	defer conn.cnl()
+	defer conn.Close()
 	wait := time.NewTimer(0)
 	defer wait.Stop()
 	go func() {
@@ -209,8 +261,6 @@ func (obj *connPool) rwMain(conn *connecotr) {
 		for {
 			wait.Reset(time.Second * 30)
 			select {
-			case <-obj.ctx.Done():
-				return
 			case <-conn.ctx.Done():
 				return
 			case <-wait.C:
@@ -222,8 +272,6 @@ func (obj *connPool) rwMain(conn *connecotr) {
 	}()
 	for {
 		select {
-		case <-obj.ctx.Done():
-			return
 		case <-conn.ctx.Done():
 			return
 		case task := <-obj.tasks:
@@ -234,6 +282,19 @@ func (obj *connPool) rwMain(conn *connecotr) {
 				}
 				return
 			}
+			if !conn.h2 {
+				select {
+				case <-conn.ctx.Done():
+					return
+				case <-conn.ctx2.Done():
+				default:
+					select {
+					case obj.tasks <- task:
+					case task.emptyPool <- struct{}{}:
+					}
+					return
+				}
+			}
 			wait.Reset(time.Hour * 24 * 365)
 			if conn.h2 {
 				go http2Req(conn, task)
@@ -241,6 +302,9 @@ func (obj *connPool) rwMain(conn *connecotr) {
 				go http1Req(conn, task)
 			}
 			<-task.ctx.Done()
+			if task.oneConn {
+				return
+			}
 			wait.Reset(time.Second * 30)
 			if task.req == nil {
 				return
@@ -250,82 +314,145 @@ func (obj *connPool) rwMain(conn *connecotr) {
 }
 
 type RoundTripper struct {
-	ctx       context.Context
-	cnl       context.CancelFunc
-	connPools map[string]*connPool
-	connsLock sync.Mutex
-	dialer    *DialClient
-	t2        *http2.Transport
-	t22       *h2ja3.Upg
+	ctx                 context.Context
+	cnl                 context.CancelFunc
+	connPools           map[string]*connPool
+	connsLock           sync.Mutex
+	dialer              *DialClient
+	tlsConfig           *tls.Config
+	utlsConfig          *utls.Config
+	getProxy            func(ctx context.Context, url *url.URL) (string, error)
+	tlsHandshakeTimeout time.Duration
+}
+type RoundTripperOption struct {
+	TlsHandshakeTimeout time.Duration
+	DialTimeout         time.Duration
+	KeepAlive           time.Duration
+	LocalAddr           *net.TCPAddr //使用本地网卡
+	AddrType            AddrType     //优先使用的地址类型,ipv4,ipv6 ,或自动选项
+	GetAddrType         func(string) AddrType
+	Dns                 net.IP
+	GetProxy            func(ctx context.Context, url *url.URL) (string, error)
 }
 
-func NewRoundTripper(preCtx context.Context, dialClient *DialClient, t22 *h2ja3.Upg, option ClientOption) *RoundTripper {
+func NewRoundTripper(preCtx context.Context, option RoundTripperOption) *RoundTripper {
 	if preCtx == nil {
 		preCtx = context.TODO()
 	}
 	ctx, cnl := context.WithCancel(preCtx)
-	t2 := http2.Transport{
-		DialTLSContext:   dialClient.requestHttp2DialTlsContext,
-		TLSClientConfig:  dialClient.TlsConfig(),
-		ReadIdleTimeout:  option.ResponseHeaderTimeout,
-		PingTimeout:      option.TLSHandshakeTimeout,
-		WriteByteTimeout: option.IdleConnTimeout,
+
+	dialClient := NewDail(ctx, DialOption{
+		DialTimeout: option.DialTimeout,
+		Dns:         option.Dns,
+		KeepAlive:   option.KeepAlive,
+		LocalAddr:   option.LocalAddr,
+		AddrType:    option.AddrType,
+		GetAddrType: option.GetAddrType,
+	})
+	if option.TlsHandshakeTimeout == 0 {
+		option.TlsHandshakeTimeout = time.Second * 15
+	}
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: true,
+		SessionTicketKey:   [32]byte{},
+		ClientSessionCache: tls.NewLRUClientSessionCache(0),
+	}
+	utlsConfig := &utls.Config{
+		InsecureSkipVerify:     true,
+		InsecureSkipTimeVerify: true,
+		SessionTicketKey:       [32]byte{},
+		ClientSessionCache:     utls.NewLRUClientSessionCache(0),
 	}
 	return &RoundTripper{
-		t2:        &t2,
-		t22:       t22,
-		ctx:       ctx,
-		cnl:       cnl,
-		connPools: make(map[string]*connPool),
-		dialer:    dialClient,
+		tlsConfig:           tlsConfig,
+		utlsConfig:          utlsConfig,
+		ctx:                 ctx,
+		cnl:                 cnl,
+		connPools:           make(map[string]*connPool),
+		dialer:              dialClient,
+		getProxy:            option.GetProxy,
+		tlsHandshakeTimeout: option.TlsHandshakeTimeout,
 	}
 }
-
-func (obj *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	key := getKey(req)
-	pool := obj.getConnPool(key)
-	ctx, cnl := context.WithCancel(obj.ctx)
-	defer cnl()
-	task := &reqTask{
-		ctx:       ctx,
-		cnl:       cnl,
-		req:       req,
-		emptyPool: make(chan struct{}),
+func (obj *RoundTripper) SetGetProxy(getProxy func(ctx context.Context, url *url.URL) (string, error)) {
+	obj.getProxy = getProxy
+}
+func (obj *RoundTripper) GetProxy(ctx context.Context, proxyUrl *url.URL) (*url.URL, error) {
+	if obj.getProxy == nil {
+		return nil, nil
 	}
-	if pool != nil {
-		select {
-		case pool.tasks <- task:
-			select {
-			case <-task.emptyPool:
-			case <-task.ctx.Done():
-				if task.err == nil && task.res == nil {
-					task.err = obj.ctx.Err()
-				}
-				return task.res, task.err
-			}
-		default:
-		}
-	}
-	log.Print("dial============")
-	conn, err := obj.dial(key, req)
+	proxy, err := obj.getProxy(ctx, proxyUrl)
 	if err != nil {
 		return nil, err
 	}
-	log.Print("dial============ ok")
+	return tools.VerifyProxy(proxy)
+}
+
+func (obj *RoundTripper) poolRoundTrip(task *reqTask, key string) (bool, error) {
+	pool := obj.getConnPool(key)
+	if pool == nil {
+		return false, nil
+	}
+	select {
+	case <-obj.ctx.Done():
+		return false, obj.ctx.Err()
+	case pool.tasks <- task:
+		select {
+		case <-task.emptyPool:
+		case <-task.ctx.Done():
+			if task.err == nil && task.res == nil {
+				task.err = obj.ctx.Err()
+			}
+			return true, nil
+		}
+	default:
+	}
+	return false, nil
+}
+func (obj *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	ctxData := req.Context().Value(keyPrincipalID).(*reqCtxData)
+	if ctxData.requestCallBack != nil {
+		if err := ctxData.requestCallBack(req.Context(), req); err != nil {
+			return nil, err
+		}
+	}
+	key := getKey(ctxData, req)
+	task := &reqTask{req: req, emptyPool: make(chan struct{})}
+	task.ctx, task.cnl = context.WithCancel(obj.ctx)
+	defer task.cnl()
+	ok, err := obj.poolRoundTrip(task, key)
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		if ctxData.responseCallBack != nil {
+			if err = ctxData.responseCallBack(task.req.Context(), req, task.res); err != nil {
+				task.err = err
+			}
+		}
+		return task.res, task.err
+	}
+
+	conn, err := obj.dial(ctxData, key, req)
+	if err != nil {
+		return nil, err
+	}
 	if !conn.h2 {
 		go http1Req(conn, task)
 	} else {
 		go http2Req(conn, task)
 	}
-	log.Print("dial============ ok2")
 	<-task.ctx.Done()
-	if task.err == nil && task.res != nil {
-		log.Print("dial============ ok3")
+	if task.err == nil && task.res != nil && !task.oneConn {
 		obj.putConnPool(key, conn)
-		log.Print("dial============ ok4")
 	}
 	if task.err == nil && task.res == nil {
 		task.err = obj.ctx.Err()
+	}
+	if ctxData.responseCallBack != nil {
+		if err = ctxData.responseCallBack(task.req.Context(), req, task.res); err != nil {
+			task.err = err
+		}
 	}
 	return task.res, task.err
 }

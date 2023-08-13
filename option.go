@@ -6,16 +6,23 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net/http"
 	"net/textproto"
 	"net/url"
 	"strings"
 	"time"
 
+	"gitee.com/baixudong/ja3"
 	"gitee.com/baixudong/websocket"
 )
 
 // 请求参数选项
 type RequestOption struct {
+	Ja3       bool          //开启ja3指纹
+	Ja3Spec   ja3.Ja3Spec   //指定ja3Spec,使用ja3.CreateSpecWithStr 或者ja3.CreateSpecWithId 生成
+	H2Ja3     bool          //开启h2指纹
+	H2Ja3Spec ja3.H2Ja3Spec //h2指纹
+
 	Method      string        //method
 	Url         *url.URL      //请求的url
 	Host        string        //网站的host
@@ -29,23 +36,23 @@ type RequestOption struct {
 	Data        any           //发送application/x-www-form-urlencoded,适用于key,val,支持string,[]bytes,json,map
 	body        io.Reader
 	Body        io.Reader
-	Json        any            //发送application/json,支持：string,[]bytes,json,map
-	Text        any            //发送text/xml,支持string,[]bytes,json,map
-	ContentType string         //headers 中Content-Type 的值
-	Raw         any            //不设置context-type,支持string,[]bytes,json,map
-	TempData    map[string]any //临时变量，用于回调存储或自由度更高的用法
-	DisCookie   bool           //关闭cookies管理,这个请求不用cookies池
-	DisDecode   bool           //关闭自动解码
-	Bar         bool           //是否开启bar
-	DisProxy    bool           //是否关闭代理,强制关闭代理
-	TryNum      int64          //重试次数
+	Json        any    //发送application/json,支持：string,[]bytes,json,map
+	Text        any    //发送text/xml,支持string,[]bytes,json,map
+	ContentType string //headers 中Content-Type 的值
+	Raw         any    //不设置context-type,支持string,[]bytes,json,map
+
+	DisCookie bool  //关闭cookies管理,这个请求不用cookies池
+	DisDecode bool  //关闭自动解码
+	Bar       bool  //是否开启bar
+	DisProxy  bool  //是否关闭代理,强制关闭代理
+	TryNum    int64 //重试次数
 
 	OptionCallBack func(context.Context, *Client, *RequestOption) error //请求参数回调,用于对请求参数进行修改。返回error,中断重试请求,返回nil继续
 	ResultCallBack func(context.Context, *Client, *Response) error      //结果回调,用于对结果进行校验。返回nil，直接返回,返回err的话，如果有errCallBack 走errCallBack，没有继续try
 	ErrCallBack    func(context.Context, *Client, error) error          //错误回调,返回error,中断重试请求,返回nil继续
 
-	RequestCallBack  func(context.Context, *RequestDebug) error  //request回调,用于定位bug,正常请求不要设置这个函数
-	ResponseCallBack func(context.Context, *ResponseDebug) error //response回调,用于定位bug,正常请求不要设置这个函数
+	RequestCallBack  func(context.Context, *http.Request) error
+	ResponseCallBack func(context.Context, *http.Request, *http.Response) error
 
 	Jar *Jar //自定义临时cookies 管理
 
@@ -53,8 +60,7 @@ type RequestOption struct {
 	DisRead     bool             //关闭默认读取请求体,不会主动读取body里面的内容，需用你自己读取
 	DisUnZip    bool             //关闭自动解压
 	WsOption    websocket.Option //websocket option,使用websocket 请求的option
-
-	converUrl string
+	converUrl   string
 }
 
 func (obj *RequestOption) initBody() (err error) {
@@ -219,6 +225,19 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	}
 	if !option.DisUnZip {
 		option.DisUnZip = obj.disUnZip
+	}
+	if option.Ja3Spec.IsSet() {
+		option.Ja3 = true
+	}
+	if option.H2Ja3Spec.IsSet() {
+		option.H2Ja3 = true
+	}
+
+	if option.RequestCallBack == nil {
+		option.RequestCallBack = obj.requestCallBack
+	}
+	if option.ResponseCallBack == nil {
+		option.ResponseCallBack = obj.responseCallBack
 	}
 	return option
 }

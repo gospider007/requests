@@ -14,6 +14,7 @@ import (
 
 	"net/http"
 
+	"gitee.com/baixudong/ja3"
 	"gitee.com/baixudong/re"
 	"gitee.com/baixudong/tools"
 	"gitee.com/baixudong/websocket"
@@ -125,16 +126,15 @@ var (
 )
 
 type reqCtxData struct {
-	isRawConn        bool
-	proxy            *url.URL
-	url              *url.URL
-	host             string
 	redirectNum      int
+	proxy            *url.URL
 	disProxy         bool
 	ws               bool
-	requestCallBack  func(context.Context, *RequestDebug) error
-	disBody          bool
-	responseCallBack func(context.Context, *ResponseDebug) error
+	requestCallBack  func(context.Context, *http.Request) error
+	responseCallBack func(context.Context, *http.Request, *http.Response) error
+
+	h2Ja3Spec ja3.H2Ja3Spec
+	ja3Spec   ja3.Ja3Spec
 }
 
 func Get(preCtx context.Context, href string, options ...RequestOption) (*Response, error) {
@@ -261,14 +261,18 @@ func (obj *Client) Request(preCtx context.Context, method string, href string, o
 			if err != nil { //有错误
 				if errors.Is(err, ErrFatal) { //致命错误直接返回
 					return
-				} else if option.ErrCallBack != nil && option.ErrCallBack(preCtx, obj, err) != nil { //不是致命错误，有错误回调,有错误,直接返回
-					return
+				} else if option.ErrCallBack != nil { //不是致命错误，有错误回调,有错误,直接返回
+					if err = option.ErrCallBack(preCtx, obj, err); err != nil {
+						return
+					}
 				}
 			} else if option.ResultCallBack == nil { //没有错误，且没有回调，直接返回
 				return
 			} else if err = option.ResultCallBack(preCtx, obj, resp); err != nil { //没有错误，有回调，回调错误
-				if option.ErrCallBack != nil && option.ErrCallBack(preCtx, obj, err) != nil { //有错误回调,有错误直接返回
-					return
+				if option.ErrCallBack != nil { //有错误回调,有错误直接返回
+					if err = option.ErrCallBack(preCtx, obj, err); err != nil {
+						return
+					}
 				}
 			} else { //没有错误，有回调，没有回调错误，直接返回
 				return
@@ -280,18 +284,6 @@ func (obj *Client) Request(preCtx context.Context, method string, href string, o
 	}
 	return resp, errors.New("max try num")
 }
-func verifyProxy(proxyUrl string) (*url.URL, error) {
-	proxy, err := url.Parse(proxyUrl)
-	if err != nil {
-		return nil, err
-	}
-	switch proxy.Scheme {
-	case "http", "socks5", "https":
-		return proxy, nil
-	default:
-		return nil, tools.WrapError(ErrFatal, "不支持的代理协议")
-	}
-}
 func (obj *Client) request(preCtx context.Context, option RequestOption) (response *Response, err error) {
 	if err = option.optionInit(); err != nil {
 		err = tools.WrapError(err, "option 初始化错误")
@@ -302,23 +294,43 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 	var reqs *http.Request
 	//构造ctxData
 	ctxData := new(reqCtxData)
+
 	ctxData.requestCallBack = option.RequestCallBack
 	ctxData.responseCallBack = option.ResponseCallBack
-	if option.Body != nil {
-		ctxData.disBody = true
-	}
+	// if option.Body != nil {
+	// 	ctxData.disBody = true
+	// }
+	//构造代理
 	ctxData.disProxy = option.DisProxy
 	if !ctxData.disProxy {
 		if option.Proxy != "" { //代理相关构造
-			tempProxy, err := verifyProxy(option.Proxy)
+			tempProxy, err := tools.VerifyProxy(option.Proxy)
 			if err != nil {
 				return response, tools.WrapError(ErrFatal, errors.New("tempRequest 构造代理失败"), err)
 			}
 			ctxData.proxy = tempProxy
-		} else if tempProxy := obj.dialer.Proxy(); tempProxy != nil {
-			ctxData.proxy = tempProxy
+		} else if obj.proxy != nil {
+			ctxData.proxy = obj.proxy
 		}
 	}
+	//指纹
+	if option.Ja3Spec.IsSet() {
+		ctxData.ja3Spec = option.Ja3Spec
+	} else if option.Ja3 {
+		ctxData.ja3Spec = ja3.DefaultJa3Spec()
+	} else if obj.ja3Spec.IsSet() {
+		ctxData.ja3Spec = obj.ja3Spec
+	}
+
+	if option.H2Ja3Spec.IsSet() {
+		ctxData.h2Ja3Spec = option.H2Ja3Spec
+	} else if option.H2Ja3 {
+		ctxData.h2Ja3Spec = ja3.DefaultH2Ja3Spec()
+	} else if obj.h2Ja3Spec.IsSet() {
+		ctxData.h2Ja3Spec = obj.h2Ja3Spec
+	}
+
+	//重定向
 	if option.RedirectNum != 0 { //重定向次数
 		ctxData.redirectNum = option.RedirectNum
 	}
@@ -347,8 +359,8 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 	if err != nil {
 		return response, tools.WrapError(ErrFatal, errors.New("tempRequest 构造request失败"), err)
 	}
-	ctxData.url = reqs.URL
-	ctxData.host = reqs.Host
+	// ctxData.url = reqs.URL
+	// ctxData.host = reqs.Host
 	if reqs.URL.Scheme == "file" {
 		filePath := re.Sub(`^/+`, "", reqs.URL.Path)
 		fileContent, err := os.ReadFile(filePath)
@@ -404,15 +416,15 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 	r, err = obj.getClient(option).Do(reqs)
 	if r != nil {
 		isSse := r.Header.Get("Content-Type") == "text/event-stream"
-		if ctxData.responseCallBack != nil {
-			var resp *ResponseDebug
-			if resp, err = cloneResponse(r, isSse || ctxData.ws); err != nil {
-				return
-			}
-			if err = ctxData.responseCallBack(reqCtx, resp); err != nil {
-				return response, tools.WrapError(ErrFatal, "request requestCallBack 回调错误", err)
-			}
-		}
+		// if ctxData.responseCallBack != nil {
+		// 	var resp *ResponseDebug
+		// 	if resp, err = cloneResponse(r, isSse || ctxData.ws); err != nil {
+		// 		return
+		// 	}
+		// 	if err = ctxData.responseCallBack(reqCtx, resp); err != nil {
+		// 		return response, tools.WrapError(ErrFatal, "request requestCallBack 回调错误", err)
+		// 	}
+		// }
 		if ctxData.ws {
 			if r.StatusCode == 101 {
 				option.DisRead = true
