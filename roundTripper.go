@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -25,17 +26,24 @@ type roundTripper interface {
 }
 
 type connecotr struct {
-	ctx      context.Context
-	ctx2     context.Context
-	cnl      context.CancelFunc
-	rawConn  net.Conn
-	h2       bool
-	r        *bufio.Reader
-	rawConn2 roundTripper
+	ctx          context.Context
+	ctx2         context.Context
+	cnl          context.CancelFunc
+	rawConn      net.Conn
+	h2           bool
+	r            *bufio.Reader
+	h2RawConn    *http2.ClientConn
+	h2Ja3RawConn *h2ja3.ClientConn
 }
 
 func (obj *connecotr) Close() error {
 	obj.cnl()
+	if obj.h2RawConn != nil {
+		obj.h2RawConn.Close()
+	}
+	if obj.h2Ja3RawConn != nil {
+		obj.h2Ja3RawConn.Close()
+	}
 	return obj.rawConn.Close()
 }
 
@@ -174,9 +182,9 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, key string, req *http.Request
 	if h2 {
 		conne.h2 = h2
 		if ctxData.h2Ja3Spec.IsSet() {
-			conne.rawConn2, err = h2ja3.NewClientConn(netConn, ctxData.h2Ja3Spec)
+			conne.h2Ja3RawConn, err = h2ja3.NewClientConn(netConn, ctxData.h2Ja3Spec)
 		} else {
-			conne.rawConn2, err = (&http2.Transport{}).NewClientConn(netConn)
+			conne.h2RawConn, err = (&http2.Transport{}).NewClientConn(netConn)
 		}
 		if err != nil {
 			return conne, err
@@ -186,7 +194,49 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, key string, req *http.Request
 	}
 	return conne, err
 }
+
+type ClientConnState struct {
+	Closed bool
+	// Closing is whether the connection is in the process of
+	// closing. It may be closing due to shutdown, being a
+	// single-use connection, being marked as DoNotReuse, or
+	// having received a GOAWAY frame.
+	Closing bool
+
+	// StreamsActive is how many streams are active.
+	StreamsActive int
+
+	// StreamsReserved is how many streams have been reserved via
+	// ClientConn.ReserveNewRequest.
+	StreamsReserved int
+
+	// StreamsPending is how many requests have been sent in excess
+	// of the peer's advertised MaxConcurrentStreams setting and
+	// are waiting for other streams to complete.
+	StreamsPending int
+
+	// MaxConcurrentStreams is how many concurrent streams the
+	// peer advertised as acceptable. Zero means no SETTINGS
+	// frame has been received yet.
+	MaxConcurrentStreams uint32
+
+	// LastIdle, if non-zero, is when the connection last
+	// transitioned to idle state.
+	LastIdle time.Time
+}
+
 func (obj *connecotr) ping() error {
+	if obj.h2RawConn != nil {
+		state := obj.h2RawConn.State()
+		if state.Closed || state.Closing {
+			return errors.New("h2 is close")
+		}
+	} else if obj.h2Ja3RawConn != nil {
+		state := obj.h2Ja3RawConn.State()
+		if state.Closed || state.Closing {
+			return errors.New("h2 is close")
+		}
+	}
 	_, err := obj.rawConn.Read(make([]byte, 0))
 	return err
 }
@@ -239,7 +289,11 @@ func http1Req(conn *connecotr, task *reqTask) {
 
 func http2Req(conn *connecotr, task *reqTask) {
 	defer task.cnl()
-	task.res, task.err = conn.rawConn2.RoundTrip(task.req)
+	if conn.h2RawConn != nil {
+		task.res, task.err = conn.h2RawConn.RoundTrip(task.req)
+	} else {
+		task.res, task.err = conn.h2Ja3RawConn.RoundTrip(task.req)
+	}
 	if task.res != nil {
 		wrapBody(conn, task)
 	}
@@ -302,13 +356,10 @@ func (obj *connPool) rwMain(conn *connecotr) {
 				go http1Req(conn, task)
 			}
 			<-task.ctx.Done()
-			if task.oneConn {
+			if task.oneConn || task.req == nil {
 				return
 			}
 			wait.Reset(time.Second * 30)
-			if task.req == nil {
-				return
-			}
 		}
 	}
 }
