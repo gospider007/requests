@@ -194,7 +194,11 @@ func (obj *Client) SetGetProxy(getProxy func(ctx context.Context, url *url.URL) 
 }
 
 // 关闭客户端
+func (obj *Client) CloseIdleConnections() {
+	obj.transport.CloseIdleConnections()
+}
 func (obj *Client) Close() {
+	obj.CloseIdleConnections()
 	obj.cnl()
 }
 
