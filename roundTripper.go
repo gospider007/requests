@@ -237,7 +237,7 @@ func (obj *connecotr) ping() error {
 			return errors.New("h2 is close")
 		}
 	}
-	_, err := obj.rawConn.Read(make([]byte, 0))
+	_, err := obj.rawConn.Write(make([]byte, 0))
 	return err
 }
 
