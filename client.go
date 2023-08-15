@@ -122,13 +122,14 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	// 	}
 	// }
 	transport := NewRoundTripper(ctx, RoundTripperOption{
+		TlsHandshakeTimeout: option.TlsHandshakeTimeout,
 		DialTimeout:         option.DialTimeout,
-		Dns:                 option.Dns,
 		KeepAlive:           option.KeepAlive,
 		LocalAddr:           option.LocalAddr,
 		AddrType:            option.AddrType,
 		GetAddrType:         option.GetAddrType,
-		TlsHandshakeTimeout: option.TlsHandshakeTimeout,
+		Dns:                 option.Dns,
+		GetProxy:            option.GetProxy,
 	})
 	client := &http.Client{
 		Jar:       jar,
