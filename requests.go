@@ -126,9 +126,11 @@ var (
 )
 
 type reqCtxData struct {
-	redirectNum      int
-	proxy            *url.URL
-	disProxy         bool
+	redirectNum int
+	proxy       *url.URL
+	disProxy    bool
+
+	disAlive         bool
 	ws               bool
 	requestCallBack  func(context.Context, *http.Request) error
 	responseCallBack func(context.Context, *http.Request, *http.Response) error
@@ -295,11 +297,9 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 	//构造ctxData
 	ctxData := new(reqCtxData)
 
+	ctxData.disAlive = option.DisAlive
 	ctxData.requestCallBack = option.RequestCallBack
 	ctxData.responseCallBack = option.ResponseCallBack
-	// if option.Body != nil {
-	// 	ctxData.disBody = true
-	// }
 	//构造代理
 	ctxData.disProxy = option.DisProxy
 	if !ctxData.disProxy {
@@ -416,15 +416,6 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 	r, err = obj.getClient(option).Do(reqs)
 	if r != nil {
 		isSse := r.Header.Get("Content-Type") == "text/event-stream"
-		// if ctxData.responseCallBack != nil {
-		// 	var resp *ResponseDebug
-		// 	if resp, err = cloneResponse(r, isSse || ctxData.ws); err != nil {
-		// 		return
-		// 	}
-		// 	if err = ctxData.responseCallBack(reqCtx, resp); err != nil {
-		// 		return response, tools.WrapError(ErrFatal, "request requestCallBack 回调错误", err)
-		// 	}
-		// }
 		if ctxData.ws {
 			if r.StatusCode == 101 {
 				option.DisRead = true

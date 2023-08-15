@@ -41,6 +41,7 @@ type RequestOption struct {
 	ContentType string //headers 中Content-Type 的值
 	Raw         any    //不设置context-type,支持string,[]bytes,json,map
 
+	DisAlive  bool  //关闭连接复用
 	DisCookie bool  //关闭cookies管理,这个请求不用cookies池
 	DisDecode bool  //关闭自动解码
 	Bar       bool  //是否开启bar
@@ -213,6 +214,9 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	}
 	if option.Timeout == 0 {
 		option.Timeout = obj.timeout
+	}
+	if !option.DisAlive {
+		option.DisAlive = obj.disAlive
 	}
 	if !option.DisCookie {
 		option.DisCookie = obj.disCookie

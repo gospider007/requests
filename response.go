@@ -28,6 +28,7 @@ type Response struct {
 	cnl       context.CancelFunc
 	content   []byte
 	encoding  string
+	disAlive  bool
 	disDecode bool
 	disUnzip  bool
 	filePath  string
@@ -73,16 +74,16 @@ func (obj *SseClient) Recv() (Event, error) {
 	}
 }
 
-func (obj *Client) newResponse(ctx context.Context, cnl context.CancelFunc, r *http.Response, request_option RequestOption) (*Response, error) {
-	response := &Response{response: r, ctx: ctx, cnl: cnl, bar: request_option.Bar}
-	if request_option.DisRead { //是否预读
+func (obj *Client) newResponse(ctx context.Context, cnl context.CancelFunc, r *http.Response, option RequestOption) (*Response, error) {
+	response := &Response{response: r, ctx: ctx, cnl: cnl, bar: option.Bar, disAlive: option.DisAlive}
+	if option.DisRead { //是否预读
 		return response, nil
 	}
-	if request_option.DisUnZip || r.Uncompressed { //是否解压
+	if option.DisUnZip || r.Uncompressed { //是否解压
 		response.disUnzip = true
 	}
-	response.disDecode = request_option.DisDecode //是否解码
-	return response, response.read()              //读取内容
+	response.disDecode = option.DisDecode //是否解码
+	return response, response.read()      //读取内容
 }
 
 type Cookies []*http.Cookie
@@ -363,13 +364,26 @@ func (obj *Response) read() error { //读取body,对body 解压，解码操作
 	return nil
 }
 
+func (obj *Response) Delete() error {
+	delFunc, ok := obj.response.Body.(interface{ Delete() error })
+	if ok {
+		obj.response.Body.Close()
+		return delFunc.Delete()
+	} else {
+		return obj.response.Body.Close()
+	}
+}
+
 // 关闭response ,当disRead 为true 请一定要手动关闭
 func (obj *Response) Close() error {
 	defer obj.cnl()
 	if obj.webSocket != nil {
 		obj.webSocket.Close("close")
-	}
-	if obj.response != nil && obj.response.Body != nil {
+		obj.Delete()
+	} else if obj.response != nil && obj.response.Body != nil {
+		if obj.disAlive {
+			return obj.Delete()
+		}
 		tools.CopyWitchContext(obj.ctx, io.Discard, obj.response.Body)
 		return obj.response.Body.Close()
 	}

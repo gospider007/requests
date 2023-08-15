@@ -35,6 +35,8 @@ type ClientOption struct {
 
 	RedirectNum int //重定向次数,小于0为禁用,0:不限制
 
+	DisAlive bool //关闭连接复用
+
 	DisDecode      bool                                                 //关闭自动编码
 	DisRead        bool                                                 //关闭默认读取请求体
 	DisUnZip       bool                                                 //关闭自动解压
@@ -67,6 +69,7 @@ type Client struct {
 	headers any           //请求头
 	bar     bool          //是否开启bar
 
+	disAlive    bool
 	disCookie   bool
 	client      *http.Client
 	noJarClient *http.Client
@@ -156,6 +159,7 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 
 		disCookie:      option.DisCookie,
 		redirectNum:    option.RedirectNum,
+		disAlive:       option.DisAlive,
 		disDecode:      option.DisDecode,
 		disRead:        option.DisRead,
 		disUnZip:       option.DisUnZip,
@@ -197,6 +201,7 @@ func (obj *Client) SetGetProxy(getProxy func(ctx context.Context, url *url.URL) 
 func (obj *Client) CloseIdleConnections() {
 	obj.transport.CloseIdleConnections()
 }
+
 func (obj *Client) Close() {
 	obj.CloseIdleConnections()
 	obj.cnl()
