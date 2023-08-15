@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/url"
 	"sync"
@@ -141,7 +140,6 @@ func (obj *RoundTripper) UtlsConfig() *utls.Config {
 	return obj.utlsConfig.Clone()
 }
 func (obj *RoundTripper) dial(ctxData *reqCtxData, key string, req *http.Request) (conn *Connecotr, err error) {
-	log.Print("new conn")
 	if !ctxData.disProxy && ctxData.proxy == nil { //确定代理
 		if ctxData.proxy, err = obj.GetProxy(req.Context(), req.URL); err != nil {
 			return nil, err
