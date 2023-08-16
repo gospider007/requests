@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -105,6 +106,8 @@ func (obj *RoundTripper) putConnPool(key string, conn *Connecotr) {
 	defer obj.connsLock.Unlock()
 	if !conn.h2 {
 		go conn.read()
+	} else {
+		go conn.h2Loop()
 	}
 	pool, ok := obj.connPools[key]
 	if ok {
@@ -191,8 +194,32 @@ type Connecotr struct {
 	rc           chan []byte
 	rn           chan int
 	isRead       bool
+	t            *time.Timer
 }
 
+func (obj *Connecotr) h2Loop() error {
+	defer obj.Close()
+	defer func() {
+		if obj.t != nil {
+			obj.t.Stop()
+		}
+	}()
+	for {
+		if obj.t == nil {
+			obj.t = time.NewTimer(time.Second * 30)
+		} else {
+			obj.t.Reset(time.Second * 30)
+		}
+		select {
+		case <-obj.ctx.Done():
+			return obj.ctx.Err()
+		case <-obj.t.C:
+			if obj.h2Closed() {
+				return errors.New("h2 closed")
+			}
+		}
+	}
+}
 func (obj *Connecotr) Close() error {
 	obj.cnl()
 	if obj.h2RawConn != nil {
@@ -279,7 +306,7 @@ type ReadWriteCloser struct {
 	conn *Connecotr
 }
 
-func (obj *ReadWriteCloser) Conn() *Connecotr {
+func (obj *ReadWriteCloser) Conn() net.Conn {
 	return obj.conn
 }
 func (obj *ReadWriteCloser) Read(p []byte) (n int, err error) {
