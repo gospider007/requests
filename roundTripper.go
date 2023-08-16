@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -15,10 +14,9 @@ import (
 
 	"net/http"
 
-	h2ja3 "gitee.com/baixudong/net/http2"
+	"gitee.com/baixudong/net/http2"
 	"gitee.com/baixudong/tools"
 	utls "github.com/refraction-networking/utls"
-	"golang.org/x/net/http2"
 )
 
 type roundTripper interface {
@@ -104,10 +102,9 @@ func (obj *RoundTripper) getConnPool(key string) *connPool {
 func (obj *RoundTripper) putConnPool(key string, conn *Connecotr) {
 	obj.connsLock.Lock()
 	defer obj.connsLock.Unlock()
+	conn.isPool = true
 	if !conn.h2 {
 		go conn.read()
-	} else {
-		go conn.h2Loop()
 	}
 	pool, ok := obj.connPools[key]
 	if ok {
@@ -145,7 +142,6 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, key string, req *http.Request
 	conne.rc = make(chan []byte)
 
 	conne.ctx, conne.cnl = context.WithCancel(obj.ctx)
-	var h2 bool
 	if req.URL.Scheme == "https" {
 		ctx, cnl := context.WithTimeout(req.Context(), obj.tlsHandshakeTimeout)
 		defer cnl()
@@ -154,26 +150,22 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, key string, req *http.Request
 			if err != nil {
 				return conne, err
 			}
-			h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
+			conne.h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
 			netConn = tlsConn
 		} else {
 			tlsConn, err := obj.dialer.AddTls(ctx, netConn, host, ctxData.ws, obj.TlsConfig())
 			if err != nil {
 				return conne, err
 			}
-			h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
+			conne.h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
 			netConn = tlsConn
 		}
 	}
 	conne.rawConn = netConn
-	if h2 {
-		conne.h2 = h2
-		if ctxData.h2Ja3Spec.IsSet() {
-			conne.h2Ja3RawConn, err = h2ja3.NewClientConn(netConn, ctxData.h2Ja3Spec)
-		} else {
-			conne.h2RawConn, err = (&http2.Transport{}).NewClientConn(netConn)
-		}
-		if err != nil {
+	if conne.h2 {
+		if conne.h2RawConn, err = http2.NewClientConn(func() {
+			conne.cnl()
+		}, netConn, ctxData.h2Ja3Spec); err != nil {
 			return conne, err
 		}
 	} else {
@@ -183,50 +175,23 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, key string, req *http.Request
 }
 
 type Connecotr struct {
-	ctx          context.Context
-	ctx2         context.Context
-	cnl          context.CancelFunc
-	rawConn      net.Conn
-	h2           bool
-	r            *bufio.Reader
-	h2RawConn    *http2.ClientConn
-	h2Ja3RawConn *h2ja3.ClientConn
-	rc           chan []byte
-	rn           chan int
-	isRead       bool
-	t            *time.Timer
+	ctx       context.Context
+	ctx2      context.Context
+	cnl       context.CancelFunc
+	rawConn   net.Conn
+	h2        bool
+	r         *bufio.Reader
+	h2RawConn *http2.ClientConn
+	rc        chan []byte
+	rn        chan int
+	isRead    bool
+	isPool    bool
 }
 
-func (obj *Connecotr) h2Loop() error {
-	defer obj.Close()
-	defer func() {
-		if obj.t != nil {
-			obj.t.Stop()
-		}
-	}()
-	for {
-		if obj.t == nil {
-			obj.t = time.NewTimer(time.Second * 30)
-		} else {
-			obj.t.Reset(time.Second * 30)
-		}
-		select {
-		case <-obj.ctx.Done():
-			return obj.ctx.Err()
-		case <-obj.t.C:
-			if obj.h2Closed() {
-				return errors.New("h2 closed")
-			}
-		}
-	}
-}
 func (obj *Connecotr) Close() error {
 	obj.cnl()
 	if obj.h2RawConn != nil {
 		obj.h2RawConn.Close()
-	}
-	if obj.h2Ja3RawConn != nil {
-		obj.h2Ja3RawConn.Close()
 	}
 	return obj.rawConn.Close()
 }
@@ -288,14 +253,8 @@ func (obj *Connecotr) SetWriteDeadline(t time.Time) error {
 }
 
 func (obj *Connecotr) h2Closed() bool {
-	if obj.h2RawConn != nil {
-		state := obj.h2RawConn.State()
-		return state.Closed || state.Closing
-	} else if obj.h2Ja3RawConn != nil {
-		state := obj.h2Ja3RawConn.State()
-		return state.Closed || state.Closing
-	}
-	return false
+	state := obj.h2RawConn.State()
+	return state.Closed || state.Closing
 }
 
 type ReadWriteCloser struct {
@@ -313,6 +272,9 @@ func (obj *ReadWriteCloser) Read(p []byte) (n int, err error) {
 	return obj.body.Read(p)
 }
 func (obj *ReadWriteCloser) Close() error {
+	if !obj.conn.isPool {
+		defer obj.Delete()
+	}
 	defer obj.cnl()
 	return obj.body.Close()
 }
@@ -356,11 +318,7 @@ func http2Req(conn *Connecotr, task *reqTask) {
 			conn.Close()
 		}
 	}()
-	if conn.h2RawConn != nil {
-		task.res, task.err = conn.h2RawConn.RoundTrip(task.req)
-	} else {
-		task.res, task.err = conn.h2Ja3RawConn.RoundTrip(task.req)
-	}
+	task.res, task.err = conn.h2RawConn.RoundTrip(task.req)
 	if task.res != nil {
 		wrapBody(conn, task)
 	}
@@ -550,17 +508,17 @@ func (obj *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 		go http2Req(conn, task)
 	}
 	<-task.ctx.Done()
-	if ctxData.responseCallBack != nil {
-		if err = ctxData.responseCallBack(task.req.Context(), req, task.res); err != nil {
-			task.err = err
-			conn.Close()
-		}
-	}
 	if task.err == nil && task.res == nil {
 		task.err = obj.ctx.Err()
 	}
 	if task.err == nil && task.res != nil && task.res.StatusCode != 101 && !ctxData.disAlive {
 		obj.putConnPool(key, conn)
+	}
+	if ctxData.responseCallBack != nil {
+		if err = ctxData.responseCallBack(task.req.Context(), req, task.res); err != nil {
+			task.err = err
+			conn.Close()
+		}
 	}
 	return task.res, task.err
 }

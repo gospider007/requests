@@ -28,7 +28,6 @@ type Response struct {
 	cnl       context.CancelFunc
 	content   []byte
 	encoding  string
-	disAlive  bool
 	disDecode bool
 	disUnzip  bool
 	filePath  string
@@ -75,7 +74,7 @@ func (obj *SseClient) Recv() (Event, error) {
 }
 
 func (obj *Client) newResponse(ctx context.Context, cnl context.CancelFunc, r *http.Response, option RequestOption) (*Response, error) {
-	response := &Response{response: r, ctx: ctx, cnl: cnl, bar: option.Bar, disAlive: option.DisAlive}
+	response := &Response{response: r, ctx: ctx, cnl: cnl, bar: option.Bar}
 	if option.DisRead { //是否预读
 		return response, nil
 	}
@@ -367,11 +366,9 @@ func (obj *Response) read() error { //读取body,对body 解压，解码操作
 func (obj *Response) Delete() error {
 	delFunc, ok := obj.response.Body.(interface{ Delete() error })
 	if ok {
-		obj.response.Body.Close()
-		return delFunc.Delete()
-	} else {
-		return obj.response.Body.Close()
+		defer delFunc.Delete()
 	}
+	return obj.Close()
 }
 
 // 关闭response ,当disRead 为true 请一定要手动关闭
@@ -379,11 +376,8 @@ func (obj *Response) Close() error {
 	defer obj.cnl()
 	if obj.webSocket != nil {
 		obj.webSocket.Close("close")
-		obj.Delete()
-	} else if obj.response != nil && obj.response.Body != nil {
-		if obj.disAlive {
-			return obj.Delete()
-		}
+	}
+	if obj.response != nil && obj.response.Body != nil {
 		tools.CopyWitchContext(obj.ctx, io.Discard, obj.response.Body)
 		return obj.response.Body.Close()
 	}
