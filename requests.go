@@ -314,21 +314,8 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 		}
 	}
 	//指纹
-	if option.Ja3Spec.IsSet() {
-		ctxData.ja3Spec = option.Ja3Spec
-	} else if option.Ja3 {
-		ctxData.ja3Spec = ja3.DefaultJa3Spec()
-	} else if obj.ja3Spec.IsSet() {
-		ctxData.ja3Spec = obj.ja3Spec
-	}
-
-	if option.H2Ja3Spec.IsSet() {
-		ctxData.h2Ja3Spec = option.H2Ja3Spec
-	} else if option.H2Ja3 {
-		ctxData.h2Ja3Spec = ja3.DefaultH2Ja3Spec()
-	} else if obj.h2Ja3Spec.IsSet() {
-		ctxData.h2Ja3Spec = obj.h2Ja3Spec
-	}
+	ctxData.ja3Spec = option.Ja3Spec
+	ctxData.h2Ja3Spec = option.H2Ja3Spec
 
 	//重定向
 	if option.RedirectNum != 0 { //重定向次数

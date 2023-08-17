@@ -30,7 +30,6 @@ type ClientOption struct {
 
 	Ja3       bool          //开启ja3指纹
 	Ja3Spec   ja3.Ja3Spec   //指定ja3Spec,使用ja3.CreateSpecWithStr 或者ja3.CreateSpecWithId 生成
-	H2Ja3     bool          //开启h2指纹
 	H2Ja3Spec ja3.H2Ja3Spec //h2指纹
 
 	RedirectNum int //重定向次数,小于0为禁用,0:不限制
@@ -182,11 +181,7 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	} else if option.Ja3 {
 		result.ja3Spec = ja3.DefaultJa3Spec()
 	}
-	if option.H2Ja3Spec.IsSet() {
-		result.h2Ja3Spec = option.H2Ja3Spec
-	} else if option.H2Ja3 {
-		result.h2Ja3Spec = ja3.DefaultH2Ja3Spec()
-	}
+	result.h2Ja3Spec = option.H2Ja3Spec
 	return result, err
 }
 

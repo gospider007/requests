@@ -20,7 +20,6 @@ import (
 type RequestOption struct {
 	Ja3       bool          //开启ja3指纹
 	Ja3Spec   ja3.Ja3Spec   //指定ja3Spec,使用ja3.CreateSpecWithStr 或者ja3.CreateSpecWithId 生成
-	H2Ja3     bool          //开启h2指纹
 	H2Ja3Spec ja3.H2Ja3Spec //h2指纹
 
 	Method      string        //method
@@ -230,13 +229,17 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	if !option.DisUnZip {
 		option.DisUnZip = obj.disUnZip
 	}
-	if option.Ja3Spec.IsSet() {
-		option.Ja3 = true
-	}
-	if option.H2Ja3Spec.IsSet() {
-		option.H2Ja3 = true
-	}
 
+	if !option.Ja3Spec.IsSet() {
+		if option.Ja3 {
+			option.Ja3Spec = ja3.DefaultJa3Spec()
+		} else {
+			option.Ja3Spec = obj.ja3Spec
+		}
+	}
+	if !option.H2Ja3Spec.IsSet() {
+		option.H2Ja3Spec = obj.h2Ja3Spec
+	}
 	if option.RequestCallBack == nil {
 		option.RequestCallBack = obj.requestCallBack
 	}

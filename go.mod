@@ -6,9 +6,9 @@ require (
 	gitee.com/baixudong/bar v0.0.0-20230814072341-e111c30a1386
 	gitee.com/baixudong/bs4 v0.0.0-20230814072447-945ab1fd97ed
 	gitee.com/baixudong/ja3 v0.0.0-20230814072518-68cf0876b63f
-	gitee.com/baixudong/net v0.0.0-20230816101354-633323f5384b
+	gitee.com/baixudong/net v0.0.0-20230817053219-eb62a5b32011
 	gitee.com/baixudong/re v0.0.0-20230809033040-360c1d945e59
-	gitee.com/baixudong/tools v0.0.0-20230816030611-f464d3a1d64d
+	gitee.com/baixudong/tools v0.0.0-20230817082053-97c88f6d0fbc
 	gitee.com/baixudong/websocket v0.0.0-20230816024804-f69b381d7a77
 	github.com/refraction-networking/utls v1.4.3
 	github.com/tidwall/gjson v1.16.0
@@ -32,7 +32,7 @@ require (
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/quic-go/quic-go v0.37.4 // indirect
+	github.com/quic-go/quic-go v0.37.5 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
