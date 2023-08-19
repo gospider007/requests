@@ -239,7 +239,6 @@ func (obj *Client) Request(preCtx context.Context, method string, href string, o
 		select {
 		case <-obj.ctx.Done():
 			obj.Close()
-
 			return nil, tools.WrapError(obj.ctx.Err(), "client ctx 错误")
 		case <-preCtx.Done():
 			return nil, tools.WrapError(preCtx.Err(), "request ctx 错误")
@@ -338,8 +337,8 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 		}
 	}()
 	//创建request
-	if option.body != nil {
-		reqs, err = http.NewRequestWithContext(reqCtx, method, href, option.body)
+	if option.Body != nil {
+		reqs, err = http.NewRequestWithContext(reqCtx, method, href, option.Body)
 	} else {
 		reqs, err = http.NewRequestWithContext(reqCtx, method, href, nil)
 	}

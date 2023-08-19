@@ -33,7 +33,6 @@ type RequestOption struct {
 	Params      any           //url 中的参数，用以拼接url,支持json,map
 	Form        any           //发送multipart/form-data,适用于文件上传,支持json,map
 	Data        any           //发送application/x-www-form-urlencoded,适用于key,val,支持string,[]bytes,json,map
-	body        io.Reader
 	Body        io.Reader
 	Json        any    //发送application/json,支持：string,[]bytes,json,map
 	Text        any    //发送text/xml,支持string,[]bytes,json,map
@@ -65,14 +64,14 @@ type RequestOption struct {
 
 func (obj *RequestOption) initBody() (err error) {
 	if obj.Body != nil {
-		obj.body = obj.Body
+		return nil
 	} else if obj.Raw != nil {
-		if obj.body, err = newBody(obj.Raw, rawType, nil); err != nil {
+		if obj.Body, err = newBody(obj.Raw, rawType, nil); err != nil {
 			return err
 		}
 	} else if obj.Form != nil {
 		dataMap := map[string][]string{}
-		if obj.body, err = newBody(obj.Form, formType, dataMap); err != nil {
+		if obj.Body, err = newBody(obj.Form, formType, dataMap); err != nil {
 			return err
 		}
 		tempBody := bytes.NewBuffer(nil)
@@ -105,7 +104,7 @@ func (obj *RequestOption) initBody() (err error) {
 		if obj.ContentType == "" {
 			obj.ContentType = writer.FormDataContentType()
 		}
-		obj.body = tempBody
+		obj.Body = tempBody
 	} else if obj.Files != nil {
 		tempBody := bytes.NewBuffer(nil)
 		writer := multipart.NewWriter(tempBody)
@@ -130,23 +129,23 @@ func (obj *RequestOption) initBody() (err error) {
 		if obj.ContentType == "" {
 			obj.ContentType = writer.FormDataContentType()
 		}
-		obj.body = tempBody
+		obj.Body = tempBody
 	} else if obj.Data != nil {
-		if obj.body, err = newBody(obj.Data, dataType, nil); err != nil {
+		if obj.Body, err = newBody(obj.Data, dataType, nil); err != nil {
 			return err
 		}
 		if obj.ContentType == "" {
 			obj.ContentType = "application/x-www-form-urlencoded"
 		}
 	} else if obj.Json != nil {
-		if obj.body, err = newBody(obj.Json, jsonType, nil); err != nil {
+		if obj.Body, err = newBody(obj.Json, jsonType, nil); err != nil {
 			return err
 		}
 		if obj.ContentType == "" {
 			obj.ContentType = "application/json"
 		}
 	} else if obj.Text != nil {
-		if obj.body, err = newBody(obj.Text, textType, nil); err != nil {
+		if obj.Body, err = newBody(obj.Text, textType, nil); err != nil {
 			return err
 		}
 		if obj.ContentType == "" {

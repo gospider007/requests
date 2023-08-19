@@ -14,6 +14,7 @@ import (
 
 	"net/http"
 
+	"gitee.com/baixudong/ja3"
 	"gitee.com/baixudong/net/http2"
 	"gitee.com/baixudong/tools"
 	utls "github.com/refraction-networking/utls"
@@ -119,22 +120,21 @@ func (obj *RoundTripper) TlsConfig() *tls.Config {
 func (obj *RoundTripper) UtlsConfig() *utls.Config {
 	return obj.utlsConfig.Clone()
 }
-func (obj *RoundTripper) dial(ctxData *reqCtxData, key string, req *http.Request) (conn *Connecotr, err error) {
+func (obj *RoundTripper) dial(ctxData *reqCtxData, addr string, key string, req *http.Request) (conn *Connecotr, oneSessionCache *ja3.OneSessionCache, err error) {
 	if !ctxData.disProxy && ctxData.proxy == nil { //确定代理
 		if ctxData.proxy, err = obj.GetProxy(req.Context(), req.URL); err != nil {
-			return nil, err
+			return conn, oneSessionCache, err
 		}
 	}
 	var netConn net.Conn
 	host := getHost(req)
-	addr := getAddr(req.URL)
 	if ctxData.proxy == nil {
 		netConn, err = obj.dialer.DialContext(req.Context(), "tcp", addr)
 	} else {
 		netConn, err = obj.dialer.DialContextWithProxy(req.Context(), "tcp", req.URL.Scheme, addr, host, ctxData.proxy, obj.TlsConfig())
 	}
 	if err != nil {
-		return nil, err
+		return conn, oneSessionCache, err
 	}
 	conne := new(Connecotr)
 
@@ -146,16 +146,29 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, key string, req *http.Request
 		ctx, cnl := context.WithTimeout(req.Context(), obj.tlsHandshakeTimeout)
 		defer cnl()
 		if ctxData.ja3Spec.IsSet() {
-			tlsConn, err := obj.dialer.AddJa3Tls(ctx, netConn, host, ctxData.ws, ctxData.ja3Spec, obj.UtlsConfig())
+			session, ok := obj.clientSessionCache.Get(addr)
+			utlsConfig := obj.UtlsConfig()
+			oneSessionCache = ja3.NewOneSessionCache(session)
+			utlsConfig.ClientSessionCache = oneSessionCache
+			if ok {
+				if !ctxData.ja3Spec.HasPsk() {
+					ja3.AddPsk(&ctxData.ja3Spec)
+				}
+			} else {
+				if ctxData.ja3Spec.HasPsk() {
+					ja3.DelPsk(&ctxData.ja3Spec)
+				}
+			}
+			tlsConn, err := obj.dialer.AddJa3Tls(ctx, netConn, host, ctxData.ws, ctxData.ja3Spec, utlsConfig)
 			if err != nil {
-				return conne, err
+				return conne, oneSessionCache, err
 			}
 			conne.h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
 			netConn = tlsConn
 		} else {
 			tlsConn, err := obj.dialer.AddTls(ctx, netConn, host, ctxData.ws, obj.TlsConfig())
 			if err != nil {
-				return conne, err
+				return conne, oneSessionCache, err
 			}
 			conne.h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
 			netConn = tlsConn
@@ -166,12 +179,12 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, key string, req *http.Request
 		if conne.h2RawConn, err = http2.NewClientConn(func() {
 			conne.cnl()
 		}, netConn, ctxData.h2Ja3Spec); err != nil {
-			return conne, err
+			return conne, oneSessionCache, err
 		}
 	} else {
 		conne.r = bufio.NewReader(conne)
 	}
-	return conne, err
+	return conne, oneSessionCache, err
 }
 
 type Connecotr struct {
@@ -372,6 +385,7 @@ func (obj *connPool) rwMain(conn *Connecotr) {
 }
 
 type RoundTripper struct {
+	clientSessionCache  utls.ClientSessionCache
 	ctx                 context.Context
 	cnl                 context.CancelFunc
 	connPools           map[string]*connPool
@@ -382,6 +396,7 @@ type RoundTripper struct {
 	getProxy            func(ctx context.Context, url *url.URL) (string, error)
 	tlsHandshakeTimeout time.Duration
 }
+
 type RoundTripperOption struct {
 	TlsHandshakeTimeout time.Duration
 	DialTimeout         time.Duration
@@ -419,9 +434,9 @@ func NewRoundTripper(preCtx context.Context, option RoundTripperOption) *RoundTr
 		InsecureSkipVerify:     true,
 		InsecureSkipTimeVerify: true,
 		SessionTicketKey:       [32]byte{},
-		// ClientSessionCache:     utls.NewLRUClientSessionCache(0),
 	}
 	return &RoundTripper{
+		clientSessionCache:  ja3.NewClientSessionCache(),
 		tlsConfig:           tlsConfig,
 		utlsConfig:          utlsConfig,
 		ctx:                 ctx,
@@ -498,7 +513,8 @@ func (obj *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 			return task.res, task.err
 		}
 	}
-	conn, err := obj.dial(ctxData, key, req)
+	addr := getAddr(req.URL)
+	conn, oneSessionCache, err := obj.dial(ctxData, addr, key, req)
 	if err != nil {
 		return nil, err
 	}
@@ -508,12 +524,16 @@ func (obj *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 		go http2Req(conn, task)
 	}
 	<-task.ctx.Done()
+	if oneSessionCache != nil && oneSessionCache.Session() != nil {
+		obj.clientSessionCache.Put(addr, oneSessionCache.Session())
+	}
 	if task.err == nil && task.res == nil {
 		task.err = obj.ctx.Err()
 	}
 	if task.err == nil && task.res != nil && task.res.StatusCode != 101 && !ctxData.disAlive {
 		obj.putConnPool(key, conn)
 	}
+
 	if ctxData.responseCallBack != nil {
 		if err = ctxData.responseCallBack(task.req.Context(), req, task.res); err != nil {
 			task.err = err
