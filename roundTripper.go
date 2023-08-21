@@ -120,10 +120,10 @@ func (obj *RoundTripper) TlsConfig() *tls.Config {
 func (obj *RoundTripper) UtlsConfig() *utls.Config {
 	return obj.utlsConfig.Clone()
 }
-func (obj *RoundTripper) dial(ctxData *reqCtxData, addr string, key string, req *http.Request) (conn *Connecotr, oneSessionCache *ja3.OneSessionCache, err error) {
+func (obj *RoundTripper) dial(ctxData *reqCtxData, addr string, key string, req *http.Request) (conn *Connecotr, clientSessionState *utls.ClientSessionState, err error) {
 	if !ctxData.disProxy && ctxData.proxy == nil { //确定代理
 		if ctxData.proxy, err = obj.GetProxy(req.Context(), req.URL); err != nil {
-			return conn, oneSessionCache, err
+			return conn, clientSessionState, err
 		}
 	}
 	var netConn net.Conn
@@ -134,7 +134,7 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, addr string, key string, req 
 		netConn, err = obj.dialer.DialContextWithProxy(req.Context(), "tcp", req.URL.Scheme, addr, host, ctxData.proxy, obj.TlsConfig())
 	}
 	if err != nil {
-		return conn, oneSessionCache, err
+		return conn, clientSessionState, err
 	}
 	conne := new(Connecotr)
 
@@ -148,7 +148,7 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, addr string, key string, req 
 		if ctxData.ja3Spec.IsSet() {
 			session, ok := obj.clientSessionCache.Get(addr)
 			utlsConfig := obj.UtlsConfig()
-			oneSessionCache = ja3.NewOneSessionCache(session)
+			oneSessionCache := ja3.NewOneSessionCache(session)
 			utlsConfig.ClientSessionCache = oneSessionCache
 			if ok {
 				if !ctxData.ja3Spec.HasPsk() {
@@ -161,14 +161,17 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, addr string, key string, req 
 			}
 			tlsConn, err := obj.dialer.AddJa3Tls(ctx, netConn, host, ctxData.ws, ctxData.ja3Spec, utlsConfig)
 			if err != nil {
-				return conne, oneSessionCache, err
+				return conne, clientSessionState, err
 			}
 			conne.h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
 			netConn = tlsConn
+			if oneSessionCache.Session() != nil && tlsConn.ConnectionState().HandshakeComplete && tlsConn.ConnectionState().Version == tls.VersionTLS13 && !tlsConn.HandshakeState.State13.UsingPSK {
+				clientSessionState = oneSessionCache.Session()
+			}
 		} else {
 			tlsConn, err := obj.dialer.AddTls(ctx, netConn, host, ctxData.ws, obj.TlsConfig())
 			if err != nil {
-				return conne, oneSessionCache, err
+				return conne, clientSessionState, err
 			}
 			conne.h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
 			netConn = tlsConn
@@ -179,12 +182,12 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, addr string, key string, req 
 		if conne.h2RawConn, err = http2.NewClientConn(func() {
 			conne.cnl()
 		}, netConn, ctxData.h2Ja3Spec); err != nil {
-			return conne, oneSessionCache, err
+			return conne, clientSessionState, err
 		}
 	} else {
 		conne.r = bufio.NewReader(conne)
 	}
-	return conne, oneSessionCache, err
+	return conne, clientSessionState, err
 }
 
 type Connecotr struct {
@@ -514,7 +517,7 @@ func (obj *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 		}
 	}
 	addr := getAddr(req.URL)
-	conn, oneSessionCache, err := obj.dial(ctxData, addr, key, req)
+	conn, clientSessionState, err := obj.dial(ctxData, addr, key, req)
 	if err != nil {
 		return nil, err
 	}
@@ -524,8 +527,8 @@ func (obj *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 		go http2Req(conn, task)
 	}
 	<-task.ctx.Done()
-	if oneSessionCache != nil && oneSessionCache.Session() != nil {
-		obj.clientSessionCache.Put(addr, oneSessionCache.Session())
+	if clientSessionState != nil {
+		obj.clientSessionCache.Put(addr, clientSessionState)
 	}
 	if task.err == nil && task.res == nil {
 		task.err = obj.ctx.Err()
