@@ -37,9 +37,8 @@ type ClientOption struct {
 	DisAlive bool //关闭连接复用
 
 	DisDecode      bool                                                 //关闭自动编码
-	DisRead        bool                                                 //关闭默认读取请求体
 	DisUnZip       bool                                                 //关闭自动解压
-	TryNum         int64                                                //重试次数
+	TryNum         int                                                  //重试次数
 	OptionCallBack func(context.Context, *Client, *RequestOption) error //请求参数回调,用于对请求参数进行修改。返回error,中断重试请求,返回nil继续
 	ResultCallBack func(context.Context, *Client, *Response) error      //结果回调,用于对结果进行校验。返回nil，直接返回,返回err的话，如果有errCallBack 走errCallBack，没有继续try
 	ErrCallBack    func(context.Context, *Client, error) error          //错误回调,返回error,中断重试请求,返回nil继续
@@ -51,11 +50,10 @@ type ClientOption struct {
 	ResponseCallBack func(context.Context, *http.Request, *http.Response) error
 }
 type Client struct {
-	redirectNum int   //重定向次数
-	disDecode   bool  //关闭自动编码
-	disRead     bool  //关闭默认读取请求体
-	disUnZip    bool  //变比自动解压
-	tryNum      int64 //重试次数
+	redirectNum int  //重定向次数
+	disDecode   bool //关闭自动编码
+	disUnZip    bool //变比自动解压
+	tryNum      int  //重试次数
 
 	requestCallBack  func(context.Context, *http.Request) error
 	responseCallBack func(context.Context, *http.Request, *http.Response) error
@@ -161,7 +159,6 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 		redirectNum:    option.RedirectNum,
 		disAlive:       option.DisAlive,
 		disDecode:      option.DisDecode,
-		disRead:        option.DisRead,
 		disUnZip:       option.DisUnZip,
 		tryNum:         option.TryNum,
 		optionCallBack: option.OptionCallBack,

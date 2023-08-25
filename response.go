@@ -24,6 +24,8 @@ import (
 type Response struct {
 	response  *http.Response
 	webSocket *websocket.Conn
+	sseClient *SseClient
+
 	ctx       context.Context
 	cnl       context.CancelFunc
 	content   []byte
@@ -71,18 +73,6 @@ func (obj *SseClient) Recv() (Event, error) {
 			return event, errors.New("内容解析错误：" + readStr)
 		}
 	}
-}
-
-func (obj *Client) newResponse(ctx context.Context, cnl context.CancelFunc, r *http.Response, option RequestOption) (*Response, error) {
-	response := &Response{response: r, ctx: ctx, cnl: cnl, bar: option.Bar}
-	if option.DisRead { //是否预读
-		return response, nil
-	}
-	if option.DisUnZip || r.Uncompressed { //是否解压
-		response.disUnzip = true
-	}
-	response.disDecode = option.DisDecode //是否解码
-	return response, response.read()      //读取内容
 }
 
 type Cookies []*http.Cookie
@@ -148,12 +138,7 @@ func (obj *Response) WebSocket() *websocket.Conn {
 	return obj.webSocket
 }
 func (obj *Response) SseClient() *SseClient {
-	select {
-	case <-obj.ctx.Done():
-		return newSseClient(bytes.NewBuffer(obj.Content()))
-	default:
-		return newSseClient(obj)
-	}
+	return obj.sseClient
 }
 
 // 返回当前的Location
@@ -237,18 +222,9 @@ func (obj *Response) Text() string {
 func (obj *Response) SetContent(val []byte) {
 	obj.content = val
 }
+
+// body 数据的源头
 func (obj *Response) Content() []byte {
-	if obj.webSocket != nil {
-		return obj.content
-	}
-	select {
-	case <-obj.ctx.Done():
-	default:
-		defer obj.Close()
-		bytesWrite := bytes.NewBuffer(nil)
-		tools.CopyWitchContext(obj.ctx, bytesWrite, obj.response.Body)
-		obj.content = bytesWrite.Bytes()
-	}
 	return obj.content
 }
 
@@ -333,8 +309,7 @@ func (obj *Response) Read(con []byte) (i int, err error) { //读取body
 	}
 }
 
-func (obj *Response) read() error { //读取body,对body 解压，解码操作
-	defer obj.Close()
+func (obj *Response) ReadBody() error { //读取body,对body 解压，解码操作
 	var bBody *bytes.Buffer
 	var err error
 	if obj.bar && obj.ContentLength() > 0 { //是否打印进度条,读取内容
@@ -371,9 +346,11 @@ func (obj *Response) Delete() error {
 	return obj.Close()
 }
 
-// 关闭response ,当disRead 为true 请一定要手动关闭
+// 关闭response ,当DisRead 为true,websocket,sse 协议 请一定要手动关闭
 func (obj *Response) Close() error {
-	defer obj.cnl()
+	if obj.cnl != nil {
+		defer obj.cnl()
+	}
 	if obj.webSocket != nil {
 		obj.webSocket.Close("close")
 	}

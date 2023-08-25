@@ -533,10 +533,9 @@ func (obj *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	if task.err == nil && task.res == nil {
 		task.err = obj.ctx.Err()
 	}
-	if task.err == nil && task.res != nil && task.res.StatusCode != 101 && !ctxData.disAlive {
+	if task.err == nil && task.res != nil && task.res.StatusCode != 101 && task.res.Header.Get("Content-Type") != "text/event-stream" && !ctxData.disAlive {
 		obj.putConnPool(key, conn)
 	}
-
 	if ctxData.responseCallBack != nil {
 		if err = ctxData.responseCallBack(task.req.Context(), req, task.res); err != nil {
 			task.err = err

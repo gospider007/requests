@@ -53,14 +53,19 @@ func (obj *RequestDebug) HeadBuffer() *bytes.Buffer {
 	con.WriteString("\r\n")
 	return con
 }
-func cloneRequest(r *http.Request, disBody bool) (*RequestDebug, error) {
+
+func CloneRequest(r *http.Request, bodys ...bool) (*RequestDebug, error) {
 	request := new(RequestDebug)
 	request.Proto = r.Proto
 	request.Method = r.Method
 	request.Url = r.URL
 	request.Header = r.Header
 	var err error
-	if !disBody {
+	var body bool
+	if len(bodys) > 0 {
+		body = bodys[0]
+	}
+	if body {
 		request.con = bytes.NewBuffer(nil)
 		if err = r.Write(request.con); err != nil {
 			return request, err
@@ -90,7 +95,7 @@ func (obj *ResponseDebug) HeadBuffer() *bytes.Buffer {
 	con.WriteString("\r\n")
 	return con
 }
-func cloneResponse(r *http.Response, disBody bool) (*ResponseDebug, error) {
+func CloneResponse(r *http.Response, bodys ...bool) (*ResponseDebug, error) {
 	response := new(ResponseDebug)
 	response.con = bytes.NewBuffer(nil)
 	response.Url = r.Request.URL
@@ -101,7 +106,11 @@ func cloneResponse(r *http.Response, disBody bool) (*ResponseDebug, error) {
 	response.request = r.Request
 
 	var err error
-	if !disBody {
+	var body bool
+	if len(bodys) > 0 {
+		body = bodys[0]
+	}
+	if body {
 		response.con = bytes.NewBuffer(nil)
 		if err = r.Write(response.con); err != nil {
 			return response, err
@@ -230,12 +239,11 @@ func (obj *Client) Request(preCtx context.Context, method string, href string, o
 		rawOption = options[0]
 	}
 	optionBak := obj.newRequestOption(rawOption)
-	if rawOption.Body != nil && optionBak.TryNum > 0 {
+	if rawOption.Body != nil {
 		optionBak.TryNum = 0
 	}
 	//开始请求
-	var tryNum int64
-	for tryNum = 0; tryNum <= optionBak.TryNum; tryNum++ {
+	for tryNum := 0; tryNum <= optionBak.TryNum; tryNum++ {
 		select {
 		case <-obj.ctx.Done():
 			obj.Close()
@@ -259,43 +267,52 @@ func (obj *Client) Request(preCtx context.Context, method string, href string, o
 				}
 			}
 			resp, err = obj.request(preCtx, option)
-			if err != nil { //有错误
-				if errors.Is(err, ErrFatal) { //致命错误直接返回
-					return
-				} else if option.ErrCallBack != nil { //不是致命错误，有错误回调,有错误,直接返回
-					if err = option.ErrCallBack(preCtx, obj, err); err != nil {
-						return
-					}
-				}
-			} else if option.ResultCallBack == nil { //没有错误，且没有回调，直接返回
-				return
-			} else if err = option.ResultCallBack(preCtx, obj, resp); err != nil { //没有错误，有回调，回调错误
-				if option.ErrCallBack != nil { //有错误回调,有错误直接返回
-					if err = option.ErrCallBack(preCtx, obj, err); err != nil {
-						return
-					}
-				}
-			} else { //没有错误，有回调，没有回调错误，直接返回
+			if err == nil || errors.Is(err, ErrFatal) { //致命错误,或没有错误,直接返回
 				return
 			}
 		}
 	}
-	if err != nil { //有错误直接返回错误
-		return
+	if err == nil {
+		err = errors.New("max try num")
 	}
-	return resp, errors.New("max try num")
+	return resp, err
 }
 func (obj *Client) request(preCtx context.Context, option RequestOption) (response *Response, err error) {
+	response = new(Response)
+	defer func() {
+		if err == nil { //判断是否读取body,和对body的处理
+			if response.webSocket == nil && response.sseClient == nil && !option.DisRead {
+				err = response.ReadBody()
+				defer response.Close()
+			}
+		}
+		if err == nil { //result 回调处理
+			if option.ResultCallBack != nil {
+				err = option.ResultCallBack(preCtx, obj, response)
+			}
+		}
+		if err != nil { //err 回调处理
+			response.Close()
+			if option.ErrCallBack != nil {
+				if err2 := option.ErrCallBack(preCtx, obj, err); err2 != nil {
+					err = tools.WrapError(ErrFatal, err2)
+				}
+			}
+		}
+	}()
 	if err = option.optionInit(); err != nil {
 		err = tools.WrapError(err, "option 初始化错误")
 		return
 	}
+	response.bar = option.Bar
+	response.disUnzip = option.DisUnZip
+	response.disDecode = option.DisDecode
+
 	method := strings.ToUpper(option.Method)
 	href := option.converUrl
 	var reqs *http.Request
 	//构造ctxData
 	ctxData := new(reqCtxData)
-
 	ctxData.disAlive = option.DisAlive
 	ctxData.requestCallBack = option.RequestCallBack
 	ctxData.responseCallBack = option.ResponseCallBack
@@ -321,44 +338,31 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 		ctxData.redirectNum = option.RedirectNum
 	}
 	//构造ctx,cnl
-	var cancel context.CancelFunc
-	var reqCtx context.Context
 	if option.Timeout > 0 { //超时
-		reqCtx, cancel = context.WithTimeout(context.WithValue(preCtx, keyPrincipalID, ctxData), option.Timeout)
+		response.ctx, response.cnl = context.WithTimeout(context.WithValue(preCtx, keyPrincipalID, ctxData), option.Timeout)
 	} else {
-		reqCtx, cancel = context.WithCancel(context.WithValue(preCtx, keyPrincipalID, ctxData))
+		response.ctx, response.cnl = context.WithCancel(context.WithValue(preCtx, keyPrincipalID, ctxData))
 	}
-	defer func() {
-		if err != nil {
-			cancel()
-			if response != nil {
-				response.Close()
-			}
-		}
-	}()
 	//创建request
 	if option.Body != nil {
-		reqs, err = http.NewRequestWithContext(reqCtx, method, href, option.Body)
+		reqs, err = http.NewRequestWithContext(response.ctx, method, href, option.Body)
 	} else {
-		reqs, err = http.NewRequestWithContext(reqCtx, method, href, nil)
+		reqs, err = http.NewRequestWithContext(response.ctx, method, href, nil)
 	}
 	if err != nil {
 		return response, tools.WrapError(ErrFatal, errors.New("tempRequest 构造request失败"), err)
 	}
-	// ctxData.url = reqs.URL
-	// ctxData.host = reqs.Host
-	if reqs.URL.Scheme == "file" {
-		filePath := re.Sub(`^/+`, "", reqs.URL.Path)
-		fileContent, err := os.ReadFile(filePath)
+
+	//判断file
+	if reqs.URL.Scheme == "file" { //文件直接返回
+		response.filePath = re.Sub(`^/+`, "", reqs.URL.Path)
+		response.content, err = os.ReadFile(response.filePath)
 		if err != nil {
-			return response, tools.WrapError(ErrFatal, errors.New("read filePath data error"), err)
+			err = tools.WrapError(ErrFatal, errors.New("read filePath data error"), err)
 		}
-		cancel()
-		return &Response{
-			content:  fileContent,
-			filePath: filePath,
-		}, nil
+		return
 	}
+
 	//判断ws
 	switch reqs.URL.Scheme {
 	case "ws":
@@ -368,12 +372,13 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 		ctxData.ws = true
 		reqs.URL.Scheme = "https"
 	}
+
 	//添加headers
 	var headOk bool
 	if reqs.Header, headOk = option.Headers.(http.Header); !headOk {
 		return response, tools.WrapError(ErrFatal, "request headers 转换错误")
 	}
-
+	//设置 ContentType 值
 	if reqs.Header.Get("Content-Type") == "" && reqs.Header.Get("content-type") == "" && option.ContentType != "" {
 		reqs.Header.Set("Content-Type", option.ContentType)
 	}
@@ -394,31 +399,27 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 		}
 	}
 	//开始发送请求
-	var r *http.Response
-	var err2 error
-	if ctxData.ws {
+	if ctxData.ws { //设置websocket headers
 		websocket.SetClientHeaders(reqs.Header, option.WsOption)
 	}
-	r, err = obj.getClient(option).Do(reqs)
-	if r != nil {
-		isSse := r.Header.Get("Content-Type") == "text/event-stream"
-		if ctxData.ws {
-			if r.StatusCode == 101 {
-				option.DisRead = true
-			} else if err == nil {
-				err = errors.New("statusCode not 101, url为websocket链接，但是对方服务器没有将请求升级到websocket")
-			}
-		} else if isSse {
-			option.DisRead = true
-		}
-		if response, err2 = obj.newResponse(reqCtx, cancel, r, option); err2 != nil { //创建 response
-			return response, err2
-		}
-		if ctxData.ws && r.StatusCode == 101 {
-			if response.webSocket, err2 = websocket.NewClientConn(r); err2 != nil { //创建 websocket
-				return response, err2
-			}
-		}
+	if response.response, err = obj.getClient(option).Do(reqs); err != nil {
+		return
 	}
-	return response, err
+	if response.response == nil {
+		err = errors.New("response is nil")
+		return
+	}
+	if !response.disUnzip {
+		response.disUnzip = response.response.Uncompressed
+	}
+	if ctxData.ws { //判断ws 的状态码是否正确
+		if response.response.StatusCode == 101 {
+			response.webSocket, err = websocket.NewClientConn(response.response)
+		} else {
+			err = errors.New("statusCode not 101, url为websocket链接，但是对方服务器没有将请求升级到websocket")
+		}
+	} else if response.response.Header.Get("Content-Type") == "text/event-stream" { //如果为sse协议就关闭读取
+		response.sseClient = newSseClient(response)
+	}
+	return
 }

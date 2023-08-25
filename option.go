@@ -39,12 +39,14 @@ type RequestOption struct {
 	ContentType string //headers 中Content-Type 的值
 	Raw         any    //不设置context-type,支持string,[]bytes,json,map
 
-	DisAlive  bool  //关闭连接复用
-	DisCookie bool  //关闭cookies管理,这个请求不用cookies池
-	DisDecode bool  //关闭自动解码
-	Bar       bool  //是否开启bar
-	DisProxy  bool  //是否关闭代理,强制关闭代理
-	TryNum    int64 //重试次数
+	DisAlive  bool //关闭连接复用
+	DisCookie bool //关闭cookies管理,这个请求不用cookies池
+	DisDecode bool //关闭自动解码
+	DisRead   bool //关闭自动读取
+
+	Bar      bool //是否开启bar
+	DisProxy bool //是否关闭代理,强制关闭代理
+	TryNum   int  //重试次数
 
 	OptionCallBack func(context.Context, *Client, *RequestOption) error //请求参数回调,用于对请求参数进行修改。返回error,中断重试请求,返回nil继续
 	ResultCallBack func(context.Context, *Client, *Response) error      //结果回调,用于对结果进行校验。返回nil，直接返回,返回err的话，如果有errCallBack 走errCallBack，没有继续try
@@ -56,7 +58,6 @@ type RequestOption struct {
 	Jar *Jar //自定义临时cookies 管理
 
 	RedirectNum int              //重定向次数,小于零 关闭重定向
-	DisRead     bool             //关闭默认读取请求体,不会主动读取body里面的内容，需用你自己读取
 	DisUnZip    bool             //关闭自动解压
 	WsOption    websocket.Option //websocket option,使用websocket 请求的option
 	converUrl   string
@@ -185,7 +186,9 @@ func (obj *RequestOption) optionInit() error {
 	return obj.initCookies()
 }
 func (obj *Client) newRequestOption(option RequestOption) RequestOption {
-	if option.TryNum == 0 {
+	if option.TryNum < 0 {
+		option.TryNum = 0
+	} else if option.TryNum == 0 {
 		option.TryNum = obj.tryNum
 	}
 	if option.OptionCallBack == nil {
@@ -221,9 +224,6 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	}
 	if !option.DisDecode {
 		option.DisDecode = obj.disDecode
-	}
-	if !option.DisRead {
-		option.DisRead = obj.disRead
 	}
 	if !option.DisUnZip {
 		option.DisUnZip = obj.disUnZip
