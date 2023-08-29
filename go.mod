@@ -5,12 +5,12 @@ go 1.21.0
 require (
 	gitee.com/baixudong/bar v0.0.0-20230814072341-e111c30a1386
 	gitee.com/baixudong/bs4 v0.0.0-20230814072447-945ab1fd97ed
-	gitee.com/baixudong/ja3 v0.0.0-20230819150415-70ad3a34ab61
+	gitee.com/baixudong/ja3 v0.0.0-20230829015831-02d9ec0c9f91
 	gitee.com/baixudong/net v0.0.0-20230821075807-0a284fde7633
 	gitee.com/baixudong/re v0.0.0-20230809033040-360c1d945e59
 	gitee.com/baixudong/tools v0.0.0-20230821075140-7422c51fd918
 	gitee.com/baixudong/websocket v0.0.0-20230821075043-d36a43fd76a3
-	github.com/refraction-networking/utls v1.5.0
+	github.com/refraction-networking/utls v1.5.2
 	github.com/tidwall/gjson v1.16.0
 )
 

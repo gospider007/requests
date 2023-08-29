@@ -434,6 +434,7 @@ func NewRoundTripper(preCtx context.Context, option RoundTripperOption) *RoundTr
 		InsecureSkipVerify:     true,
 		InsecureSkipTimeVerify: true,
 		SessionTicketKey:       [32]byte{},
+		OmitEmptyPsk:           true,
 	}
 	return &RoundTripper{
 		clientSessionCache:  ja3.NewClientSessionCache(),
