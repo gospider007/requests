@@ -148,54 +148,94 @@ type reqCtxData struct {
 	ja3Spec   ja3.Ja3Spec
 }
 
-func Get(preCtx context.Context, href string, options ...RequestOption) (*Response, error) {
+func Get(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	client, _ := NewClient(preCtx)
-	defer client.Close()
+	defer func() {
+		if err != nil || (resp.webSocket == nil && resp.sseClient == nil) {
+			client.Close()
+		}
+	}()
 	return client.Request(preCtx, http.MethodGet, href, options...)
 }
-func Head(preCtx context.Context, href string, options ...RequestOption) (*Response, error) {
+func Head(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	client, _ := NewClient(preCtx)
-	defer client.Close()
+	defer func() {
+		if err != nil || (resp.webSocket == nil && resp.sseClient == nil) {
+			client.Close()
+		}
+	}()
 	return client.Request(preCtx, http.MethodHead, href, options...)
 }
-func Post(preCtx context.Context, href string, options ...RequestOption) (*Response, error) {
+func Post(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	client, _ := NewClient(preCtx)
-	defer client.Close()
+	defer func() {
+		if err != nil || (resp.webSocket == nil && resp.sseClient == nil) {
+			client.Close()
+		}
+	}()
 	return client.Request(preCtx, http.MethodPost, href, options...)
 }
-func Put(preCtx context.Context, href string, options ...RequestOption) (*Response, error) {
+func Put(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	client, _ := NewClient(preCtx)
-	defer client.Close()
+	defer func() {
+		if err != nil || (resp.webSocket == nil && resp.sseClient == nil) {
+			client.Close()
+		}
+	}()
 	return client.Request(preCtx, http.MethodPut, href, options...)
 }
-func Patch(preCtx context.Context, href string, options ...RequestOption) (*Response, error) {
+func Patch(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	client, _ := NewClient(preCtx)
-	defer client.Close()
+	defer func() {
+		if err != nil || (resp.webSocket == nil && resp.sseClient == nil) {
+			client.Close()
+		}
+	}()
 	return client.Request(preCtx, http.MethodPatch, href, options...)
 }
-func Delete(preCtx context.Context, href string, options ...RequestOption) (*Response, error) {
+func Delete(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	client, _ := NewClient(preCtx)
-	defer client.Close()
+	defer func() {
+		if err != nil || (resp.webSocket == nil && resp.sseClient == nil) {
+			client.Close()
+		}
+	}()
 	return client.Request(preCtx, http.MethodDelete, href, options...)
 }
-func Connect(preCtx context.Context, href string, options ...RequestOption) (*Response, error) {
+func Connect(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	client, _ := NewClient(preCtx)
-	defer client.Close()
+	defer func() {
+		if err != nil || (resp.webSocket == nil && resp.sseClient == nil) {
+			client.Close()
+		}
+	}()
 	return client.Request(preCtx, http.MethodConnect, href, options...)
 }
-func Options(preCtx context.Context, href string, options ...RequestOption) (*Response, error) {
+func Options(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	client, _ := NewClient(preCtx)
-	defer client.Close()
+	defer func() {
+		if err != nil || (resp.webSocket == nil && resp.sseClient == nil) {
+			client.Close()
+		}
+	}()
 	return client.Request(preCtx, http.MethodOptions, href, options...)
 }
-func Trace(preCtx context.Context, href string, options ...RequestOption) (*Response, error) {
+func Trace(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	client, _ := NewClient(preCtx)
-	defer client.Close()
+	defer func() {
+		if err != nil || (resp.webSocket == nil && resp.sseClient == nil) {
+			client.Close()
+		}
+	}()
 	return client.Request(preCtx, http.MethodTrace, href, options...)
 }
-func Request(preCtx context.Context, method string, href string, options ...RequestOption) (*Response, error) {
+func Request(preCtx context.Context, method string, href string, options ...RequestOption) (resp *Response, err error) {
 	client, _ := NewClient(preCtx)
-	defer client.Close()
+	defer func() {
+		if err != nil || (resp.webSocket == nil && resp.sseClient == nil) {
+			client.Close()
+		}
+	}()
 	return client.Request(preCtx, method, href, options...)
 }
 func (obj *Client) Get(preCtx context.Context, href string, options ...RequestOption) (*Response, error) {
