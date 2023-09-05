@@ -98,7 +98,7 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 		option.DialTimeout = time.Second * 15
 	}
 	if option.TlsHandshakeTimeout == 0 {
-		option.TlsHandshakeTimeout = time.Second * 15
+		option.TlsHandshakeTimeout = time.Second * 5
 	}
 	//创建cookiesjar
 	var jar *cookiejar.Jar

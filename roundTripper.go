@@ -79,7 +79,7 @@ func getHost(req *http.Request) string {
 func getKey(ctxData *reqCtxData, req *http.Request) string {
 	return fmt.Sprintf("%s@%s", getAddr(ctxData.proxy), getAddr(req.URL))
 }
-func (obj *RoundTripper) newConnPool(key string, conn *Connecotr) *connPool {
+func (obj *RoundTripper) newConnPool(key string, conn *Connecotr) *connPool { //新建连接池
 	pool := new(connPool)
 	pool.ctx, pool.cnl = context.WithCancel(obj.ctx)
 	pool.total.Add(1)
@@ -88,12 +88,6 @@ func (obj *RoundTripper) newConnPool(key string, conn *Connecotr) *connPool {
 	pool.key = key
 	go pool.rwMain(conn)
 	return pool
-}
-func (obj *RoundTripper) delConnPool(key string, pool *connPool) {
-	obj.connsLock.Lock()
-	defer obj.connsLock.Unlock()
-	pool.Close()
-	delete(obj.connPools, key)
 }
 func (obj *RoundTripper) getConnPool(key string) *connPool {
 	obj.connsLock.Lock()
@@ -109,6 +103,7 @@ func (obj *RoundTripper) putConnPool(key string, conn *Connecotr) {
 	}
 	pool, ok := obj.connPools[key]
 	if ok {
+		pool.total.Add(1)
 		go pool.rwMain(conn)
 	} else {
 		obj.connPools[key] = obj.newConnPool(key, conn)
@@ -188,6 +183,7 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, addr string, key string, req 
 }
 
 type Connecotr struct {
+	err       error
 	ctx       context.Context
 	ctx2      context.Context
 	cnl       context.CancelFunc
@@ -202,7 +198,7 @@ type Connecotr struct {
 }
 
 func (obj *Connecotr) Close() error {
-	obj.cnl()
+	defer obj.cnl()
 	if obj.h2RawConn != nil {
 		obj.h2RawConn.Close()
 	}
@@ -212,39 +208,50 @@ func (obj *Connecotr) read() {
 	defer obj.Close()
 	obj.isRead = true
 	con := make([]byte, 1024)
+	var i int
 	for {
-		i, err := obj.rawConn.Read(con)
-		if err != nil {
+		if i, obj.err = obj.rawConn.Read(con); obj.err != nil && i == 0 {
 			return
 		}
 		b := con[:i]
 		for once := true; once || len(b) > 0; once = false {
 			select {
 			case obj.rc <- b:
-				nw := <-obj.rn
-				b = b[nw:]
+				select {
+				case nw := <-obj.rn:
+					b = b[nw:]
+				case <-obj.ctx.Done():
+					return
+				}
 			case <-obj.ctx.Done():
 				return
 			}
 		}
 	}
 }
-func (obj *Connecotr) Read(b []byte) (int, error) {
+func (obj *Connecotr) Read(b []byte) (i int, err error) {
 	if !obj.isRead {
 		return obj.rawConn.Read(b)
 	}
 	select {
 	case con := <-obj.rc:
-		i := copy(b, con)
+		i, err = copy(b, con), obj.err
 		select {
 		case obj.rn <- i:
-			return i, nil
+			if i < len(con) {
+				err = nil
+			}
 		case <-obj.ctx.Done():
-			return i, obj.ctx.Err()
+			if err = obj.err; err == nil {
+				err = tools.WrapError(obj.ctx.Err(), "connecotr close")
+			}
 		}
 	case <-obj.ctx.Done():
-		return 0, obj.ctx.Err()
+		if err = obj.err; err == nil {
+			err = tools.WrapError(obj.ctx.Err(), "connecotr close")
+		}
 	}
+	return
 }
 func (obj *Connecotr) Write(b []byte) (int, error) {
 	return obj.rawConn.Write(b)
@@ -271,7 +278,6 @@ func (obj *Connecotr) h2Closed() bool {
 }
 
 type ReadWriteCloser struct {
-	ctx  context.Context
 	cnl  context.CancelFunc
 	cnl2 context.CancelFunc
 	body io.ReadCloser
@@ -301,7 +307,7 @@ func (obj *ReadWriteCloser) Delete() (err error) {
 func wrapBody(conn *Connecotr, task *reqTask) {
 	body := new(ReadWriteCloser)
 	conn.ctx2, body.cnl = context.WithCancel(conn.ctx)
-	body.cnl2 = conn.cnl
+	body.cnl2 = conn.cnl //使body 具备关闭连接的能力
 	body.body = task.res.Body
 	body.conn = conn
 	task.res.Body = body
@@ -311,6 +317,8 @@ func http1Req(conn *Connecotr, task *reqTask) {
 	defer func() {
 		if task.res == nil || task.err != nil {
 			conn.Close()
+		} else if task.res != nil {
+			wrapBody(conn, task)
 		}
 	}()
 	err := task.req.Write(conn)
@@ -318,9 +326,6 @@ func http1Req(conn *Connecotr, task *reqTask) {
 		task.err = err
 	} else {
 		task.res, task.err = http.ReadResponse(conn.r, task.req)
-		if task.res != nil {
-			wrapBody(conn, task)
-		}
 	}
 }
 
@@ -329,24 +334,24 @@ func http2Req(conn *Connecotr, task *reqTask) {
 	defer func() {
 		if task.res == nil || task.err != nil {
 			conn.Close()
+		} else if task.res != nil {
+			wrapBody(conn, task)
 		}
 	}()
 	task.res, task.err = conn.h2RawConn.RoundTrip(task.req)
-	if task.res != nil {
-		wrapBody(conn, task)
-	}
 }
-
 func (obj *connPool) rwMain(conn *Connecotr) {
 	conn.ctx, conn.cnl = context.WithCancel(obj.ctx)
 	defer func() {
-		if obj.total.Load() == 0 {
-			obj.rt.delConnPool(obj.key, obj)
+		obj.rt.connsLock.Lock()
+		defer obj.rt.connsLock.Unlock()
+		conn.Close()
+		obj.total.Add(-1)
+		if obj.total.Load() <= 0 {
+			obj.Close()
+			delete(obj.rt.connPools, obj.key)
 		}
 	}()
-	defer obj.total.Add(-1)
-	defer conn.Close()
-	defer conn.cnl()
 	for {
 		select {
 		case <-conn.ctx.Done(): //连接池通知关闭，等待连接被释放掉
@@ -485,8 +490,11 @@ func (obj *RoundTripper) poolRoundTrip(task *reqTask, key string) (bool, error) 
 }
 
 func (obj *RoundTripper) CloseIdleConnections() {
+	obj.connsLock.Lock()
+	defer obj.connsLock.Unlock()
 	for key, pool := range obj.connPools {
-		obj.delConnPool(key, pool)
+		pool.Close()
+		delete(obj.connPools, key)
 	}
 }
 func (obj *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {

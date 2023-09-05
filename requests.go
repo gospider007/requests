@@ -320,16 +320,12 @@ func (obj *Client) Request(preCtx context.Context, method string, href string, o
 func (obj *Client) request(preCtx context.Context, option RequestOption) (response *Response, err error) {
 	response = new(Response)
 	defer func() {
-		if err == nil { //判断是否读取body,和对body的处理
-			if response.webSocket == nil && response.sseClient == nil && !option.DisRead {
-				err = response.ReadBody()
-				defer response.Close()
-			}
+		if err == nil && response.webSocket == nil && response.sseClient == nil && !option.DisRead { //判断是否读取body,和对body的处理
+			err = response.ReadBody()
+			defer response.Close()
 		}
-		if err == nil { //result 回调处理
-			if option.ResultCallBack != nil {
-				err = option.ResultCallBack(preCtx, obj, response)
-			}
+		if err == nil && option.ResultCallBack != nil { //result 回调处理
+			err = option.ResultCallBack(preCtx, obj, response)
 		}
 		if err != nil { //err 回调处理
 			response.Close()
@@ -418,6 +414,11 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 	if reqs.Header, headOk = option.Headers.(http.Header); !headOk {
 		return response, tools.WrapError(ErrFatal, "request headers 转换错误")
 	}
+	//添加Referer
+	if option.Referer != "" && reqs.Header.Get("Referer") == "" {
+		reqs.Header.Set("Referer", option.Referer)
+	}
+
 	//设置 ContentType 值
 	if reqs.Header.Get("Content-Type") == "" && reqs.Header.Get("content-type") == "" && option.ContentType != "" {
 		reqs.Header.Set("Content-Type", option.ContentType)

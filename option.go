@@ -22,6 +22,7 @@ type RequestOption struct {
 	Ja3Spec   ja3.Ja3Spec   //指定ja3Spec,使用ja3.CreateSpecWithStr 或者ja3.CreateSpecWithId 生成
 	H2Ja3Spec ja3.H2Ja3Spec //h2指纹
 
+	Referer     string
 	Method      string        //method
 	Url         *url.URL      //请求的url
 	Host        string        //网站的host
