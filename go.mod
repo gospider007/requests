@@ -8,7 +8,7 @@ require (
 	gitee.com/baixudong/ja3 v0.0.0-20230905022841-a30a5742bdb7
 	gitee.com/baixudong/net v0.0.0-20230905022950-d3a73f7bf4cc
 	gitee.com/baixudong/re v0.0.0-20230809033040-360c1d945e59
-	gitee.com/baixudong/tools v0.0.0-20230821075140-7422c51fd918
+	gitee.com/baixudong/tools v0.0.0-20230905085451-d080a77e3eb5
 	gitee.com/baixudong/websocket v0.0.0-20230821075043-d36a43fd76a3
 	github.com/refraction-networking/utls v1.5.3
 	github.com/tidwall/gjson v1.16.0

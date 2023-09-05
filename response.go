@@ -279,7 +279,7 @@ func (obj *Response) barRead() (*bytes.Buffer, error) {
 		bar:  bar.NewClient(obj.response.ContentLength),
 		body: bytes.NewBuffer(nil),
 	}
-	err := tools.CopyWitchContext(obj.response.Request.Context(), barData, obj.response.Body)
+	err := tools.CopyWitchContext(obj.response.Request.Context(), barData, obj.response.Body, false)
 	if err != nil {
 		return nil, err
 	}
@@ -316,9 +316,10 @@ func (obj *Response) ReadBody() error { //读取body,对body 解压，解码操�
 		bBody, err = obj.barRead()
 	} else {
 		bBody = bytes.NewBuffer(nil)
-		err = tools.CopyWitchContext(obj.response.Request.Context(), bBody, obj.response.Body)
+		err = tools.CopyWitchContext(obj.response.Request.Context(), bBody, obj.response.Body, false)
 	}
 	if err != nil {
+		obj.Delete()
 		return errors.New("response 读取内容 错误: " + err.Error())
 	}
 	if !obj.disUnzip {
@@ -339,11 +340,10 @@ func (obj *Response) ReadBody() error { //读取body,对body 解压，解码操�
 }
 
 func (obj *Response) Delete() error {
-	delFunc, ok := obj.response.Body.(interface{ Delete() error })
-	if ok {
-		defer delFunc.Delete()
+	if delFunc, ok := obj.response.Body.(interface{ Delete() error }); ok {
+		return delFunc.Delete()
 	}
-	return obj.Close()
+	return nil
 }
 
 // 关闭response ,当DisRead 为true,websocket,sse 协议 请一定要手动关闭
@@ -355,8 +355,11 @@ func (obj *Response) Close() error {
 		obj.webSocket.Close("close")
 	}
 	if obj.response != nil && obj.response.Body != nil {
-		tools.CopyWitchContext(obj.ctx, io.Discard, obj.response.Body)
-		return obj.response.Body.Close()
+		if err := tools.CopyWitchContext(obj.ctx, io.Discard, obj.response.Body, false); err != nil {
+			obj.Delete()
+		} else {
+			return obj.response.Body.Close()
+		}
 	}
 	return nil
 }
