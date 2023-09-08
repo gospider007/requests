@@ -2,6 +2,7 @@ package requests
 
 import (
 	"context"
+	"errors"
 	"net"
 	"net/url"
 	"time"
@@ -201,8 +202,11 @@ func (obj *Client) Close() {
 }
 
 // 返回url 的cookies,也可以设置url 的cookies
-func (obj *Client) Cookies(href string, cookies ...any) (Cookies, error) {
-	return cookie(obj.client.Jar, href, cookies...)
+func (obj *Client) GetCookies(href string) (Cookies, error) {
+	return getCookies(obj.client.Jar, href)
+}
+func (obj *Client) SetCookies(href string, cookies ...any) error {
+	return setCookies(obj.client.Jar, href, cookies...)
 }
 
 type Jar struct {
@@ -219,29 +223,42 @@ func NewJar() *Jar {
 		jar: newJar(),
 	}
 }
-func (obj *Jar) Cookies(href string, cookies ...any) (Cookies, error) {
-	return cookie(obj.jar, href, cookies...)
+func (obj *Jar) GetCookies(href string, cookies ...any) (Cookies, error) {
+	return getCookies(obj.jar, href)
+}
+func (obj *Jar) SetCookies(href string, cookies ...any) error {
+	return setCookies(obj.jar, href, cookies...)
 }
 func (obj *Jar) ClearCookies() {
 	*obj.jar = *newJar()
 }
 
-func cookie(jar http.CookieJar, href string, cookies ...any) (Cookies, error) {
+func getCookies(jar http.CookieJar, href string) (Cookies, error) {
 	if jar == nil {
-		return nil, nil
+		return nil, errors.New("jar is nil")
 	}
 	u, err := url.Parse(href)
 	if err != nil {
 		return nil, err
 	}
+	return jar.Cookies(u), nil
+}
+func setCookies(jar http.CookieJar, href string, cookies ...any) error {
+	if jar == nil {
+		return errors.New("jar is nil")
+	}
+	u, err := url.Parse(href)
+	if err != nil {
+		return err
+	}
 	for _, cookie := range cookies {
 		cooks, err := ReadCookies(cookie)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		jar.SetCookies(u, cooks)
 	}
-	return jar.Cookies(u), nil
+	return nil
 }
 
 // 清除cookies
