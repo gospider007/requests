@@ -197,12 +197,9 @@ func (obj *Response) Decode(encoding string) {
 }
 
 // 尝试将内容解析成map
-func (obj *Response) Map() map[string]any {
+func (obj *Response) Map() (map[string]any, error) {
 	var data map[string]any
-	if err := json.Unmarshal(obj.Content(), &data); err != nil {
-		return nil
-	}
-	return data
+	return data, json.Unmarshal(obj.Content(), &data)
 }
 
 // 尝试将请求解析成gjson, 如果传值将会解析到val中返回的gjson为空struct
