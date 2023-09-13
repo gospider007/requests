@@ -182,7 +182,9 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	result.h2Ja3Spec = option.H2Ja3Spec
 	return result, err
 }
-
+func (obj *Client) HttpClient() *http.Client {
+	return obj.client
+}
 func (obj *Client) SetProxy(proxyUrl string) (err error) {
 	obj.proxy, err = tools.VerifyProxy(proxyUrl)
 	return

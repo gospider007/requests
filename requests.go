@@ -131,7 +131,7 @@ type keyPrincipal string
 const keyPrincipalID keyPrincipal = "gospiderContextData"
 
 var (
-	ErrFatal = errors.New("致命错误")
+	errFatal = errors.New("致命错误")
 )
 
 type reqCtxData struct {
@@ -301,13 +301,8 @@ func (obj *Client) Request(preCtx context.Context, method string, href string, o
 					return
 				}
 			}
-			if option.OptionCallBack != nil {
-				if err = option.OptionCallBack(preCtx, obj, &option); err != nil {
-					return
-				}
-			}
 			resp, err = obj.request(preCtx, option)
-			if err == nil || errors.Is(err, ErrFatal) { //致命错误,或没有错误,直接返回
+			if err == nil || errors.Is(err, errFatal) { //致命错误,或没有错误,直接返回
 				return
 			}
 		}
@@ -318,6 +313,12 @@ func (obj *Client) Request(preCtx context.Context, method string, href string, o
 	return resp, err
 }
 func (obj *Client) request(preCtx context.Context, option RequestOption) (response *Response, err error) {
+	if option.OptionCallBack != nil {
+		if err = option.OptionCallBack(preCtx, obj, &option); err != nil {
+			err = tools.WrapError(errFatal, err)
+			return
+		}
+	}
 	response = new(Response)
 	defer func() {
 		if err == nil && response.webSocket == nil && response.sseClient == nil && !option.DisRead { //判断是否读取body,和对body的处理
@@ -325,13 +326,15 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 			defer response.Close()
 		}
 		if err == nil && option.ResultCallBack != nil { //result 回调处理
-			err = option.ResultCallBack(preCtx, obj, response)
+			if err = option.ResultCallBack(preCtx, obj, response); err != nil {
+				err = tools.WrapError(errFatal, err)
+			}
 		}
 		if err != nil { //err 回调处理
 			response.Close()
 			if option.ErrCallBack != nil {
 				if err2 := option.ErrCallBack(preCtx, obj, err); err2 != nil {
-					err = tools.WrapError(ErrFatal, err2)
+					err = tools.WrapError(errFatal, err2)
 				}
 			}
 		}
@@ -358,7 +361,7 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 		if option.Proxy != "" { //代理相关构造
 			tempProxy, err := tools.VerifyProxy(option.Proxy)
 			if err != nil {
-				return response, tools.WrapError(ErrFatal, errors.New("tempRequest 构造代理失败"), err)
+				return response, tools.WrapError(errFatal, errors.New("tempRequest 构造代理失败"), err)
 			}
 			ctxData.proxy = tempProxy
 		} else if obj.proxy != nil {
@@ -386,7 +389,7 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 		reqs, err = http.NewRequestWithContext(response.ctx, method, href, nil)
 	}
 	if err != nil {
-		return response, tools.WrapError(ErrFatal, errors.New("tempRequest 构造request失败"), err)
+		return response, tools.WrapError(errFatal, errors.New("tempRequest 构造request失败"), err)
 	}
 
 	//判断file
@@ -394,7 +397,7 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 		response.filePath = re.Sub(`^/+`, "", reqs.URL.Path)
 		response.content, err = os.ReadFile(response.filePath)
 		if err != nil {
-			err = tools.WrapError(ErrFatal, errors.New("read filePath data error"), err)
+			err = tools.WrapError(errFatal, errors.New("read filePath data error"), err)
 		}
 		return
 	}
@@ -412,7 +415,7 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 	//添加headers
 	var headOk bool
 	if reqs.Header, headOk = option.Headers.(http.Header); !headOk {
-		return response, tools.WrapError(ErrFatal, "request headers 转换错误")
+		return response, tools.WrapError(errFatal, "request headers 转换错误")
 	}
 	//添加Referer
 	if option.Referer != "" && reqs.Header.Get("Referer") == "" {
@@ -433,7 +436,7 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 	if option.Cookies != nil {
 		cooks, cookOk := option.Cookies.(Cookies)
 		if !cookOk {
-			return response, tools.WrapError(ErrFatal, "request cookies 转换错误")
+			return response, tools.WrapError(errFatal, "request cookies 转换错误")
 		}
 		for _, vv := range cooks {
 			reqs.AddCookie(vv)
