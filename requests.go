@@ -313,12 +313,6 @@ func (obj *Client) Request(preCtx context.Context, method string, href string, o
 	return resp, err
 }
 func (obj *Client) request(preCtx context.Context, option RequestOption) (response *Response, err error) {
-	if option.OptionCallBack != nil {
-		if err = option.OptionCallBack(preCtx, obj, &option); err != nil {
-			err = tools.WrapError(errFatal, err)
-			return
-		}
-	}
 	response = new(Response)
 	defer func() {
 		if err == nil && response.webSocket == nil && response.sseClient == nil && !option.DisRead { //判断是否读取body,和对body的处理
@@ -326,9 +320,7 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 			defer response.Close()
 		}
 		if err == nil && option.ResultCallBack != nil { //result 回调处理
-			if err = option.ResultCallBack(preCtx, obj, response); err != nil {
-				err = tools.WrapError(errFatal, err)
-			}
+			err = option.ResultCallBack(preCtx, obj, response)
 		}
 		if err != nil { //err 回调处理
 			response.Close()
@@ -339,6 +331,11 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 			}
 		}
 	}()
+	if option.OptionCallBack != nil {
+		if err = option.OptionCallBack(preCtx, obj, &option); err != nil {
+			return
+		}
+	}
 	if err = option.optionInit(); err != nil {
 		err = tools.WrapError(err, "option 初始化错误")
 		return
