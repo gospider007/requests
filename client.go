@@ -2,13 +2,11 @@ package requests
 
 import (
 	"context"
-	"errors"
 	"net"
 	"net/url"
 	"time"
 
 	"net/http"
-	"net/http/cookiejar"
 
 	"gitee.com/baixudong/ja3"
 	"gitee.com/baixudong/tools"
@@ -51,6 +49,7 @@ type ClientOption struct {
 	ResponseCallBack func(context.Context, *http.Request, *http.Response) error
 }
 type Client struct {
+	jar         *Jar
 	redirectNum int  //重定向次数
 	disDecode   bool //关闭自动编码
 	disUnZip    bool //变比自动解压
@@ -102,9 +101,9 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 		option.TlsHandshakeTimeout = time.Second * 5
 	}
 	//创建cookiesjar
-	var jar *cookiejar.Jar
+	var jar *Jar
 	if !option.DisCookie {
-		jar = newJar()
+		jar = NewJar()
 	}
 	// var http3Transport *http3.RoundTripper
 	// if option.Http3 {
@@ -130,7 +129,7 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 		GetProxy:            option.GetProxy,
 	})
 	client := &http.Client{
-		Jar:       jar,
+		Jar:       jar.jar,
 		Transport: transport,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			ctxData := req.Context().Value(keyPrincipalID).(*reqCtxData)
@@ -148,6 +147,7 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 		}
 	}
 	result := &Client{
+		jar:              jar,
 		ctx:              ctx,
 		cnl:              cnl,
 		client:           client,
@@ -203,72 +203,6 @@ func (obj *Client) Close() {
 	obj.cnl()
 }
 
-// 返回url 的cookies,也可以设置url 的cookies
-func (obj *Client) GetCookies(href string) (Cookies, error) {
-	return getCookies(obj.client.Jar, href)
-}
-func (obj *Client) SetCookies(href string, cookies ...any) error {
-	return setCookies(obj.client.Jar, href, cookies...)
-}
-
-type Jar struct {
-	jar *cookiejar.Jar
-}
-
-func newJar() *cookiejar.Jar {
-	jar, _ := cookiejar.New(nil)
-	return jar
-}
-
-func NewJar() *Jar {
-	return &Jar{
-		jar: newJar(),
-	}
-}
-func (obj *Jar) GetCookies(href string, cookies ...any) (Cookies, error) {
-	return getCookies(obj.jar, href)
-}
-func (obj *Jar) SetCookies(href string, cookies ...any) error {
-	return setCookies(obj.jar, href, cookies...)
-}
-func (obj *Jar) ClearCookies() {
-	*obj.jar = *newJar()
-}
-
-func getCookies(jar http.CookieJar, href string) (Cookies, error) {
-	if jar == nil {
-		return nil, errors.New("jar is nil")
-	}
-	u, err := url.Parse(href)
-	if err != nil {
-		return nil, err
-	}
-	return jar.Cookies(u), nil
-}
-func setCookies(jar http.CookieJar, href string, cookies ...any) error {
-	if jar == nil {
-		return errors.New("jar is nil")
-	}
-	u, err := url.Parse(href)
-	if err != nil {
-		return err
-	}
-	for _, cookie := range cookies {
-		cooks, err := ReadCookies(cookie)
-		if err != nil {
-			return err
-		}
-		jar.SetCookies(u, cooks)
-	}
-	return nil
-}
-
-// 清除cookies
-func (obj *Client) ClearCookies() {
-	if obj.client.Jar != nil {
-		*obj.client.Jar.(*cookiejar.Jar) = *newJar()
-	}
-}
 func (obj *Client) getClient(option RequestOption) *http.Client {
 	if option.DisCookie && obj.noJarClient != nil {
 		return obj.noJarClient

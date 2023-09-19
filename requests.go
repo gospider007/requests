@@ -429,7 +429,7 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 	} else if reqs.Header.Get("Host") != "" {
 		reqs.Host = reqs.Header.Get("Host")
 	}
-	//添加cookies
+	//添加 cookies
 	if option.Cookies != nil {
 		cooks, cookOk := option.Cookies.(Cookies)
 		if !cookOk {
