@@ -18,6 +18,8 @@ gitee.com/baixudong/re v0.0.0-20230809033040-360c1d945e59 h1:HtdoUzBIqepeVTeeZ0Q
 gitee.com/baixudong/re v0.0.0-20230809033040-360c1d945e59/go.mod h1:i5L3z/q42lHZvd3JSk3390XdujEY2QHXFMEcaO/uZD0=
 gitee.com/baixudong/tools v0.0.0-20230905085451-d080a77e3eb5 h1:CEXI3HSiYtLwqxAhXBRAO4hZytrdfU/Tddt1dRWlJkI=
 gitee.com/baixudong/tools v0.0.0-20230905085451-d080a77e3eb5/go.mod h1:PWkrwws4GU5x9uXZ5SWvIO9m/2X9mBm7hlqdspWvyG0=
+gitee.com/baixudong/tools v0.0.0-20230919022534-a35f70b56721 h1:spUdEKG58L0+rpsGwoee19Lj5Rm1B0ZYBLIbl5qh520=
+gitee.com/baixudong/tools v0.0.0-20230919022534-a35f70b56721/go.mod h1:QuHZXi57lppf8QMtiMvpvGqTOuFiIAXObIbtE4ndETc=
 gitee.com/baixudong/websocket v0.0.0-20230821075043-d36a43fd76a3 h1:NifiYlEzspCTbJeI9UGSJftr0gDLw15LSwkCQDNql1g=
 gitee.com/baixudong/websocket v0.0.0-20230821075043-d36a43fd76a3/go.mod h1:oyckF4xv35MXCaMp9k/Rs5FOaRPuLUs2MBo6Flgz9Ro=
 github.com/PuerkitoBio/goquery v1.8.1 h1:uQxhNlArOIdbrH1tr0UXwdVFgDcZDrZVdcpygAcwmWM=
