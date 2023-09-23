@@ -129,7 +129,6 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 		GetProxy:            option.GetProxy,
 	})
 	client := &http.Client{
-		Jar:       jar.jar,
 		Transport: transport,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			ctxData := req.Context().Value(keyPrincipalID).(*reqCtxData)
@@ -138,6 +137,9 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 			}
 			return http.ErrUseLastResponse
 		},
+	}
+	if jar != nil {
+		client.Jar = jar.jar
 	}
 	var noJarClient *http.Client
 	if client.Jar != nil {
