@@ -441,7 +441,7 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 	}
 	//开始发送请求
 	if ctxData.ws { //设置websocket headers
-		websocket.SetClientHeaders(reqs.Header, option.WsOption)
+		websocket.SetClientHeadersOption(reqs.Header, option.WsOption)
 	}
 	if response.response, err = obj.getClient(option).Do(reqs); err != nil {
 		return

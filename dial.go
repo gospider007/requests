@@ -396,7 +396,7 @@ func (obj *DialClient) DialContextWithProxy(ctx context.Context, netword string,
 		}
 		tlsConn, err := obj.AddTls(ctx, conn, proxyUrl.Host, true, tlsConfig)
 		if err == nil {
-			return tlsConn, obj.clientVerifyHttps(ctx, scheme, proxyUrl, addr, host, tlsConn)
+			err = obj.clientVerifyHttps(ctx, scheme, proxyUrl, addr, host, tlsConn)
 		}
 		return tlsConn, err
 	case "socks5":
