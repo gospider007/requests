@@ -95,7 +95,7 @@ func (obj *DialClient) AddrToIp(ctx context.Context, addr string) (string, error
 	if err != nil {
 		return addr, tools.WrapError(err, "addrToIp 错误,SplitHostPort")
 	}
-	_, ipInt := tools.ParseHost(host)
+	_, ipInt := ParseHost(host)
 	if ipInt == 4 || ipInt == 6 {
 		return addr, nil
 	}
@@ -164,11 +164,11 @@ func (obj *DialClient) clientVerifySocks5(ctx context.Context, proxyUrl *url.URL
 	}
 	var host string
 	var port int
-	if host, port, err = tools.SplitHostPort(addr); err != nil {
+	if host, port, err = SplitHostPort(addr); err != nil {
 		return
 	}
 	writeCon := []byte{5, 1, 0}
-	ip, ipInt := tools.ParseHost(host)
+	ip, ipInt := ParseHost(host)
 	switch ipInt {
 	case 4:
 		writeCon = append(writeCon, 1)
@@ -245,7 +245,7 @@ func (obj *DialClient) lookupIPAddr(ctx context.Context, host string) (net.IP, e
 	}
 	for _, ipAddr := range ips {
 		ip := ipAddr.IP
-		if ipType := tools.ParseIp(ip); ipType == 4 || ipType == 6 {
+		if ipType := ParseIp(ip); ipType == 4 || ipType == 6 {
 			if addrType == 0 || addrType == ipType {
 				return ip, nil
 			}
@@ -253,7 +253,7 @@ func (obj *DialClient) lookupIPAddr(ctx context.Context, host string) (net.IP, e
 	}
 	for _, ipAddr := range ips {
 		ip := ipAddr.IP
-		if ipType := tools.ParseIp(ip); ipType == 4 || ipType == 6 {
+		if ipType := ParseIp(ip); ipType == 4 || ipType == 6 {
 			return ip, nil
 		}
 	}
@@ -277,7 +277,7 @@ func (obj *DialClient) Dialer() *net.Dialer {
 }
 func (obj *DialClient) AddTls(ctx context.Context, conn net.Conn, host string, disHttp bool, tlsConfig *tls.Config) (*tls.Conn, error) {
 	var tlsConn *tls.Conn
-	tlsConfig.ServerName = tools.GetServerName(host)
+	tlsConfig.ServerName = GetServerName(host)
 	if disHttp {
 		tlsConfig.NextProtos = []string{"http/1.1"}
 	} else {
@@ -287,7 +287,7 @@ func (obj *DialClient) AddTls(ctx context.Context, conn net.Conn, host string, d
 	return tlsConn, tlsConn.HandshakeContext(ctx)
 }
 func (obj *DialClient) AddJa3Tls(ctx context.Context, conn net.Conn, host string, disHttp bool, ja3Spec ja3.Ja3Spec, tlsConfig *utls.Config) (*utls.UConn, error) {
-	tlsConfig.ServerName = tools.GetServerName(host)
+	tlsConfig.ServerName = GetServerName(host)
 	if disHttp {
 		tlsConfig.NextProtos = []string{"http/1.1"}
 	} else {

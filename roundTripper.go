@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -321,36 +322,27 @@ func wrapBody(conn *Connecotr, task *reqTask) {
 }
 func http1Req(conn *Connecotr, task *reqTask) {
 	defer task.cnl()
-	defer func() {
-		if task.res == nil || task.err != nil {
-			conn.Close()
-		} else if task.res != nil {
+	if task.err = task.req.Write(conn); task.err == nil {
+		if task.res, task.err = http.ReadResponse(conn.r, task.req); task.res != nil && task.err == nil {
 			wrapBody(conn, task)
 		}
-	}()
-	err := task.req.Write(conn)
-	if err != nil {
-		task.err = err
-	} else {
-		task.res, task.err = http.ReadResponse(conn.r, task.req)
 	}
 }
 
 func http2Req(conn *Connecotr, task *reqTask) {
 	defer task.cnl()
-	defer func() {
-		if task.res == nil || task.err != nil {
-			conn.Close()
-		} else if task.res != nil {
-			wrapBody(conn, task)
-		}
-	}()
-	task.res, task.err = conn.h2RawConn.RoundTrip(task.req)
+	if task.res, task.err = conn.h2RawConn.RoundTrip(task.req); task.res != nil && task.err == nil {
+		wrapBody(conn, task)
+	}
 }
 func (obj *connPool) rwMain(conn *Connecotr) {
 	conn.deleteCtx, conn.deleteCnl = context.WithCancel(obj.ctx)
 	conn.closeCtx, conn.closeCnl = context.WithCancel(conn.deleteCtx)
+	var afterTime *time.Timer
 	defer func() {
+		if afterTime != nil {
+			afterTime.Stop()
+		}
 		obj.rt.connsLock.Lock()
 		defer obj.rt.connsLock.Unlock()
 		conn.Close()
@@ -390,9 +382,19 @@ func (obj *connPool) rwMain(conn *Connecotr) {
 				go http1Req(conn, task)
 			}
 			//等待任务完成
-			<-task.ctx.Done()
-			//如果没有response返回，就认定这个连接异常，直接返回
-			if task.req == nil || task.err != nil {
+			if afterTime == nil {
+				afterTime = time.NewTimer(obj.rt.responseHeaderTimeout)
+			} else {
+				afterTime.Reset(obj.rt.responseHeaderTimeout)
+			}
+			select {
+			case <-task.ctx.Done():
+				if task.req == nil || task.err != nil { //如果没有response返回，就认定这个连接异常，直接返回
+					return
+				}
+			case <-afterTime.C:
+				task.err = errors.New("response Header is Timeout")
+				task.cnl()
 				return
 			}
 		}
@@ -400,27 +402,29 @@ func (obj *connPool) rwMain(conn *Connecotr) {
 }
 
 type RoundTripper struct {
-	clientSessionCache  utls.ClientSessionCache
-	ctx                 context.Context
-	cnl                 context.CancelFunc
-	connPools           map[string]*connPool
-	connsLock           sync.Mutex
-	dialer              *DialClient
-	tlsConfig           *tls.Config
-	utlsConfig          *utls.Config
-	getProxy            func(ctx context.Context, url *url.URL) (string, error)
-	tlsHandshakeTimeout time.Duration
+	clientSessionCache    utls.ClientSessionCache
+	ctx                   context.Context
+	cnl                   context.CancelFunc
+	connPools             map[string]*connPool
+	connsLock             sync.Mutex
+	dialer                *DialClient
+	tlsConfig             *tls.Config
+	utlsConfig            *utls.Config
+	getProxy              func(ctx context.Context, url *url.URL) (string, error)
+	tlsHandshakeTimeout   time.Duration
+	responseHeaderTimeout time.Duration
 }
 
 type RoundTripperOption struct {
-	TlsHandshakeTimeout time.Duration
-	DialTimeout         time.Duration
-	KeepAlive           time.Duration
-	LocalAddr           *net.TCPAddr //使用本地网卡
-	AddrType            AddrType     //优先使用的地址类型,ipv4,ipv6 ,或自动选项
-	GetAddrType         func(string) AddrType
-	Dns                 net.IP
-	GetProxy            func(ctx context.Context, url *url.URL) (string, error)
+	TlsHandshakeTimeout   time.Duration
+	DialTimeout           time.Duration
+	KeepAlive             time.Duration
+	ResponseHeaderTimeout time.Duration
+	LocalAddr             *net.TCPAddr //使用本地网卡
+	AddrType              AddrType     //优先使用的地址类型,ipv4,ipv6 ,或自动选项
+	GetAddrType           func(string) AddrType
+	Dns                   net.IP
+	GetProxy              func(ctx context.Context, url *url.URL) (string, error)
 }
 
 func NewRoundTripper(preCtx context.Context, option RoundTripperOption) *RoundTripper {
@@ -440,6 +444,9 @@ func NewRoundTripper(preCtx context.Context, option RoundTripperOption) *RoundTr
 	if option.TlsHandshakeTimeout == 0 {
 		option.TlsHandshakeTimeout = time.Second * 15
 	}
+	if option.ResponseHeaderTimeout == 0 {
+		option.ResponseHeaderTimeout = time.Second * 30
+	}
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: true,
 		SessionTicketKey:   [32]byte{},
@@ -452,15 +459,16 @@ func NewRoundTripper(preCtx context.Context, option RoundTripperOption) *RoundTr
 		OmitEmptyPsk:           true,
 	}
 	return &RoundTripper{
-		clientSessionCache:  ja3.NewClientSessionCache(),
-		tlsConfig:           tlsConfig,
-		utlsConfig:          utlsConfig,
-		ctx:                 ctx,
-		cnl:                 cnl,
-		connPools:           make(map[string]*connPool),
-		dialer:              dialClient,
-		getProxy:            option.GetProxy,
-		tlsHandshakeTimeout: option.TlsHandshakeTimeout,
+		clientSessionCache:    ja3.NewClientSessionCache(),
+		tlsConfig:             tlsConfig,
+		utlsConfig:            utlsConfig,
+		ctx:                   ctx,
+		cnl:                   cnl,
+		connPools:             make(map[string]*connPool),
+		dialer:                dialClient,
+		getProxy:              option.GetProxy,
+		tlsHandshakeTimeout:   option.TlsHandshakeTimeout,
+		responseHeaderTimeout: option.ResponseHeaderTimeout,
 	}
 }
 func (obj *RoundTripper) SetGetProxy(getProxy func(ctx context.Context, url *url.URL) (string, error)) {
@@ -474,7 +482,7 @@ func (obj *RoundTripper) GetProxy(ctx context.Context, proxyUrl *url.URL) (*url.
 	if err != nil {
 		return nil, err
 	}
-	return tools.VerifyProxy(proxy)
+	return VerifyProxy(proxy)
 }
 
 func (obj *RoundTripper) poolRoundTrip(task *reqTask, key string) (bool, error) {

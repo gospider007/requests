@@ -16,9 +16,9 @@ import (
 
 	"gitee.com/baixudong/bar"
 	"gitee.com/baixudong/bs4"
+	"gitee.com/baixudong/bson"
 	"gitee.com/baixudong/tools"
 	"gitee.com/baixudong/websocket"
-	"github.com/tidwall/gjson"
 )
 
 type Response struct {
@@ -203,11 +203,8 @@ func (obj *Response) Map() (map[string]any, error) {
 }
 
 // 尝试将请求解析成gjson, 如果传值将会解析到val中返回的gjson为空struct
-func (obj *Response) Json(vals ...any) (gjson.Result, error) {
-	if len(vals) > 0 {
-		return gjson.Result{}, tools.JsonUnMarshal(obj.Content(), vals[0])
-	}
-	return tools.Any2json(obj.Content())
+func (obj *Response) Json(vals ...any) (*bson.Client, error) {
+	return bson.Decode(obj.Content(), vals...)
 }
 
 // 返回内容的字符串形式
@@ -233,11 +230,11 @@ func (obj *Response) Html() *bs4.Client {
 // 获取headers 的Content-Type
 func (obj *Response) ContentType() string {
 	if obj.filePath != "" {
-		return tools.GetContentTypeWithBytes(obj.content)
+		return GetContentTypeWithBytes(obj.content)
 	}
 	contentType := obj.response.Header.Get("Content-Type")
 	if contentType == "" {
-		contentType = tools.GetContentTypeWithBytes(obj.content)
+		contentType = GetContentTypeWithBytes(obj.content)
 	}
 	return contentType
 }

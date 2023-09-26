@@ -9,7 +9,6 @@ import (
 	"net/http"
 
 	"gitee.com/baixudong/ja3"
-	"gitee.com/baixudong/tools"
 )
 
 type ClientOption struct {
@@ -19,9 +18,10 @@ type ClientOption struct {
 	DisCookie bool         //关闭cookies管理
 	LocalAddr *net.TCPAddr //本地网卡出口ip
 
-	DialTimeout         time.Duration //dial tcp 超时时间,default:15
-	TlsHandshakeTimeout time.Duration //tls 超时时间,default:15
-	KeepAlive           time.Duration //keepalive保活检测定时,default:30
+	DialTimeout           time.Duration //dial tcp 超时时间,default:15
+	TlsHandshakeTimeout   time.Duration //tls 超时时间,default:15
+	KeepAlive             time.Duration //keepalive保活检测定时,default:30
+	ResponseHeaderTimeout time.Duration //ResponseHeaderTimeout ,default:30
 
 	AddrType    AddrType //优先使用的addr 类型
 	GetAddrType func(string) AddrType
@@ -94,6 +94,9 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	if option.KeepAlive == 0 {
 		option.KeepAlive = time.Second * 30
 	}
+	if option.ResponseHeaderTimeout == 0 {
+		option.ResponseHeaderTimeout = time.Second * 30
+	}
 	if option.DialTimeout == 0 {
 		option.DialTimeout = time.Second * 15
 	}
@@ -119,14 +122,16 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	// 	}
 	// }
 	transport := NewRoundTripper(ctx, RoundTripperOption{
-		TlsHandshakeTimeout: option.TlsHandshakeTimeout,
-		DialTimeout:         option.DialTimeout,
-		KeepAlive:           option.KeepAlive,
-		LocalAddr:           option.LocalAddr,
-		AddrType:            option.AddrType,
-		GetAddrType:         option.GetAddrType,
-		Dns:                 option.Dns,
-		GetProxy:            option.GetProxy,
+		TlsHandshakeTimeout:   option.TlsHandshakeTimeout,
+		DialTimeout:           option.DialTimeout,
+		KeepAlive:             option.KeepAlive,
+		ResponseHeaderTimeout: option.ResponseHeaderTimeout,
+
+		LocalAddr:   option.LocalAddr,
+		AddrType:    option.AddrType,
+		GetAddrType: option.GetAddrType,
+		Dns:         option.Dns,
+		GetProxy:    option.GetProxy,
 	})
 	client := &http.Client{
 		Transport: transport,
@@ -173,7 +178,7 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	}
 	var err error
 	if option.Proxy != "" {
-		result.proxy, err = tools.VerifyProxy(option.Proxy)
+		result.proxy, err = VerifyProxy(option.Proxy)
 	}
 
 	if option.Ja3Spec.IsSet() {
@@ -188,7 +193,7 @@ func (obj *Client) HttpClient() *http.Client {
 	return obj.client
 }
 func (obj *Client) SetProxy(proxyUrl string) (err error) {
-	obj.proxy, err = tools.VerifyProxy(proxyUrl)
+	obj.proxy, err = VerifyProxy(proxyUrl)
 	return
 }
 func (obj *Client) SetGetProxy(getProxy func(ctx context.Context, url *url.URL) (string, error)) {

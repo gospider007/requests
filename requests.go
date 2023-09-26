@@ -356,7 +356,7 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 	ctxData.disProxy = option.DisProxy
 	if !ctxData.disProxy {
 		if option.Proxy != "" { //代理相关构造
-			tempProxy, err := tools.VerifyProxy(option.Proxy)
+			tempProxy, err := VerifyProxy(option.Proxy)
 			if err != nil {
 				return response, tools.WrapError(errFatal, errors.New("tempRequest 构造代理失败"), err)
 			}
