@@ -6,7 +6,7 @@ import (
 
 	"net/http"
 
-	"gitee.com/baixudong/bson"
+	"gitee.com/baixudong/gson"
 	"github.com/tidwall/gjson"
 )
 
@@ -102,7 +102,7 @@ func any2Cookies(val any) (Cookies, error) {
 		}
 		return cookies, nil
 	default:
-		jsonData, err := bson.Decode(cooks)
+		jsonData, err := gson.Decode(cooks)
 		if err != nil {
 			return nil, err
 		}

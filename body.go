@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"gitee.com/baixudong/bson"
+	"gitee.com/baixudong/gson"
 	"gitee.com/baixudong/tools"
 	"github.com/tidwall/gjson"
 )
@@ -81,7 +81,7 @@ func newBody(val any, valType bodyType, dataMap map[string][]string) (*bytes.Rea
 			return nil, fmt.Errorf("未知的content-type：%d", valType)
 		}
 	default:
-		result, err := bson.Decode(value)
+		result, err := gson.Decode(value)
 		if err != nil {
 			return nil, err
 		}

@@ -5,7 +5,7 @@ import (
 
 	"net/http"
 
-	"gitee.com/baixudong/bson"
+	"gitee.com/baixudong/gson"
 	"github.com/tidwall/gjson"
 )
 
@@ -47,7 +47,7 @@ func (obj *RequestOption) initHeaders() error {
 		obj.Headers = head
 		return nil
 	default:
-		jsonData, err := bson.Decode(headers)
+		jsonData, err := gson.Decode(headers)
 		if err != nil {
 			return err
 		}

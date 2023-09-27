@@ -16,7 +16,7 @@ import (
 
 	"gitee.com/baixudong/bar"
 	"gitee.com/baixudong/bs4"
-	"gitee.com/baixudong/bson"
+	"gitee.com/baixudong/gson"
 	"gitee.com/baixudong/tools"
 	"gitee.com/baixudong/websocket"
 )
@@ -203,8 +203,8 @@ func (obj *Response) Map() (map[string]any, error) {
 }
 
 // 尝试将请求解析成gjson, 如果传值将会解析到val中返回的gjson为空struct
-func (obj *Response) Json(vals ...any) (*bson.Client, error) {
-	return bson.Decode(obj.Content(), vals...)
+func (obj *Response) Json(vals ...any) (*gson.Client, error) {
+	return gson.Decode(obj.Content(), vals...)
 }
 
 // 返回内容的字符串形式
