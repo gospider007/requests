@@ -4,8 +4,6 @@ gitee.com/baixudong/blog v0.0.0-20230923032533-d83e7cb672f7 h1:QDS4QkH6BHy95RnoG
 gitee.com/baixudong/blog v0.0.0-20230923032533-d83e7cb672f7/go.mod h1:CRRC/3rq5rR/0+3MUuuxP3BX2gj8aR0SM0gumsd0pUk=
 gitee.com/baixudong/bs4 v0.0.0-20230927062753-f5145bca0107 h1:WKJaX19tpsdJIaPdjw6U0i/YD4h6aFAMVpj3fnHO07E=
 gitee.com/baixudong/bs4 v0.0.0-20230927062753-f5145bca0107/go.mod h1:qpnFEEUdMFASmQsbXHRUoiTbxLgBRX3AjqCqJU81MT4=
-gitee.com/baixudong/bson v0.0.0-20230926055331-1f714a0c27cc h1:WxvbxAZMthFF1yk+8vUjXP+FhzaYB8YZ6P1sbdIZGxU=
-gitee.com/baixudong/bson v0.0.0-20230926055331-1f714a0c27cc/go.mod h1:l0UcOwUDvIi+7mujD+eJpbD3LK2dYLAxnP8oKHuKwNg=
 gitee.com/baixudong/ja3 v0.0.0-20230923032211-164f4a779e92 h1:NsVQh2jjeqDTnGJFDVcRuUCPqUFkmJIFqZ2jbPqbsgM=
 gitee.com/baixudong/ja3 v0.0.0-20230923032211-164f4a779e92/go.mod h1:FCRp6/ZVtb/3MLMgDk1kUo1+D8sHb46PbSj5JSKPbsc=
 gitee.com/baixudong/kinds v0.0.0-20230809033013-c3d6d3479f8c h1:MZewpjU0+82TcA+nHrcAbbgZhTCqVH2I5zwYBWJ4v54=
