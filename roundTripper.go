@@ -26,7 +26,6 @@ type roundTripper interface {
 }
 
 type reqTask struct {
-	bodyCtx   context.Context //body的生命周期
 	ctx       context.Context //控制请求的生命周期
 	cnl       context.CancelFunc
 	req       *http.Request  //发送的请求
@@ -194,6 +193,8 @@ type Connecotr struct {
 	closeCtx context.Context //通知关闭
 	closeCnl context.CancelFunc
 
+	bodyCtx context.Context //body的生命周期
+
 	rawConn   net.Conn
 	h2        bool
 	r         *bufio.Reader
@@ -214,7 +215,7 @@ func (obj *Connecotr) Close() error {
 func (obj *Connecotr) read() {
 	defer obj.Close()
 	obj.isRead = true
-	con := make([]byte, 1024)
+	con := make([]byte, 4096)
 	var i int
 	for {
 		if i, obj.err = obj.rawConn.Read(con); obj.err != nil && i == 0 {
@@ -314,7 +315,7 @@ func (obj *ReadWriteCloser) ForceDelete() { //强制关闭连接，立刻马上
 
 func wrapBody(conn *Connecotr, task *reqTask) {
 	body := new(ReadWriteCloser)
-	task.bodyCtx, body.cnl = context.WithCancel(conn.deleteCtx)
+	conn.bodyCtx, body.cnl = context.WithCancel(conn.deleteCtx)
 	body.body = task.res.Body
 	body.conn = conn
 	task.res.Body = body
@@ -357,6 +358,9 @@ func (obj *connPool) rwMain(conn *Connecotr) {
 			delete(obj.rt.connPools, obj.key)
 		}
 	}()
+	if !conn.h2 {
+		<-conn.bodyCtx.Done() //等待连接占用被释放
+	}
 	for {
 		select {
 		case <-conn.closeCtx.Done(): //连接池通知关闭，等待连接被释放掉
@@ -389,7 +393,7 @@ func (obj *connPool) rwMain(conn *Connecotr) {
 					return
 				}
 				if !conn.h2 {
-					<-task.bodyCtx.Done() //等待body close
+					<-conn.bodyCtx.Done() //等待body close
 				}
 			case <-afterTime.C:
 				task.err = errors.New("response Header is Timeout")
