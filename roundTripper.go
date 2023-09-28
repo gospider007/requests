@@ -366,6 +366,12 @@ func (obj *connPool) rwMain(conn *Connecotr) {
 				obj.notice(task)
 				return
 			}
+			select {
+			case <-conn.closeCtx.Done(): //连接池通知关闭，等待连接被释放掉
+				obj.notice(task)
+				return
+			default:
+			}
 			if conn.h2 {
 				go http2Req(conn, task)
 			} else {
