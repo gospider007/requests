@@ -26,6 +26,7 @@ type roundTripper interface {
 }
 
 type reqTask struct {
+	bodyCtx   context.Context //body的生命周期
 	ctx       context.Context //控制请求的生命周期
 	cnl       context.CancelFunc
 	req       *http.Request  //发送的请求
@@ -193,8 +194,6 @@ type Connecotr struct {
 	closeCtx context.Context //通知关闭
 	closeCnl context.CancelFunc
 
-	bodyCtx context.Context //body
-
 	rawConn   net.Conn
 	h2        bool
 	r         *bufio.Reader
@@ -315,7 +314,7 @@ func (obj *ReadWriteCloser) ForceDelete() { //强制关闭连接，立刻马上
 
 func wrapBody(conn *Connecotr, task *reqTask) {
 	body := new(ReadWriteCloser)
-	conn.bodyCtx, body.cnl = context.WithCancel(conn.deleteCtx)
+	task.bodyCtx, body.cnl = context.WithCancel(conn.deleteCtx)
 	body.body = task.res.Body
 	body.conn = conn
 	task.res.Body = body
@@ -333,6 +332,12 @@ func http2Req(conn *Connecotr, task *reqTask) {
 	defer task.cnl()
 	if task.res, task.err = conn.h2RawConn.RoundTrip(task.req); task.res != nil && task.err == nil {
 		wrapBody(conn, task)
+	}
+}
+func (obj *connPool) notice(task *reqTask) {
+	select {
+	case obj.tasks <- task: //任务给池子里其它连接
+	case task.emptyPool <- struct{}{}: //告诉提交任务方，池子没有可用连接
 	}
 }
 func (obj *connPool) rwMain(conn *Connecotr) {
@@ -355,30 +360,15 @@ func (obj *connPool) rwMain(conn *Connecotr) {
 	for {
 		select {
 		case <-conn.closeCtx.Done(): //连接池通知关闭，等待连接被释放掉
-			select {
-			case <-conn.bodyCtx.Done():
+			return
+		case task := <-obj.tasks: //接收到任务
+			if conn.h2 && conn.h2Closed() { //连接不可用
+				obj.notice(task)
 				return
 			}
-		case task := <-obj.tasks: //接收到任务
 			if conn.h2 {
-				if conn.h2Closed() { //判断连接是否异常
-					select {
-					case obj.tasks <- task: //任务给池子里其它连接
-					case task.emptyPool <- struct{}{}: //告诉提交任务方，池子没有可用连接
-					}
-					return //由于连接异常直接结束
-				}
 				go http2Req(conn, task)
 			} else {
-				select {
-				case <-conn.bodyCtx.Done(): //http1.1 连接被占用
-				default:
-					select {
-					case obj.tasks <- task: //任务给池子里其它连接
-					case task.emptyPool <- struct{}{}: //告诉提交任务方，池子没有可用连接
-					}
-					continue //由于连接被占用，开始下一个循环
-				}
 				go http1Req(conn, task)
 			}
 			//等待任务完成
@@ -391,6 +381,9 @@ func (obj *connPool) rwMain(conn *Connecotr) {
 			case <-task.ctx.Done():
 				if task.req == nil || task.err != nil { //如果没有response返回，就认定这个连接异常，直接返回
 					return
+				}
+				if !conn.h2 {
+					<-task.bodyCtx.Done() //等待body close
 				}
 			case <-afterTime.C:
 				task.err = errors.New("response Header is Timeout")
