@@ -8,7 +8,6 @@ import (
 
 	"gitee.com/baixudong/gson"
 	"gitee.com/baixudong/tools"
-	"github.com/tidwall/gjson"
 )
 
 // 构造一个文件
@@ -31,13 +30,13 @@ const (
 
 func newBody(val any, valType bodyType, dataMap map[string][]string) (*bytes.Reader, error) {
 	switch value := val.(type) {
-	case gjson.Result:
+	case *gson.Client:
 		if !value.IsObject() {
 			return nil, errors.New("body-type错误")
 		}
 		switch valType {
 		case jsonType, textType, rawType:
-			return bytes.NewReader(tools.StringToBytes(value.Raw)), nil
+			return bytes.NewReader(value.Bytes()), nil
 		case dataType:
 			tempVal := url.Values{}
 			for kk, vv := range value.Map() {

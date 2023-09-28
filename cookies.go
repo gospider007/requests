@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"gitee.com/baixudong/gson"
-	"github.com/tidwall/gjson"
 )
 
 //go:linkname readCookies net/http.readCookies
@@ -80,7 +79,7 @@ func any2Cookies(val any) (Cookies, error) {
 			}
 		}
 		return cookies, nil
-	case gjson.Result:
+	case *gson.Client:
 		if !cooks.IsObject() {
 			return nil, errors.New("cookies不支持的类型")
 		}
