@@ -15,7 +15,6 @@ import (
 
 	"net/http"
 
-	"gitee.com/baixudong/ja3"
 	"gitee.com/baixudong/net/http2"
 	"gitee.com/baixudong/tools"
 	utls "github.com/refraction-networking/utls"
@@ -32,6 +31,10 @@ type reqTask struct {
 	res       *http.Response //接收的请求
 	emptyPool chan struct{}
 	err       error
+}
+
+func (obj *reqTask) isPool() bool {
+	return obj.err == nil && obj.res != nil && obj.res.StatusCode != 101 && obj.res.Header.Get("Content-Type") != "text/event-stream"
 }
 
 type connPool struct {
@@ -83,10 +86,10 @@ func getKey(ctxData *reqCtxData, req *http.Request) string {
 func (obj *RoundTripper) newConnPool(key string, conn *Connecotr) *connPool { //新建连接池
 	pool := new(connPool)
 	pool.ctx, pool.cnl = context.WithCancel(obj.ctx)
-	pool.total.Add(1)
 	pool.tasks = make(chan *reqTask)
 	pool.rt = obj
 	pool.key = key
+	pool.total.Add(1)
 	go pool.rwMain(conn)
 	return pool
 }
@@ -116,10 +119,10 @@ func (obj *RoundTripper) TlsConfig() *tls.Config {
 func (obj *RoundTripper) UtlsConfig() *utls.Config {
 	return obj.utlsConfig.Clone()
 }
-func (obj *RoundTripper) dial(ctxData *reqCtxData, addr string, key string, req *http.Request) (conn *Connecotr, oneSessionCache *ja3.OneSessionCache, err error) {
+func (obj *RoundTripper) dial(ctxData *reqCtxData, addr string, key string, req *http.Request) (conn *Connecotr, err error) {
 	if !ctxData.disProxy && ctxData.proxy == nil { //确定代理
 		if ctxData.proxy, err = obj.GetProxy(req.Context(), req.URL); err != nil {
-			return conn, oneSessionCache, err
+			return conn, err
 		}
 	}
 	var netConn net.Conn
@@ -130,43 +133,27 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, addr string, key string, req 
 		netConn, err = obj.dialer.DialContextWithProxy(req.Context(), "tcp", req.URL.Scheme, addr, host, ctxData.proxy, obj.TlsConfig())
 	}
 	if err != nil {
-		return conn, oneSessionCache, err
+		return conn, err
 	}
 	conne := new(Connecotr)
-
 	conne.rn = make(chan int)
 	conne.rc = make(chan []byte)
-
-	conne.deleteCtx, conne.deleteCnl = context.WithCancel(obj.ctx)
-	conne.closeCtx, conne.closeCnl = context.WithCancel(conne.deleteCtx)
-
-	if req.URL.Scheme == "https" {
+	conne.WithCancel(obj.ctx)
+	isWebSocket := req.URL.Scheme == "wss"
+	if req.URL.Scheme == "https" || isWebSocket {
 		ctx, cnl := context.WithTimeout(req.Context(), obj.tlsHandshakeTimeout)
 		defer cnl()
 		if ctxData.ja3Spec.IsSet() {
-			session, ok := obj.clientSessionCache.Get(addr)
-			utlsConfig := obj.UtlsConfig()
-			oneSessionCache = ja3.NewOneSessionCache(session)
-			utlsConfig.ClientSessionCache = oneSessionCache
-			if ok {
-				if !ctxData.ja3Spec.HasPsk() {
-					ja3.AddPsk(&ctxData.ja3Spec)
-				}
-			} else {
-				if ctxData.ja3Spec.HasPsk() {
-					ja3.DelPsk(&ctxData.ja3Spec)
-				}
-			}
-			tlsConn, err := obj.dialer.AddJa3Tls(ctx, netConn, host, ctxData.ws, ctxData.ja3Spec, utlsConfig)
+			tlsConn, err := obj.dialer.AddJa3Tls(ctx, netConn, host, isWebSocket, ctxData.ja3Spec, obj.UtlsConfig())
 			if err != nil {
-				return conne, oneSessionCache, err
+				return conne, err
 			}
 			conne.h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
 			netConn = tlsConn
 		} else {
-			tlsConn, err := obj.dialer.AddTls(ctx, netConn, host, ctxData.ws, obj.TlsConfig())
+			tlsConn, err := obj.dialer.AddTls(ctx, netConn, host, isWebSocket, obj.TlsConfig())
 			if err != nil {
-				return conne, oneSessionCache, err
+				return conne, err
 			}
 			conne.h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
 			netConn = tlsConn
@@ -177,23 +164,24 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, addr string, key string, req 
 		if conne.h2RawConn, err = http2.NewClientConn(func() {
 			conne.deleteCnl()
 		}, netConn, ctxData.h2Ja3Spec); err != nil {
-			return conne, oneSessionCache, err
+			return conne, err
 		}
 	} else {
 		conne.r = bufio.NewReader(conne)
 	}
-	return conne, oneSessionCache, err
+	return conne, err
 }
 
 type Connecotr struct {
 	err       error
-	deleteCtx context.Context //强制关闭
+	deleteCtx context.Context //强制关闭，直接关闭所有底层conn
 	deleteCnl context.CancelFunc
 
-	closeCtx context.Context //通知关闭
+	closeCtx context.Context //通知关闭，安全的关闭，等待body 完成生命周期
 	closeCnl context.CancelFunc
 
-	bodyCtx context.Context //body的生命周期
+	bodyCtx context.Context    //body的生命周期
+	bodyCnl context.CancelFunc //body的生命周期
 
 	rawConn   net.Conn
 	h2        bool
@@ -205,6 +193,10 @@ type Connecotr struct {
 	isPool    bool
 }
 
+func (obj *Connecotr) WithCancel(ctx context.Context) {
+	obj.deleteCtx, obj.deleteCnl = context.WithCancel(ctx)
+	obj.closeCtx, obj.closeCnl = context.WithCancel(obj.deleteCtx)
+}
 func (obj *Connecotr) Close() error {
 	obj.deleteCnl()
 	if obj.h2RawConn != nil {
@@ -213,8 +205,8 @@ func (obj *Connecotr) Close() error {
 	return obj.rawConn.Close()
 }
 func (obj *Connecotr) read() {
-	defer obj.Close()
 	obj.isRead = true
+	defer obj.Close()
 	con := make([]byte, 4096)
 	var i int
 	for {
@@ -224,15 +216,15 @@ func (obj *Connecotr) read() {
 		b := con[:i]
 		for once := true; once || len(b) > 0; once = false {
 			select {
-			case obj.rc <- b:
-				select {
-				case nw := <-obj.rn:
-					b = b[nw:]
-				case <-obj.deleteCtx.Done():
-					return
-				}
 			case <-obj.deleteCtx.Done():
 				return
+			case obj.rc <- b:
+				select {
+				case <-obj.deleteCtx.Done():
+					return
+				case nw := <-obj.rn:
+					b = b[nw:]
+				}
 			}
 		}
 	}
@@ -242,21 +234,21 @@ func (obj *Connecotr) Read(b []byte) (i int, err error) {
 		return obj.rawConn.Read(b)
 	}
 	select {
+	case <-obj.deleteCtx.Done():
+		if err = obj.err; err == nil {
+			err = tools.WrapError(obj.deleteCtx.Err(), "connecotr close")
+		}
 	case con := <-obj.rc:
 		i, err = copy(b, con), obj.err
 		select {
-		case obj.rn <- i:
-			if i < len(con) {
-				err = nil
-			}
 		case <-obj.deleteCtx.Done():
 			if err = obj.err; err == nil {
 				err = tools.WrapError(obj.deleteCtx.Err(), "connecotr close")
 			}
-		}
-	case <-obj.deleteCtx.Done():
-		if err = obj.err; err == nil {
-			err = tools.WrapError(obj.deleteCtx.Err(), "connecotr close")
+		case obj.rn <- i:
+			if i < len(con) {
+				err = nil
+			}
 		}
 	}
 	return
@@ -286,7 +278,6 @@ func (obj *Connecotr) h2Closed() bool {
 }
 
 type ReadWriteCloser struct {
-	cnl  context.CancelFunc
 	body io.ReadCloser
 	conn *Connecotr
 }
@@ -297,12 +288,14 @@ func (obj *ReadWriteCloser) Conn() net.Conn {
 func (obj *ReadWriteCloser) Read(p []byte) (n int, err error) {
 	return obj.body.Read(p)
 }
-func (obj *ReadWriteCloser) Close() error {
+func (obj *ReadWriteCloser) Close() (err error) {
+	err = obj.body.Close()
 	if !obj.conn.isPool {
-		defer obj.Delete()
+		obj.ForceDelete()
+	} else {
+		obj.conn.bodyCnl()
 	}
-	defer obj.cnl()
-	return obj.body.Close()
+	return
 }
 
 func (obj *ReadWriteCloser) Delete() { //通知关闭连接，不会影响正在传输中的数据
@@ -313,26 +306,26 @@ func (obj *ReadWriteCloser) ForceDelete() { //强制关闭连接，立刻马上
 	obj.conn.Close()
 }
 
-func wrapBody(conn *Connecotr, task *reqTask) {
+func (obj *Connecotr) wrapBody(task *reqTask) {
 	body := new(ReadWriteCloser)
-	conn.bodyCtx, body.cnl = context.WithCancel(conn.deleteCtx)
+	obj.bodyCtx, obj.bodyCnl = context.WithCancel(obj.deleteCtx)
 	body.body = task.res.Body
-	body.conn = conn
+	body.conn = obj
 	task.res.Body = body
 }
-func http1Req(conn *Connecotr, task *reqTask) {
+func (obj *Connecotr) http1Req(task *reqTask) {
 	defer task.cnl()
-	if task.err = task.req.Write(conn); task.err == nil {
-		if task.res, task.err = http.ReadResponse(conn.r, task.req); task.res != nil && task.err == nil {
-			wrapBody(conn, task)
+	if task.err = task.req.Write(obj); task.err == nil {
+		if task.res, task.err = http.ReadResponse(obj.r, task.req); task.res != nil && task.err == nil {
+			obj.wrapBody(task)
 		}
 	}
 }
 
-func http2Req(conn *Connecotr, task *reqTask) {
+func (obj *Connecotr) http2Req(task *reqTask) {
 	defer task.cnl()
-	if task.res, task.err = conn.h2RawConn.RoundTrip(task.req); task.res != nil && task.err == nil {
-		wrapBody(conn, task)
+	if task.res, task.err = obj.h2RawConn.RoundTrip(task.req); task.res != nil && task.err == nil {
+		obj.wrapBody(task)
 	}
 }
 func (obj *connPool) notice(task *reqTask) {
@@ -341,9 +334,46 @@ func (obj *connPool) notice(task *reqTask) {
 	case task.emptyPool <- struct{}{}: //告诉提交任务方，池子没有可用连接
 	}
 }
+func (obj *Connecotr) taskMain(task *reqTask, afterTime *time.Timer, responseHeaderTimeout time.Duration) (*http.Response, error, bool) {
+	if obj.h2 && obj.h2Closed() { //连接不可用
+		return nil, errors.New("连接不可用"), true
+	}
+	select {
+	case <-obj.closeCtx.Done(): //连接池通知关闭，等待连接被释放掉
+		return nil, obj.closeCtx.Err(), true
+	default:
+	}
+	if obj.h2 {
+		go obj.http2Req(task)
+	} else {
+		go obj.http1Req(task)
+	}
+	//等待任务完成
+	if afterTime == nil {
+		afterTime = time.NewTimer(responseHeaderTimeout)
+	} else {
+		afterTime.Reset(responseHeaderTimeout)
+	}
+	if !obj.isPool {
+		defer afterTime.Stop()
+	}
+	select {
+	case <-task.ctx.Done():
+		if task.res != nil && task.err == nil && obj.isPool {
+			<-obj.bodyCtx.Done() //等待body close
+		}
+	case <-obj.deleteCtx.Done(): //强制关闭
+		task.err = obj.deleteCtx.Err()
+		task.cnl()
+	case <-afterTime.C:
+		task.err = errors.New("response Header is Timeout")
+		task.cnl()
+	}
+	return task.res, task.err, false
+}
+
 func (obj *connPool) rwMain(conn *Connecotr) {
-	conn.deleteCtx, conn.deleteCnl = context.WithCancel(obj.ctx)
-	conn.closeCtx, conn.closeCnl = context.WithCancel(conn.deleteCtx)
+	conn.WithCancel(obj.ctx)
 	var afterTime *time.Timer
 	defer func() {
 		if afterTime != nil {
@@ -358,46 +388,22 @@ func (obj *connPool) rwMain(conn *Connecotr) {
 			delete(obj.rt.connPools, obj.key)
 		}
 	}()
-	if !conn.h2 {
-		<-conn.bodyCtx.Done() //等待连接占用被释放
+	select {
+	case <-conn.deleteCtx.Done(): //强制关闭所有连接
+		return
+	case <-conn.bodyCtx.Done(): //等待连接占用被释放
 	}
 	for {
 		select {
 		case <-conn.closeCtx.Done(): //连接池通知关闭，等待连接被释放掉
 			return
 		case task := <-obj.tasks: //接收到任务
-			if conn.h2 && conn.h2Closed() { //连接不可用
+			res, err, notice := conn.taskMain(task, afterTime, obj.rt.responseHeaderTimeout)
+			if notice {
 				obj.notice(task)
 				return
 			}
-			select {
-			case <-conn.closeCtx.Done(): //连接池通知关闭，等待连接被释放掉
-				obj.notice(task)
-				return
-			default:
-			}
-			if conn.h2 {
-				go http2Req(conn, task)
-			} else {
-				go http1Req(conn, task)
-			}
-			//等待任务完成
-			if afterTime == nil {
-				afterTime = time.NewTimer(obj.rt.responseHeaderTimeout)
-			} else {
-				afterTime.Reset(obj.rt.responseHeaderTimeout)
-			}
-			select {
-			case <-task.ctx.Done():
-				if task.req == nil || task.err != nil { //如果没有response返回，就认定这个连接异常，直接返回
-					return
-				}
-				if !conn.h2 {
-					<-conn.bodyCtx.Done() //等待body close
-				}
-			case <-afterTime.C:
-				task.err = errors.New("response Header is Timeout")
-				task.cnl()
+			if res == nil || err != nil {
 				return
 			}
 		}
@@ -405,7 +411,6 @@ func (obj *connPool) rwMain(conn *Connecotr) {
 }
 
 type RoundTripper struct {
-	clientSessionCache    utls.ClientSessionCache
 	ctx                   context.Context
 	cnl                   context.CancelFunc
 	connPools             map[string]*connPool
@@ -456,13 +461,14 @@ func NewRoundTripper(preCtx context.Context, option RoundTripperOption) *RoundTr
 		ClientSessionCache: tls.NewLRUClientSessionCache(0),
 	}
 	utlsConfig := &utls.Config{
-		InsecureSkipVerify:     true,
-		InsecureSkipTimeVerify: true,
-		SessionTicketKey:       [32]byte{},
-		OmitEmptyPsk:           true,
+		InsecureSkipVerify:                 true,
+		InsecureSkipTimeVerify:             true,
+		SessionTicketKey:                   [32]byte{},
+		ClientSessionCache:                 utls.NewLRUClientSessionCache(0),
+		OmitEmptyPsk:                       true,
+		PreferSkipResumptionOnNilExtension: true,
 	}
 	return &RoundTripper{
-		clientSessionCache:    ja3.NewClientSessionCache(),
 		tlsConfig:             tlsConfig,
 		utlsConfig:            utlsConfig,
 		ctx:                   ctx,
@@ -525,42 +531,34 @@ func (obj *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 			return nil, err
 		}
 	}
-	key := getKey(ctxData, req)
+	key := getKey(ctxData, req) //pool key
 	task := &reqTask{req: req, emptyPool: make(chan struct{})}
 	task.ctx, task.cnl = context.WithCancel(obj.ctx)
 	defer task.cnl()
-	if !ctxData.disAlive {
-		ok, err := obj.poolRoundTrip(task, key)
-		if err != nil {
-			return nil, err
-		}
-		if ok {
-			if ctxData.responseCallBack != nil {
-				if err = ctxData.responseCallBack(task.req.Context(), req, task.res); err != nil {
-					task.err = err
-				}
+	//get pool conn
+	if ok, err := obj.poolRoundTrip(task, key); err != nil {
+		return nil, err
+	} else if ok { //is conn multi
+		if ctxData.responseCallBack != nil {
+			if err = ctxData.responseCallBack(task.req.Context(), req, task.res); err != nil {
+				task.err = err
 			}
-			return task.res, task.err
 		}
+		return task.res, task.err
 	}
+newConn:
 	addr := getAddr(req.URL)
-	conn, oneSessionCache, err := obj.dial(ctxData, addr, key, req)
+	conn, err := obj.dial(ctxData, addr, key, req)
 	if err != nil {
 		return nil, err
 	}
-	if !conn.h2 {
-		go http1Req(conn, task)
-	} else {
-		go http2Req(conn, task)
-	}
-	<-task.ctx.Done()
-	if oneSessionCache != nil && oneSessionCache.Session() != nil {
-		obj.clientSessionCache.Put(addr, oneSessionCache.Session())
+	if _, _, notice := conn.taskMain(task, nil, obj.responseHeaderTimeout); notice {
+		goto newConn
 	}
 	if task.err == nil && task.res == nil {
 		task.err = obj.ctx.Err()
 	}
-	if task.err == nil && task.res != nil && task.res.StatusCode != 101 && task.res.Header.Get("Content-Type") != "text/event-stream" && !ctxData.disAlive {
+	if task.isPool() {
 		obj.putConnPool(key, conn)
 	}
 	if ctxData.responseCallBack != nil {

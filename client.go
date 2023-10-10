@@ -33,8 +33,6 @@ type ClientOption struct {
 
 	RedirectNum int //重定向次数,小于0为禁用,0:不限制
 
-	DisAlive bool //关闭连接复用
-
 	DisDecode      bool                                                 //关闭自动编码
 	DisUnZip       bool                                                 //关闭自动解压
 	TryNum         int                                                  //重试次数
@@ -66,7 +64,6 @@ type Client struct {
 	headers any           //请求头
 	bar     bool          //是否开启bar
 
-	disAlive    bool
 	disCookie   bool
 	client      *http.Client
 	noJarClient *http.Client
@@ -165,7 +162,6 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 
 		disCookie:      option.DisCookie,
 		redirectNum:    option.RedirectNum,
-		disAlive:       option.DisAlive,
 		disDecode:      option.DisDecode,
 		disUnZip:       option.DisUnZip,
 		tryNum:         option.TryNum,

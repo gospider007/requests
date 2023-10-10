@@ -275,10 +275,10 @@ func (obj *DialClient) DialContext(ctx context.Context, netword string, addr str
 func (obj *DialClient) Dialer() *net.Dialer {
 	return obj.dialer
 }
-func (obj *DialClient) AddTls(ctx context.Context, conn net.Conn, host string, disHttp bool, tlsConfig *tls.Config) (*tls.Conn, error) {
+func (obj *DialClient) AddTls(ctx context.Context, conn net.Conn, host string, disHttp2 bool, tlsConfig *tls.Config) (*tls.Conn, error) {
 	var tlsConn *tls.Conn
 	tlsConfig.ServerName = GetServerName(host)
-	if disHttp {
+	if disHttp2 {
 		tlsConfig.NextProtos = []string{"http/1.1"}
 	} else {
 		tlsConfig.NextProtos = []string{"h2", "http/1.1"}
@@ -286,14 +286,14 @@ func (obj *DialClient) AddTls(ctx context.Context, conn net.Conn, host string, d
 	tlsConn = tls.Client(conn, tlsConfig)
 	return tlsConn, tlsConn.HandshakeContext(ctx)
 }
-func (obj *DialClient) AddJa3Tls(ctx context.Context, conn net.Conn, host string, disHttp bool, ja3Spec ja3.Ja3Spec, tlsConfig *utls.Config) (*utls.UConn, error) {
+func (obj *DialClient) AddJa3Tls(ctx context.Context, conn net.Conn, host string, disHttp2 bool, ja3Spec ja3.Ja3Spec, tlsConfig *utls.Config) (*utls.UConn, error) {
 	tlsConfig.ServerName = GetServerName(host)
-	if disHttp {
+	if disHttp2 {
 		tlsConfig.NextProtos = []string{"http/1.1"}
 	} else {
 		tlsConfig.NextProtos = []string{"h2", "http/1.1"}
 	}
-	return ja3.NewClient(ctx, conn, ja3Spec, disHttp, tlsConfig)
+	return ja3.NewClient(ctx, conn, ja3Spec, disHttp2, tlsConfig)
 }
 func (obj *DialClient) Socks5Proxy(ctx context.Context, network string, addr string, proxyUrl *url.URL) (conn net.Conn, err error) {
 	defer func() {
@@ -324,7 +324,6 @@ func (obj *DialClient) clientVerifyHttps(ctx context.Context, scheme string, pro
 			hdr.Set("Proxy-Authorization", "Basic "+tools.Base64Encode(proxyUrl.User.Username()+":"+password))
 		}
 	}
-	didReadResponse := make(chan struct{}) // closed after CONNECT write+read is done or fails
 	cHost := host
 	_, hport, _ := net.SplitHostPort(host)
 	if hport == "" {
@@ -341,6 +340,7 @@ func (obj *DialClient) clientVerifyHttps(ctx context.Context, scheme string, pro
 	}
 
 	var resp *http.Response
+	didReadResponse := make(chan struct{}) // closed after CONNECT write+read is done or fails
 	go func() {
 		defer close(didReadResponse)
 		connectReq := &http.Request{
@@ -383,22 +383,16 @@ func (obj *DialClient) DialContextWithProxy(ctx context.Context, netword string,
 		}
 	}
 	switch proxyUrl.Scheme {
-	case "http":
+	case "http", "https":
 		conn, err := obj.DialContext(ctx, netword, net.JoinHostPort(proxyUrl.Hostname(), proxyUrl.Port()))
 		if err != nil {
 			return conn, err
+		} else if proxyUrl.Scheme == "https" {
+			if conn, err = obj.AddTls(ctx, conn, proxyUrl.Host, true, tlsConfig); err != nil {
+				return conn, err
+			}
 		}
 		return conn, obj.clientVerifyHttps(ctx, scheme, proxyUrl, addr, host, conn)
-	case "https":
-		conn, err := obj.DialContext(ctx, netword, net.JoinHostPort(proxyUrl.Hostname(), proxyUrl.Port()))
-		if err != nil {
-			return conn, err
-		}
-		tlsConn, err := obj.AddTls(ctx, conn, proxyUrl.Host, true, tlsConfig)
-		if err == nil {
-			err = obj.clientVerifyHttps(ctx, scheme, proxyUrl, addr, host, tlsConn)
-		}
-		return tlsConn, err
 	case "socks5":
 		return obj.Socks5Proxy(ctx, netword, addr, proxyUrl)
 	default:

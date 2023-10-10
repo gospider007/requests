@@ -139,8 +139,6 @@ type reqCtxData struct {
 	proxy       *url.URL
 	disProxy    bool
 
-	disAlive         bool
-	ws               bool
 	requestCallBack  func(context.Context, *http.Request) error
 	responseCallBack func(context.Context, *http.Request, *http.Response) error
 
@@ -349,7 +347,7 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 	var reqs *http.Request
 	//构造ctxData
 	ctxData := new(reqCtxData)
-	ctxData.disAlive = option.DisAlive
+
 	ctxData.requestCallBack = option.RequestCallBack
 	ctxData.responseCallBack = option.ResponseCallBack
 	//构造代理
@@ -389,26 +387,23 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 		return response, tools.WrapError(errFatal, errors.New("tempRequest 构造request失败"), err)
 	}
 
-	//判断file
-	if reqs.URL.Scheme == "file" { //文件直接返回
+	//解析Scheme
+	var isWebSocket bool
+	switch reqs.URL.Scheme {
+	case "ws", "wss":
+		isWebSocket = true
+	case "file":
 		response.filePath = re.Sub(`^/+`, "", reqs.URL.Path)
 		response.content, err = os.ReadFile(response.filePath)
 		if err != nil {
 			err = tools.WrapError(errFatal, errors.New("read filePath data error"), err)
 		}
 		return
+	case "http", "https":
+	default:
+		err = tools.WrapError(errFatal, fmt.Errorf("url scheme error: %s", reqs.URL.Scheme))
+		return
 	}
-
-	//判断ws
-	switch reqs.URL.Scheme {
-	case "ws":
-		ctxData.ws = true
-		reqs.URL.Scheme = "http"
-	case "wss":
-		ctxData.ws = true
-		reqs.URL.Scheme = "https"
-	}
-
 	//添加headers
 	var headOk bool
 	if reqs.Header, headOk = option.Headers.(http.Header); !headOk {
@@ -440,20 +435,20 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 		}
 	}
 	//开始发送请求
-	if ctxData.ws { //设置websocket headers
+	if isWebSocket { //设置websocket headers
 		websocket.SetClientHeadersOption(reqs.Header, option.WsOption)
 	}
 	if response.response, err = obj.getClient(option).Do(reqs); err != nil {
 		return
-	}
-	if response.response == nil {
+	} else if response.response == nil {
 		err = errors.New("response is nil")
 		return
 	}
 	if !response.disUnzip {
 		response.disUnzip = response.response.Uncompressed
 	}
-	if ctxData.ws { //判断ws 的状态码是否正确
+
+	if isWebSocket { //判断ws 的状态码是否正确
 		if response.response.StatusCode == 101 {
 			response.webSocket, err = websocket.NewClientConn(response.response)
 		} else {

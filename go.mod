@@ -6,13 +6,13 @@ require (
 	gitee.com/baixudong/bar v0.0.0-20230923032414-c19cc384edeb
 	gitee.com/baixudong/bs4 v0.0.0-20230927091031-00dd545f5784
 	gitee.com/baixudong/gson v0.0.0-20230927090937-556b58fb6899
-	gitee.com/baixudong/ja3 v0.0.0-20230927070510-152bc4a3675a
+	gitee.com/baixudong/ja3 v0.0.0-20231010095622-1f26d89ef419
 	gitee.com/baixudong/net v0.0.0-20230927083058-4a6a7a20f917
 	gitee.com/baixudong/re v0.0.0-20230809033040-360c1d945e59
 	gitee.com/baixudong/tools v0.0.0-20230926010219-77f29cbf5935
 	gitee.com/baixudong/websocket v0.0.0-20230927082325-5b4eb178c3ec
-	github.com/refraction-networking/utls v1.5.3
-	golang.org/x/net v0.15.0
+	github.com/refraction-networking/utls v1.5.4
+	golang.org/x/net v0.16.0
 )
 
 require (
@@ -44,10 +44,10 @@ require (
 	go.mongodb.org/mongo-driver v1.12.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
-	golang.org/x/crypto v0.13.0 // indirect
-	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
-	golang.org/x/image v0.12.0 // indirect
-	golang.org/x/sys v0.12.0 // indirect
+	golang.org/x/crypto v0.14.0 // indirect
+	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
+	golang.org/x/image v0.13.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect
 )

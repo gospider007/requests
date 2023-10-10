@@ -334,14 +334,10 @@ func (obj *Response) ReadBody() error { //读取body,对body 解压，解码操�
 }
 
 func (obj *Response) Delete() { //通知关闭连接，不会影响正在传输中的数据
-	if delFunc, ok := obj.response.Body.(interface{ Delete() }); ok {
-		delFunc.Delete()
-	}
+	obj.response.Body.(interface{ Delete() }).Delete()
 }
 func (obj *Response) ForceDelete() { //强制关闭连接，立刻马上,正在传输中的数据立马中断
-	if delFunc, ok := obj.response.Body.(interface{ ForceDelete() }); ok {
-		delFunc.ForceDelete()
-	}
+	obj.response.Body.(interface{ ForceDelete() }).ForceDelete()
 }
 
 // 关闭response ,当DisRead 为true,websocket,sse 协议 请一定要手动关闭
