@@ -14,11 +14,12 @@ import (
 
 	"net/http"
 
-	"gitee.com/baixudong/bar"
-	"gitee.com/baixudong/bs4"
-	"gitee.com/baixudong/gson"
-	"gitee.com/baixudong/tools"
-	"gitee.com/baixudong/websocket"
+	"github.com/gospider007/bar"
+	"github.com/gospider007/bs4"
+	"github.com/gospider007/gson"
+	"github.com/gospider007/gtls"
+	"github.com/gospider007/tools"
+	"github.com/gospider007/websocket"
 )
 
 type Response struct {
@@ -230,11 +231,11 @@ func (obj *Response) Html() *bs4.Client {
 // 获取headers 的Content-Type
 func (obj *Response) ContentType() string {
 	if obj.filePath != "" {
-		return GetContentTypeWithBytes(obj.content)
+		return gtls.GetContentTypeWithBytes(obj.content)
 	}
 	contentType := obj.response.Header.Get("Content-Type")
 	if contentType == "" {
-		contentType = GetContentTypeWithBytes(obj.content)
+		contentType = gtls.GetContentTypeWithBytes(obj.content)
 	}
 	return contentType
 }
@@ -303,7 +304,14 @@ func (obj *Response) Read(con []byte) (i int, err error) { //读取body
 	}
 }
 
+func (obj *Response) oneceAlive() bool { //读取body,对body 解压，解码操作
+	return obj.webSocket != nil || obj.sseClient != nil
+}
+
 func (obj *Response) ReadBody() error { //读取body,对body 解压，解码操作
+	if obj.oneceAlive() {
+		return errors.New("ws 或 sse 不能读取")
+	}
 	var bBody *bytes.Buffer
 	var err error
 	if obj.bar && obj.ContentLength() > 0 { //是否打印进度条,读取内容

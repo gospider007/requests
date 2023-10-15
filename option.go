@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"gitee.com/baixudong/ja3"
-	"gitee.com/baixudong/websocket"
+	"github.com/gospider007/ja3"
+	"github.com/gospider007/websocket"
 )
 
 // 请求参数选项
@@ -48,12 +48,10 @@ type RequestOption struct {
 	DisProxy bool //是否关闭代理,强制关闭代理
 	TryNum   int  //重试次数
 
-	OptionCallBack func(context.Context, *Client, *RequestOption) error //请求参数回调,用于对请求参数进行修改。返回error,中断重试请求,返回nil继续
-	ResultCallBack func(context.Context, *Client, *Response) error      //结果回调,用于对结果进行校验。返回nil，直接返回,返回err的话，如果有errCallBack 走errCallBack，没有继续try
-	ErrCallBack    func(context.Context, *Client, error) error          //错误回调,返回error,中断重试请求,返回nil继续
-
-	RequestCallBack  func(context.Context, *http.Request) error
-	ResponseCallBack func(context.Context, *http.Request, *http.Response) error
+	OptionCallBack  func(context.Context, *Client, *RequestOption) error //请求参数回调,用于对请求参数进行修改。返回error,中断重试请求,返回nil继续
+	ResultCallBack  func(context.Context, *Client, *Response) error      //结果回调,用于对结果进行校验。返回nil，直接返回,返回err的话，如果有errCallBack 走errCallBack，没有继续try
+	ErrCallBack     func(context.Context, *Client, error) error          //错误回调,返回error,中断重试请求,返回nil继续
+	RequestCallBack func(context.Context, *http.Request, *http.Response) error
 
 	Jar *Jar //自定义临时cookies 管理
 
@@ -238,9 +236,6 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	}
 	if option.RequestCallBack == nil {
 		option.RequestCallBack = obj.requestCallBack
-	}
-	if option.ResponseCallBack == nil {
-		option.ResponseCallBack = obj.responseCallBack
 	}
 	return option
 }

@@ -6,7 +6,7 @@ import (
 
 	"net/http"
 
-	"gitee.com/baixudong/gson"
+	"github.com/gospider007/gson"
 )
 
 //go:linkname readCookies net/http.readCookies

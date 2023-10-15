@@ -8,7 +8,8 @@ import (
 
 	"net/http"
 
-	"gitee.com/baixudong/ja3"
+	"github.com/gospider007/gtls"
+	"github.com/gospider007/ja3"
 )
 
 type ClientOption struct {
@@ -43,8 +44,7 @@ type ClientOption struct {
 	Headers        any                                                  //请求头
 	Bar            bool                                                 //是否开启请求进度条
 
-	RequestCallBack  func(context.Context, *http.Request) error
-	ResponseCallBack func(context.Context, *http.Request, *http.Response) error
+	RequestCallBack func(context.Context, *http.Request, *http.Response) error
 }
 type Client struct {
 	jar         *Jar
@@ -53,8 +53,7 @@ type Client struct {
 	disUnZip    bool //变比自动解压
 	tryNum      int  //重试次数
 
-	requestCallBack  func(context.Context, *http.Request) error
-	responseCallBack func(context.Context, *http.Request, *http.Response) error
+	requestCallBack func(context.Context, *http.Request, *http.Response) error
 
 	optionCallBack func(context.Context, *Client, *RequestOption) error //请求参数回调,用于对请求参数进行修改。返回error,中断重试请求,返回nil继续
 	resultCallBack func(context.Context, *Client, *Response) error      //结果回调,用于对结果进行校验。返回nil，直接返回,返回err的话，如果有errCallBack 走errCallBack，没有继续try
@@ -151,14 +150,13 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 		}
 	}
 	result := &Client{
-		jar:              jar,
-		ctx:              ctx,
-		cnl:              cnl,
-		client:           client,
-		transport:        transport,
-		noJarClient:      noJarClient,
-		requestCallBack:  option.RequestCallBack,
-		responseCallBack: option.ResponseCallBack,
+		jar:             jar,
+		ctx:             ctx,
+		cnl:             cnl,
+		client:          client,
+		transport:       transport,
+		noJarClient:     noJarClient,
+		requestCallBack: option.RequestCallBack,
 
 		disCookie:      option.DisCookie,
 		redirectNum:    option.RedirectNum,
@@ -174,7 +172,7 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	}
 	var err error
 	if option.Proxy != "" {
-		result.proxy, err = VerifyProxy(option.Proxy)
+		result.proxy, err = gtls.VerifyProxy(option.Proxy)
 	}
 
 	if option.Ja3Spec.IsSet() {
@@ -189,7 +187,7 @@ func (obj *Client) HttpClient() *http.Client {
 	return obj.client
 }
 func (obj *Client) SetProxy(proxyUrl string) (err error) {
-	obj.proxy, err = VerifyProxy(proxyUrl)
+	obj.proxy, err = gtls.VerifyProxy(proxyUrl)
 	return
 }
 func (obj *Client) SetGetProxy(getProxy func(ctx context.Context, url *url.URL) (string, error)) {

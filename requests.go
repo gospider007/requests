@@ -14,10 +14,11 @@ import (
 
 	"net/http"
 
-	"gitee.com/baixudong/ja3"
-	"gitee.com/baixudong/re"
-	"gitee.com/baixudong/tools"
-	"gitee.com/baixudong/websocket"
+	"github.com/gospider007/gtls"
+	"github.com/gospider007/ja3"
+	"github.com/gospider007/re"
+	"github.com/gospider007/tools"
+	"github.com/gospider007/websocket"
 )
 
 //go:linkname ReadRequest net/http.readRequest
@@ -139,8 +140,7 @@ type reqCtxData struct {
 	proxy       *url.URL
 	disProxy    bool
 
-	requestCallBack  func(context.Context, *http.Request) error
-	responseCallBack func(context.Context, *http.Request, *http.Response) error
+	requestCallBack func(context.Context, *http.Request, *http.Response) error
 
 	h2Ja3Spec ja3.H2Ja3Spec
 	ja3Spec   ja3.Ja3Spec
@@ -148,93 +148,83 @@ type reqCtxData struct {
 
 func Get(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	client, _ := NewClient(preCtx)
-	defer func() {
-		if err != nil || (resp.webSocket == nil && resp.sseClient == nil) {
-			client.Close()
-		}
-	}()
-	return client.Request(preCtx, http.MethodGet, href, options...)
+	resp, err = client.Request(preCtx, http.MethodGet, href, options...)
+	if err != nil || resp == nil || !resp.oneceAlive() {
+		client.Close()
+	}
+	return
 }
 func Head(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	client, _ := NewClient(preCtx)
-	defer func() {
-		if err != nil || (resp.webSocket == nil && resp.sseClient == nil) {
-			client.Close()
-		}
-	}()
-	return client.Request(preCtx, http.MethodHead, href, options...)
+	resp, err = client.Request(preCtx, http.MethodHead, href, options...)
+	if err != nil || resp == nil || !resp.oneceAlive() {
+		client.Close()
+	}
+	return
 }
 func Post(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	client, _ := NewClient(preCtx)
-	defer func() {
-		if err != nil || (resp.webSocket == nil && resp.sseClient == nil) {
-			client.Close()
-		}
-	}()
-	return client.Request(preCtx, http.MethodPost, href, options...)
+	resp, err = client.Request(preCtx, http.MethodPost, href, options...)
+	if err != nil || resp == nil || !resp.oneceAlive() {
+		client.Close()
+	}
+	return
 }
 func Put(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	client, _ := NewClient(preCtx)
-	defer func() {
-		if err != nil || (resp.webSocket == nil && resp.sseClient == nil) {
-			client.Close()
-		}
-	}()
-	return client.Request(preCtx, http.MethodPut, href, options...)
+	resp, err = client.Request(preCtx, http.MethodPut, href, options...)
+	if err != nil || resp == nil || !resp.oneceAlive() {
+		client.Close()
+	}
+	return
 }
 func Patch(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	client, _ := NewClient(preCtx)
-	defer func() {
-		if err != nil || (resp.webSocket == nil && resp.sseClient == nil) {
-			client.Close()
-		}
-	}()
-	return client.Request(preCtx, http.MethodPatch, href, options...)
+	resp, err = client.Request(preCtx, http.MethodPatch, href, options...)
+	if err != nil || resp == nil || !resp.oneceAlive() {
+		client.Close()
+	}
+	return
 }
 func Delete(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	client, _ := NewClient(preCtx)
-	defer func() {
-		if err != nil || (resp.webSocket == nil && resp.sseClient == nil) {
-			client.Close()
-		}
-	}()
-	return client.Request(preCtx, http.MethodDelete, href, options...)
+	resp, err = client.Request(preCtx, http.MethodDelete, href, options...)
+	if err != nil || resp == nil || !resp.oneceAlive() {
+		client.Close()
+	}
+	return
 }
 func Connect(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	client, _ := NewClient(preCtx)
-	defer func() {
-		if err != nil || (resp.webSocket == nil && resp.sseClient == nil) {
-			client.Close()
-		}
-	}()
-	return client.Request(preCtx, http.MethodConnect, href, options...)
+	resp, err = client.Request(preCtx, http.MethodConnect, href, options...)
+	if err != nil || resp == nil || !resp.oneceAlive() {
+		client.Close()
+	}
+	return
 }
 func Options(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	client, _ := NewClient(preCtx)
-	defer func() {
-		if err != nil || (resp.webSocket == nil && resp.sseClient == nil) {
-			client.Close()
-		}
-	}()
-	return client.Request(preCtx, http.MethodOptions, href, options...)
+	resp, err = client.Request(preCtx, http.MethodOptions, href, options...)
+	if err != nil || resp == nil || !resp.oneceAlive() {
+		client.Close()
+	}
+	return
 }
 func Trace(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	client, _ := NewClient(preCtx)
-	defer func() {
-		if err != nil || (resp.webSocket == nil && resp.sseClient == nil) {
-			client.Close()
-		}
-	}()
-	return client.Request(preCtx, http.MethodTrace, href, options...)
+	resp, err = client.Request(preCtx, http.MethodTrace, href, options...)
+	if err != nil || resp == nil || !resp.oneceAlive() {
+		client.Close()
+	}
+	return
 }
 func Request(preCtx context.Context, method string, href string, options ...RequestOption) (resp *Response, err error) {
 	client, _ := NewClient(preCtx)
-	defer func() {
-		if err != nil || (resp.webSocket == nil && resp.sseClient == nil) {
-			client.Close()
-		}
-	}()
-	return client.Request(preCtx, method, href, options...)
+	resp, err = client.Request(preCtx, method, href, options...)
+	if err != nil || resp == nil || !resp.oneceAlive() {
+		client.Close()
+	}
+	return
 }
 func (obj *Client) Get(preCtx context.Context, href string, options ...RequestOption) (*Response, error) {
 	return obj.Request(preCtx, http.MethodGet, href, options...)
@@ -313,7 +303,7 @@ func (obj *Client) Request(preCtx context.Context, method string, href string, o
 func (obj *Client) request(preCtx context.Context, option RequestOption) (response *Response, err error) {
 	response = new(Response)
 	defer func() {
-		if err == nil && response.webSocket == nil && response.sseClient == nil && !option.DisRead { //判断是否读取body,和对body的处理
+		if err == nil && !response.oneceAlive() && !option.DisRead { //判断是否读取body,和对body的处理
 			err = response.ReadBody()
 			defer response.Close()
 		}
@@ -349,12 +339,11 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 	ctxData := new(reqCtxData)
 
 	ctxData.requestCallBack = option.RequestCallBack
-	ctxData.responseCallBack = option.ResponseCallBack
 	//构造代理
 	ctxData.disProxy = option.DisProxy
 	if !ctxData.disProxy {
 		if option.Proxy != "" { //代理相关构造
-			tempProxy, err := VerifyProxy(option.Proxy)
+			tempProxy, err := gtls.VerifyProxy(option.Proxy)
 			if err != nil {
 				return response, tools.WrapError(errFatal, errors.New("tempRequest 构造代理失败"), err)
 			}
@@ -386,24 +375,6 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 	if err != nil {
 		return response, tools.WrapError(errFatal, errors.New("tempRequest 构造request失败"), err)
 	}
-
-	//解析Scheme
-	var isWebSocket bool
-	switch reqs.URL.Scheme {
-	case "ws", "wss":
-		isWebSocket = true
-	case "file":
-		response.filePath = re.Sub(`^/+`, "", reqs.URL.Path)
-		response.content, err = os.ReadFile(response.filePath)
-		if err != nil {
-			err = tools.WrapError(errFatal, errors.New("read filePath data error"), err)
-		}
-		return
-	case "http", "https":
-	default:
-		err = tools.WrapError(errFatal, fmt.Errorf("url scheme error: %s", reqs.URL.Scheme))
-		return
-	}
 	//添加headers
 	var headOk bool
 	if reqs.Header, headOk = option.Headers.(http.Header); !headOk {
@@ -418,6 +389,24 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 	if reqs.Header.Get("Content-Type") == "" && reqs.Header.Get("content-type") == "" && option.ContentType != "" {
 		reqs.Header.Set("Content-Type", option.ContentType)
 	}
+
+	//解析Scheme
+	switch reqs.URL.Scheme {
+	case "ws", "wss":
+		websocket.SetClientHeadersOption(reqs.Header, option.WsOption)
+	case "file":
+		response.filePath = re.Sub(`^/+`, "", reqs.URL.Path)
+		response.content, err = os.ReadFile(response.filePath)
+		if err != nil {
+			err = tools.WrapError(errFatal, errors.New("read filePath data error"), err)
+		}
+		return
+	case "http", "https":
+	default:
+		err = tools.WrapError(errFatal, fmt.Errorf("url scheme error: %s", reqs.URL.Scheme))
+		return
+	}
+
 	//host构造
 	if option.Host != "" {
 		reqs.Host = option.Host
@@ -434,10 +423,7 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 			reqs.AddCookie(vv)
 		}
 	}
-	//开始发送请求
-	if isWebSocket { //设置websocket headers
-		websocket.SetClientHeadersOption(reqs.Header, option.WsOption)
-	}
+
 	if response.response, err = obj.getClient(option).Do(reqs); err != nil {
 		return
 	} else if response.response == nil {
@@ -447,13 +433,8 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 	if !response.disUnzip {
 		response.disUnzip = response.response.Uncompressed
 	}
-
-	if isWebSocket { //判断ws 的状态码是否正确
-		if response.response.StatusCode == 101 {
-			response.webSocket, err = websocket.NewClientConn(response.response)
-		} else {
-			err = errors.New("statusCode not 101, url为websocket链接，但是对方服务器没有将请求升级到websocket")
-		}
+	if response.response.StatusCode == 101 {
+		response.webSocket, err = websocket.NewClientConn(response.response)
 	} else if response.response.Header.Get("Content-Type") == "text/event-stream" { //如果为sse协议就关闭读取
 		response.sseClient = newSseClient(response)
 	}

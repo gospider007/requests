@@ -1,23 +1,22 @@
-module gitee.com/baixudong/requests
+module github.com/gospider007/requests
 
 go 1.21.1
 
 require (
-	gitee.com/baixudong/bar v0.0.0-20230923032414-c19cc384edeb
-	gitee.com/baixudong/bs4 v0.0.0-20230927091031-00dd545f5784
-	gitee.com/baixudong/gson v0.0.0-20230927090937-556b58fb6899
-	gitee.com/baixudong/ja3 v0.0.0-20231010095622-1f26d89ef419
-	gitee.com/baixudong/net v0.0.0-20230927083058-4a6a7a20f917
-	gitee.com/baixudong/re v0.0.0-20230809033040-360c1d945e59
-	gitee.com/baixudong/tools v0.0.0-20230926010219-77f29cbf5935
-	gitee.com/baixudong/websocket v0.0.0-20230927082325-5b4eb178c3ec
+	github.com/gospider007/bar v0.0.0-20231015040703-7d4e67e1741a
+	github.com/gospider007/bs4 v0.0.0-20231015041001-064efde5bd08
+	github.com/gospider007/gson v0.0.0-20231015042048-4fae1418931b
+	github.com/gospider007/gtls v0.0.0-20231015025737-e18d927ad339
+	github.com/gospider007/ja3 v0.0.0-20231015030157-fdfe60187c35
+	github.com/gospider007/net v0.0.0-20231015031122-61ca42e0006f
+	github.com/gospider007/re v0.0.0-20231015023348-717c984874af
+	github.com/gospider007/tools v0.0.0-20231015025637-9b1d99c470f4
+	github.com/gospider007/websocket v0.0.0-20231015042221-9176c1ebbdfc
 	github.com/refraction-networking/utls v1.5.4
-	golang.org/x/net v0.16.0
+	golang.org/x/net v0.17.0
 )
 
 require (
-	gitee.com/baixudong/blog v0.0.0-20230923032533-d83e7cb672f7 // indirect
-	gitee.com/baixudong/kinds v0.0.0-20230809033013-c3d6d3479f8c // indirect
 	github.com/PuerkitoBio/goquery v1.8.1 // indirect
 	github.com/andybalholm/brotli v1.0.5 // indirect
 	github.com/andybalholm/cascadia v1.3.2 // indirect
@@ -29,7 +28,8 @@ require (
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
-	github.com/google/uuid v1.3.1 // indirect
+	github.com/gospider007/blog v0.0.0-20231015040505-4b08187c11ee // indirect
+	github.com/gospider007/kinds v0.0.0-20231015025159-69ab7d8d9b94 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.17.0 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect

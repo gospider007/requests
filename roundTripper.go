@@ -15,8 +15,9 @@ import (
 
 	"net/http"
 
-	"gitee.com/baixudong/net/http2"
-	"gitee.com/baixudong/tools"
+	"github.com/gospider007/gtls"
+	"github.com/gospider007/net/http2"
+	"github.com/gospider007/tools"
 	utls "github.com/refraction-networking/utls"
 )
 
@@ -491,7 +492,7 @@ func (obj *RoundTripper) GetProxy(ctx context.Context, proxyUrl *url.URL) (*url.
 	if err != nil {
 		return nil, err
 	}
-	return VerifyProxy(proxy)
+	return gtls.VerifyProxy(proxy)
 }
 
 func (obj *RoundTripper) poolRoundTrip(task *reqTask, key string) (bool, error) {
@@ -527,7 +528,7 @@ func (obj *RoundTripper) CloseIdleConnections() {
 func (obj *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	ctxData := req.Context().Value(keyPrincipalID).(*reqCtxData)
 	if ctxData.requestCallBack != nil {
-		if err := ctxData.requestCallBack(req.Context(), req); err != nil {
+		if err := ctxData.requestCallBack(req.Context(), req, nil); err != nil {
 			return nil, err
 		}
 	}
@@ -539,8 +540,8 @@ func (obj *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	if ok, err := obj.poolRoundTrip(task, key); err != nil {
 		return nil, err
 	} else if ok { //is conn multi
-		if ctxData.responseCallBack != nil {
-			if err = ctxData.responseCallBack(task.req.Context(), req, task.res); err != nil {
+		if ctxData.requestCallBack != nil {
+			if err = ctxData.requestCallBack(task.req.Context(), req, task.res); err != nil {
 				task.err = err
 			}
 		}
@@ -561,8 +562,8 @@ newConn:
 	if task.isPool() {
 		obj.putConnPool(key, conn)
 	}
-	if ctxData.responseCallBack != nil {
-		if err = ctxData.responseCallBack(task.req.Context(), req, task.res); err != nil {
+	if ctxData.requestCallBack != nil {
+		if err = ctxData.requestCallBack(task.req.Context(), req, task.res); err != nil {
 			task.err = err
 			conn.Close()
 		}

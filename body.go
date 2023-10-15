@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/url"
 
-	"gitee.com/baixudong/gson"
-	"gitee.com/baixudong/tools"
+	"github.com/gospider007/gson"
+	"github.com/gospider007/tools"
 )
 
 // 构造一个文件
