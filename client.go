@@ -34,9 +34,10 @@ type ClientOption struct {
 
 	RedirectNum int //redirect num ,<0 no redirect,==0 no limit
 
-	DisDecode       bool                                                       //disable auto decode                               //关闭自动编码
-	DisUnZip        bool                                                       //disable auto zip decode                                      //关闭自动解压
-	TryNum          int                                                        //try num                                       //重试次数
+	DisDecode       bool                                                       //disable auto decode
+	DisUnZip        bool                                                       //disable auto zip decode
+	DisAlive        bool                                                       //disable  keepalive
+	TryNum          int                                                        //try num
 	OptionCallBack  func(context.Context, *Client, *RequestOption) error       //option callback,if error is returnd, break request
 	ResultCallBack  func(context.Context, *Client, *Response) error            //result callback,if error is returnd,next errCallback
 	ErrCallBack     func(context.Context, *Client, error) error                //error callback,if error is returnd,break request
@@ -51,7 +52,9 @@ type Client struct {
 	redirectNum int
 	disDecode   bool
 	disUnZip    bool
-	tryNum      int
+	disAlive    bool
+
+	tryNum int
 
 	requestCallBack func(context.Context, *http.Request, *http.Response) error
 
@@ -96,7 +99,7 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 		option.DialTimeout = time.Second * 15
 	}
 	if option.TlsHandshakeTimeout == 0 {
-		option.TlsHandshakeTimeout = time.Second * 5
+		option.TlsHandshakeTimeout = time.Second * 15
 	}
 	//cookiesjar
 	var jar *Jar
@@ -116,7 +119,7 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	// 		EnableDatagrams: true,
 	// 	}
 	// }
-	transport := NewRoundTripper(ctx, RoundTripperOption{
+	transport := newRoundTripper(ctx, RoundTripperOption{
 		TlsHandshakeTimeout:   option.TlsHandshakeTimeout,
 		DialTimeout:           option.DialTimeout,
 		KeepAlive:             option.KeepAlive,
@@ -161,6 +164,7 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 		redirectNum:    option.RedirectNum,
 		disDecode:      option.DisDecode,
 		disUnZip:       option.DisUnZip,
+		disAlive:       option.DisAlive,
 		tryNum:         option.TryNum,
 		optionCallBack: option.OptionCallBack,
 		resultCallBack: option.ResultCallBack,

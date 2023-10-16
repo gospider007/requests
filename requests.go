@@ -139,6 +139,7 @@ type reqCtxData struct {
 	redirectNum int
 	proxy       *url.URL
 	disProxy    bool
+	disAlive    bool
 
 	requestCallBack func(context.Context, *http.Request, *http.Response) error
 
@@ -335,6 +336,7 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 	var reqs *http.Request
 	//init ctxData
 	ctxData := new(reqCtxData)
+	ctxData.disAlive = option.DisAlive
 	ctxData.requestCallBack = option.RequestCallBack
 	//init proxy
 	ctxData.disProxy = option.DisProxy

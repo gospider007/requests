@@ -42,6 +42,7 @@ type RequestOption struct {
 	DisCookie bool //disable cookies,not use cookies
 	DisDecode bool //disable auto decode
 	DisRead   bool //disable auto read
+	DisAlive  bool //disable  keepalive
 
 	Bar      bool //enable bar display
 	DisProxy bool //force disable proxy
@@ -217,6 +218,10 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	}
 	if !option.DisUnZip {
 		option.DisUnZip = obj.disUnZip
+	}
+
+	if !option.DisAlive {
+		option.DisAlive = obj.disAlive
 	}
 
 	if !option.Ja3Spec.IsSet() {

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/url"
 	"sync"
@@ -147,14 +148,15 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, addr string, key string, req 
 		if ctxData.ja3Spec.IsSet() {
 			tlsConn, err := obj.dialer.AddJa3Tls(ctx, netConn, host, isWebSocket, ctxData.ja3Spec, obj.UtlsConfig())
 			if err != nil {
-				return conne, err
+				return conne, tools.WrapError(err, "add tls error")
 			}
+			log.Print(tlsConn.ConnectionState().NegotiatedProtocol)
 			conne.h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
 			netConn = tlsConn
 		} else {
 			tlsConn, err := obj.dialer.AddTls(ctx, netConn, host, isWebSocket, obj.TlsConfig())
 			if err != nil {
-				return conne, err
+				return conne, tools.WrapError(err, "add tls error")
 			}
 			conne.h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
 			netConn = tlsConn
@@ -343,7 +345,7 @@ func (obj *Connecotr) taskMain(task *reqTask, afterTime *time.Timer, responseHea
 	}
 	select {
 	case <-obj.closeCtx.Done():
-		return nil, obj.closeCtx.Err(), true
+		return nil, tools.WrapError(obj.closeCtx.Err(), "close ctx error: "), true
 	default:
 	}
 	if obj.h2 {
@@ -365,7 +367,7 @@ func (obj *Connecotr) taskMain(task *reqTask, afterTime *time.Timer, responseHea
 			<-obj.bodyCtx.Done() //wait body close
 		}
 	case <-obj.deleteCtx.Done(): //force conn close
-		task.err = obj.deleteCtx.Err()
+		task.err = tools.WrapError(obj.deleteCtx.Err(), "delete ctx error: ")
 		task.cnl()
 	case <-afterTime.C:
 		task.err = errors.New("response Header is Timeout")
@@ -437,7 +439,7 @@ type RoundTripperOption struct {
 	GetProxy              func(ctx context.Context, url *url.URL) (string, error)
 }
 
-func NewRoundTripper(preCtx context.Context, option RoundTripperOption) *RoundTripper {
+func newRoundTripper(preCtx context.Context, option RoundTripperOption) *RoundTripper {
 	if preCtx == nil {
 		preCtx = context.TODO()
 	}
@@ -503,13 +505,13 @@ func (obj *RoundTripper) poolRoundTrip(task *reqTask, key string) (bool, error) 
 	}
 	select {
 	case <-obj.ctx.Done():
-		return false, obj.ctx.Err()
+		return false, tools.WrapError(obj.ctx.Err(), "roundTripper close ctx error: ")
 	case pool.tasks <- task:
 		select {
 		case <-task.emptyPool:
 		case <-task.ctx.Done():
 			if task.err == nil && task.res == nil {
-				task.err = obj.ctx.Err()
+				task.err = tools.WrapError(task.ctx.Err(), "task close ctx error: ")
 			}
 			return true, nil
 		}
@@ -538,15 +540,17 @@ func (obj *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	task.ctx, task.cnl = context.WithCancel(obj.ctx)
 	defer task.cnl()
 	//get pool conn
-	if ok, err := obj.poolRoundTrip(task, key); err != nil {
-		return nil, err
-	} else if ok { //is conn multi
-		if ctxData.requestCallBack != nil {
-			if err = ctxData.requestCallBack(task.req.Context(), req, task.res); err != nil {
-				task.err = err
+	if !ctxData.disAlive {
+		if ok, err := obj.poolRoundTrip(task, key); err != nil {
+			return nil, err
+		} else if ok { //is conn multi
+			if ctxData.requestCallBack != nil {
+				if err = ctxData.requestCallBack(task.req.Context(), req, task.res); err != nil {
+					task.err = err
+				}
 			}
+			return task.res, task.err
 		}
-		return task.res, task.err
 	}
 newConn:
 	addr := getAddr(req.URL)
@@ -560,7 +564,7 @@ newConn:
 	if task.err == nil && task.res == nil {
 		task.err = obj.ctx.Err()
 	}
-	if task.isPool() {
+	if task.isPool() && !ctxData.disAlive {
 		obj.putConnPool(key, conn)
 	}
 	if ctxData.requestCallBack != nil {
