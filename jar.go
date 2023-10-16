@@ -19,7 +19,6 @@ func NewJar() *Jar {
 	}
 }
 
-// 返回url 的cookies,也可以设置url 的cookies
 func (obj *Client) GetCookies(href string) (Cookies, error) {
 	return obj.jar.GetCookies(href)
 }
@@ -27,7 +26,6 @@ func (obj *Client) SetCookies(href string, cookies ...any) error {
 	return obj.jar.SetCookies(href, cookies...)
 }
 
-// 清除cookies
 func (obj *Client) ClearCookies() {
 	if obj.client.Jar != nil {
 		obj.jar.ClearCookies()

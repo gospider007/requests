@@ -132,7 +132,7 @@ type keyPrincipal string
 const keyPrincipalID keyPrincipal = "gospiderContextData"
 
 var (
-	errFatal = errors.New("致命错误")
+	errFatal = errors.New("Fatal error")
 )
 
 type reqCtxData struct {
@@ -254,7 +254,6 @@ func (obj *Client) Trace(preCtx context.Context, href string, options ...Request
 	return obj.Request(preCtx, http.MethodTrace, href, options...)
 }
 
-// 发送请求
 func (obj *Client) Request(preCtx context.Context, method string, href string, options ...RequestOption) (resp *Response, err error) {
 	if obj == nil {
 		return nil, errors.New("client is nil")
@@ -270,7 +269,6 @@ func (obj *Client) Request(preCtx context.Context, method string, href string, o
 	if rawOption.Body != nil {
 		optionBak.TryNum = 0
 	}
-	//开始请求
 	for tryNum := 0; tryNum <= optionBak.TryNum; tryNum++ {
 		select {
 		case <-obj.ctx.Done():
@@ -285,12 +283,12 @@ func (obj *Client) Request(preCtx context.Context, method string, href string, o
 			}
 			if option.Url == nil {
 				if option.Url, err = url.Parse(href); err != nil {
-					err = tools.WrapError(err, "url 解析错误")
+					err = tools.WrapError(err, "url parse error")
 					return
 				}
 			}
 			resp, err = obj.request(preCtx, option)
-			if err == nil || errors.Is(err, errFatal) { //致命错误,或没有错误,直接返回
+			if err == nil || errors.Is(err, errFatal) {
 				return
 			}
 		}
@@ -303,14 +301,14 @@ func (obj *Client) Request(preCtx context.Context, method string, href string, o
 func (obj *Client) request(preCtx context.Context, option RequestOption) (response *Response, err error) {
 	response = new(Response)
 	defer func() {
-		if err == nil && !response.oneceAlive() && !option.DisRead { //判断是否读取body,和对body的处理
+		if err == nil && !response.oneceAlive() && !option.DisRead {
 			err = response.ReadBody()
 			defer response.Close()
 		}
-		if err == nil && option.ResultCallBack != nil { //result 回调处理
+		if err == nil && option.ResultCallBack != nil {
 			err = option.ResultCallBack(preCtx, obj, response)
 		}
-		if err != nil { //err 回调处理
+		if err != nil {
 			response.Close()
 			if option.ErrCallBack != nil {
 				if err2 := option.ErrCallBack(preCtx, obj, err); err2 != nil {
@@ -325,7 +323,7 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 		}
 	}
 	if err = option.optionInit(); err != nil {
-		err = tools.WrapError(err, "option 初始化错误")
+		err = tools.WrapError(err, "option init error")
 		return
 	}
 	response.bar = option.Bar
@@ -335,38 +333,37 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 	method := strings.ToUpper(option.Method)
 	href := option.converUrl
 	var reqs *http.Request
-	//构造ctxData
+	//init ctxData
 	ctxData := new(reqCtxData)
-
 	ctxData.requestCallBack = option.RequestCallBack
-	//构造代理
+	//init proxy
 	ctxData.disProxy = option.DisProxy
 	if !ctxData.disProxy {
-		if option.Proxy != "" { //代理相关构造
+		if option.Proxy != "" {
 			tempProxy, err := gtls.VerifyProxy(option.Proxy)
 			if err != nil {
-				return response, tools.WrapError(errFatal, errors.New("tempRequest 构造代理失败"), err)
+				return response, tools.WrapError(errFatal, errors.New("tempRequest init proxy error"), err)
 			}
 			ctxData.proxy = tempProxy
 		} else if obj.proxy != nil {
 			ctxData.proxy = obj.proxy
 		}
 	}
-	//指纹
+	//fingerprint
 	ctxData.ja3Spec = option.Ja3Spec
 	ctxData.h2Ja3Spec = option.H2Ja3Spec
 
-	//重定向
-	if option.RedirectNum != 0 { //重定向次数
+	//redirect
+	if option.RedirectNum != 0 {
 		ctxData.redirectNum = option.RedirectNum
 	}
-	//构造ctx,cnl
+	//init ctx,cnl
 	if option.Timeout > 0 { //超时
 		response.ctx, response.cnl = context.WithTimeout(context.WithValue(preCtx, keyPrincipalID, ctxData), option.Timeout)
 	} else {
 		response.ctx, response.cnl = context.WithCancel(context.WithValue(preCtx, keyPrincipalID, ctxData))
 	}
-	//创建request
+	//create request
 	if option.Body != nil {
 		reqs, err = http.NewRequestWithContext(response.ctx, method, href, option.Body)
 	} else {
@@ -375,22 +372,22 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 	if err != nil {
 		return response, tools.WrapError(errFatal, errors.New("tempRequest 构造request失败"), err)
 	}
-	//添加headers
+	//add headers
 	var headOk bool
 	if reqs.Header, headOk = option.Headers.(http.Header); !headOk {
 		return response, tools.WrapError(errFatal, "request headers 转换错误")
 	}
-	//添加Referer
+	//add Referer
 	if option.Referer != "" && reqs.Header.Get("Referer") == "" {
 		reqs.Header.Set("Referer", option.Referer)
 	}
 
-	//设置 ContentType 值
+	//set ContentType
 	if reqs.Header.Get("Content-Type") == "" && reqs.Header.Get("content-type") == "" && option.ContentType != "" {
 		reqs.Header.Set("Content-Type", option.ContentType)
 	}
 
-	//解析Scheme
+	//parse Scheme
 	switch reqs.URL.Scheme {
 	case "ws", "wss":
 		websocket.SetClientHeadersOption(reqs.Header, option.WsOption)
@@ -407,17 +404,17 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 		return
 	}
 
-	//host构造
+	//add host
 	if option.Host != "" {
 		reqs.Host = option.Host
 	} else if reqs.Header.Get("Host") != "" {
 		reqs.Host = reqs.Header.Get("Host")
 	}
-	//添加 cookies
+	//add cookies
 	if option.Cookies != nil {
 		cooks, cookOk := option.Cookies.(Cookies)
 		if !cookOk {
-			return response, tools.WrapError(errFatal, "request cookies 转换错误")
+			return response, tools.WrapError(errFatal, "request cookies transport error")
 		}
 		for _, vv := range cooks {
 			reqs.AddCookie(vv)
@@ -435,7 +432,7 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 	}
 	if response.response.StatusCode == 101 {
 		response.webSocket, err = websocket.NewClientConn(response.response)
-	} else if response.response.Header.Get("Content-Type") == "text/event-stream" { //如果为sse协议就关闭读取
+	} else if response.response.Header.Get("Content-Type") == "text/event-stream" {
 		response.sseClient = newSseClient(response)
 	}
 	return

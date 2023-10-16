@@ -13,55 +13,55 @@ import (
 )
 
 type ClientOption struct {
-	GetProxy func(ctx context.Context, url *url.URL) (string, error) //根据url 返回代理，支持https,http,socks5 代理协议
-	Proxy    string                                                  //设置代理,支持https,http,socks5 代理协议
+	GetProxy func(ctx context.Context, url *url.URL) (string, error) //proxy callback:support https,http,socks5 proxy
+	Proxy    string                                                  //proxy,support https,http,socks5
 
-	DisCookie bool         //关闭cookies管理
-	LocalAddr *net.TCPAddr //本地网卡出口ip
+	DisCookie bool         //disable cookies
+	LocalAddr *net.TCPAddr //network card ip
 
-	DialTimeout           time.Duration //dial tcp 超时时间,default:15
-	TlsHandshakeTimeout   time.Duration //tls 超时时间,default:15
-	KeepAlive             time.Duration //keepalive保活检测定时,default:30
+	DialTimeout           time.Duration //dial tcp timeout,default:15
+	TlsHandshakeTimeout   time.Duration //tls timeout,default:15
+	KeepAlive             time.Duration //keepalive,default:30
 	ResponseHeaderTimeout time.Duration //ResponseHeaderTimeout ,default:30
 
-	AddrType    AddrType //优先使用的addr 类型
+	AddrType    AddrType //dns parse addr type
 	GetAddrType func(string) AddrType
 	Dns         net.IP //dns
 
-	Ja3       bool          //开启ja3指纹
-	Ja3Spec   ja3.Ja3Spec   //指定ja3Spec,使用ja3.CreateSpecWithStr 或者ja3.CreateSpecWithId 生成
-	H2Ja3Spec ja3.H2Ja3Spec //h2指纹
+	Ja3       bool          //enable ja3 fingerprint
+	Ja3Spec   ja3.Ja3Spec   //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
+	H2Ja3Spec ja3.H2Ja3Spec //h2 fingerprint
 
-	RedirectNum int //重定向次数,小于0为禁用,0:不限制
+	RedirectNum int //redirect num ,<0 no redirect,==0 no limit
 
-	DisDecode      bool                                                 //关闭自动编码
-	DisUnZip       bool                                                 //关闭自动解压
-	TryNum         int                                                  //重试次数
-	OptionCallBack func(context.Context, *Client, *RequestOption) error //请求参数回调,用于对请求参数进行修改。返回error,中断重试请求,返回nil继续
-	ResultCallBack func(context.Context, *Client, *Response) error      //结果回调,用于对结果进行校验。返回nil，直接返回,返回err的话，如果有errCallBack 走errCallBack，没有继续try
-	ErrCallBack    func(context.Context, *Client, error) error          //错误回调,返回error,中断重试请求,返回nil继续
-	Timeout        time.Duration                                        //请求超时时间
-	Headers        any                                                  //请求头
-	Bar            bool                                                 //是否开启请求进度条
+	DisDecode       bool                                                       //disable auto decode                               //关闭自动编码
+	DisUnZip        bool                                                       //disable auto zip decode                                      //关闭自动解压
+	TryNum          int                                                        //try num                                       //重试次数
+	OptionCallBack  func(context.Context, *Client, *RequestOption) error       //option callback,if error is returnd, break request
+	ResultCallBack  func(context.Context, *Client, *Response) error            //result callback,if error is returnd,next errCallback
+	ErrCallBack     func(context.Context, *Client, error) error                //error callback,if error is returnd,break request
+	RequestCallBack func(context.Context, *http.Request, *http.Response) error //request and response callback,if error is returnd,reponse is error
 
-	RequestCallBack func(context.Context, *http.Request, *http.Response) error
+	Timeout time.Duration //request timeout
+	Headers any           //default headers
+	Bar     bool          ////enable bar display
 }
 type Client struct {
 	jar         *Jar
-	redirectNum int  //重定向次数
-	disDecode   bool //关闭自动编码
-	disUnZip    bool //变比自动解压
-	tryNum      int  //重试次数
+	redirectNum int
+	disDecode   bool
+	disUnZip    bool
+	tryNum      int
 
 	requestCallBack func(context.Context, *http.Request, *http.Response) error
 
-	optionCallBack func(context.Context, *Client, *RequestOption) error //请求参数回调,用于对请求参数进行修改。返回error,中断重试请求,返回nil继续
-	resultCallBack func(context.Context, *Client, *Response) error      //结果回调,用于对结果进行校验。返回nil，直接返回,返回err的话，如果有errCallBack 走errCallBack，没有继续try
-	errCallBack    func(context.Context, *Client, error) error          //错误回调,返回error,中断重试请求,返回nil继续
+	optionCallBack func(context.Context, *Client, *RequestOption) error
+	resultCallBack func(context.Context, *Client, *Response) error
+	errCallBack    func(context.Context, *Client, error) error
 
-	timeout time.Duration //请求超时时间
-	headers any           //请求头
-	bar     bool          //是否开启bar
+	timeout time.Duration
+	headers any
+	bar     bool
 
 	disCookie   bool
 	client      *http.Client
@@ -72,18 +72,17 @@ type Client struct {
 	cnl       context.CancelFunc
 	transport *RoundTripper
 
-	ja3Spec   ja3.Ja3Spec   //指定ja3Spec,使用ja3.CreateSpecWithStr 或者ja3.CreateSpecWithId 生成
-	h2Ja3Spec ja3.H2Ja3Spec //h2指纹
+	ja3Spec   ja3.Ja3Spec
+	h2Ja3Spec ja3.H2Ja3Spec
 }
 
-// 新建一个请求客户端,发送请求必须创建哈
 func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error) {
 	if preCtx == nil {
 		preCtx = context.TODO()
 	}
 	ctx, cnl := context.WithCancel(preCtx)
 	var option ClientOption
-	//初始化参数
+
 	if len(options) > 0 {
 		option = options[0]
 	}
@@ -99,7 +98,7 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	if option.TlsHandshakeTimeout == 0 {
 		option.TlsHandshakeTimeout = time.Second * 5
 	}
-	//创建cookiesjar
+	//cookiesjar
 	var jar *Jar
 	if !option.DisCookie {
 		jar = NewJar()

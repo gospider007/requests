@@ -16,48 +16,47 @@ import (
 	"github.com/gospider007/websocket"
 )
 
-// 请求参数选项
 type RequestOption struct {
-	Ja3       bool          //开启ja3指纹
-	Ja3Spec   ja3.Ja3Spec   //指定ja3Spec,使用ja3.CreateSpecWithStr 或者ja3.CreateSpecWithId 生成
-	H2Ja3Spec ja3.H2Ja3Spec //h2指纹
+	Ja3       bool          //enable ja3 fingerprint
+	Ja3Spec   ja3.Ja3Spec   //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
+	H2Ja3Spec ja3.H2Ja3Spec //custom h2 fingerprint
 
-	Referer     string
-	Method      string        //method
-	Url         *url.URL      //请求的url
-	Host        string        //网站的host
-	Proxy       string        //代理,支持http,https,socks5协议代理,例如：http://127.0.0.1:7005
-	Timeout     time.Duration //请求超时时间
-	Headers     any           //请求头,支持：json,map，header
-	Cookies     any           // cookies,支持json,map,str，http.Header
-	Files       []File        //发送multipart/form-data,文件上传
-	Params      any           //url 中的参数，用以拼接url,支持json,map
-	Form        any           //发送multipart/form-data,适用于文件上传,支持json,map
-	Data        any           //发送application/x-www-form-urlencoded,适用于key,val,支持string,[]bytes,json,map
+	Referer     string //set headers referer value
+	Method      string //method
+	Url         *url.URL
+	Host        string
+	Proxy       string        //proxy,support http,https,socks5,example：http://127.0.0.1:7005
+	Timeout     time.Duration //request timeout
+	Headers     any           //request headers：json,map，header
+	Cookies     any           // cookies,support : json,map,str，http.Header
+	Files       []File        //send multipart/form-data, file upload
+	Params      any           //url params，join url query,support json,map
+	Form        any           //send multipart/form-data,file upload,support json,map
+	Data        any           //send application/x-www-form-urlencoded, support string,[]bytes,json,map
 	Body        io.Reader
-	Json        any    //发送application/json,支持：string,[]bytes,json,map
-	Text        any    //发送text/xml,支持string,[]bytes,json,map
-	ContentType string //headers 中Content-Type 的值
-	Raw         any    //不设置context-type,支持string,[]bytes,json,map
+	Json        any    //send application/json,support：string,[]bytes,json,map
+	Text        any    //send text/xml,support: string,[]bytes,json,map
+	ContentType string //headers Content-Type value
+	Raw         any    //not setting context-type,support string,[]bytes,json,map
 
-	DisCookie bool //关闭cookies管理,这个请求不用cookies池
-	DisDecode bool //关闭自动解码
-	DisRead   bool //关闭自动读取
+	DisCookie bool //disable cookies,not use cookies
+	DisDecode bool //disable auto decode
+	DisRead   bool //disable auto read
 
-	Bar      bool //是否开启bar
-	DisProxy bool //是否关闭代理,强制关闭代理
-	TryNum   int  //重试次数
+	Bar      bool //enable bar display
+	DisProxy bool //force disable proxy
+	TryNum   int  //try num
 
-	OptionCallBack  func(context.Context, *Client, *RequestOption) error //请求参数回调,用于对请求参数进行修改。返回error,中断重试请求,返回nil继续
-	ResultCallBack  func(context.Context, *Client, *Response) error      //结果回调,用于对结果进行校验。返回nil，直接返回,返回err的话，如果有errCallBack 走errCallBack，没有继续try
-	ErrCallBack     func(context.Context, *Client, error) error          //错误回调,返回error,中断重试请求,返回nil继续
-	RequestCallBack func(context.Context, *http.Request, *http.Response) error
+	OptionCallBack  func(context.Context, *Client, *RequestOption) error       //option callback,if error is returnd, break request
+	ResultCallBack  func(context.Context, *Client, *Response) error            //result callback,if error is returnd,next errCallback
+	ErrCallBack     func(context.Context, *Client, error) error                //error callback,if error is returnd,break request
+	RequestCallBack func(context.Context, *http.Request, *http.Response) error //request and response callback,if error is returnd,reponse is error
 
-	Jar *Jar //自定义临时cookies 管理
+	Jar *Jar //custom cookies
 
-	RedirectNum int              //重定向次数,小于零 关闭重定向
-	DisUnZip    bool             //关闭自动解压
-	WsOption    websocket.Option //websocket option,使用websocket 请求的option
+	RedirectNum int              //redirect num ,<0 no redirect,==0 no limit
+	DisUnZip    bool             //disable auto zip decode
+	WsOption    websocket.Option //websocket option
 	converUrl   string
 }
 
@@ -156,11 +155,9 @@ func (obj *RequestOption) initBody() (err error) {
 func (obj *RequestOption) optionInit() error {
 	obj.converUrl = obj.Url.String()
 	var err error
-	//构造body
 	if err = obj.initBody(); err != nil {
 		return err
 	}
-	//构造params
 	if obj.Params != nil {
 		dataMap := map[string][]string{}
 		if _, err = newBody(obj.Params, paramsType, dataMap); err != nil {
@@ -176,11 +173,9 @@ func (obj *RequestOption) optionInit() error {
 		pu.RawQuery = puValues.Encode()
 		obj.converUrl = pu.String()
 	}
-	//构造headers
 	if err = obj.initHeaders(); err != nil {
 		return err
 	}
-	//构造cookies
 	return obj.initCookies()
 }
 func (obj *Client) newRequestOption(option RequestOption) RequestOption {

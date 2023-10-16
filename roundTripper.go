@@ -26,10 +26,10 @@ type roundTripper interface {
 }
 
 type reqTask struct {
-	ctx       context.Context //控制请求的生命周期
+	ctx       context.Context
 	cnl       context.CancelFunc
-	req       *http.Request  //发送的请求
-	res       *http.Response //接收的请求
+	req       *http.Request
+	res       *http.Response
 	emptyPool chan struct{}
 	err       error
 }
@@ -39,7 +39,7 @@ func (obj *reqTask) isPool() bool {
 }
 
 type connPool struct {
-	ctx   context.Context //控制请求的生命周期
+	ctx   context.Context
 	cnl   context.CancelFunc
 	key   string
 	total atomic.Int64
@@ -84,7 +84,7 @@ func getHost(req *http.Request) string {
 func getKey(ctxData *reqCtxData, req *http.Request) string {
 	return fmt.Sprintf("%s@%s@%s", ctxData.ja3Spec.String(), getAddr(ctxData.proxy), getAddr(req.URL))
 }
-func (obj *RoundTripper) newConnPool(key string, conn *Connecotr) *connPool { //新建连接池
+func (obj *RoundTripper) newConnPool(key string, conn *Connecotr) *connPool {
 	pool := new(connPool)
 	pool.ctx, pool.cnl = context.WithCancel(obj.ctx)
 	pool.tasks = make(chan *reqTask)
@@ -121,7 +121,7 @@ func (obj *RoundTripper) UtlsConfig() *utls.Config {
 	return obj.utlsConfig.Clone()
 }
 func (obj *RoundTripper) dial(ctxData *reqCtxData, addr string, key string, req *http.Request) (conn *Connecotr, err error) {
-	if !ctxData.disProxy && ctxData.proxy == nil { //确定代理
+	if !ctxData.disProxy && ctxData.proxy == nil {
 		if ctxData.proxy, err = obj.GetProxy(req.Context(), req.URL); err != nil {
 			return conn, err
 		}
@@ -175,14 +175,14 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, addr string, key string, req 
 
 type Connecotr struct {
 	err       error
-	deleteCtx context.Context //强制关闭，直接关闭所有底层conn
+	deleteCtx context.Context //force close
 	deleteCnl context.CancelFunc
 
-	closeCtx context.Context //通知关闭，安全的关闭，等待body 完成生命周期
+	closeCtx context.Context //safe close
 	closeCnl context.CancelFunc
 
-	bodyCtx context.Context    //body的生命周期
-	bodyCnl context.CancelFunc //body的生命周期
+	bodyCtx context.Context //body close
+	bodyCnl context.CancelFunc
 
 	rawConn   net.Conn
 	h2        bool
@@ -299,11 +299,13 @@ func (obj *ReadWriteCloser) Close() (err error) {
 	return
 }
 
-func (obj *ReadWriteCloser) Delete() { //通知关闭连接，不会影响正在传输中的数据
+// safe close conn
+func (obj *ReadWriteCloser) Delete() {
 	obj.conn.closeCnl()
 }
 
-func (obj *ReadWriteCloser) ForceDelete() { //强制关闭连接，立刻马上
+// force close conn
+func (obj *ReadWriteCloser) ForceDelete() {
 	obj.conn.Close()
 }
 
@@ -331,16 +333,16 @@ func (obj *Connecotr) http2Req(task *reqTask) {
 }
 func (obj *connPool) notice(task *reqTask) {
 	select {
-	case obj.tasks <- task: //任务给池子里其它连接
-	case task.emptyPool <- struct{}{}: //告诉提交任务方，池子没有可用连接
+	case obj.tasks <- task:
+	case task.emptyPool <- struct{}{}:
 	}
 }
 func (obj *Connecotr) taskMain(task *reqTask, afterTime *time.Timer, responseHeaderTimeout time.Duration) (*http.Response, error, bool) {
-	if obj.h2 && obj.h2Closed() { //连接不可用
-		return nil, errors.New("连接不可用"), true
+	if obj.h2 && obj.h2Closed() {
+		return nil, errors.New("conn is closed"), true
 	}
 	select {
-	case <-obj.closeCtx.Done(): //连接池通知关闭，等待连接被释放掉
+	case <-obj.closeCtx.Done():
 		return nil, obj.closeCtx.Err(), true
 	default:
 	}
@@ -349,7 +351,6 @@ func (obj *Connecotr) taskMain(task *reqTask, afterTime *time.Timer, responseHea
 	} else {
 		go obj.http1Req(task)
 	}
-	//等待任务完成
 	if afterTime == nil {
 		afterTime = time.NewTimer(responseHeaderTimeout)
 	} else {
@@ -361,9 +362,9 @@ func (obj *Connecotr) taskMain(task *reqTask, afterTime *time.Timer, responseHea
 	select {
 	case <-task.ctx.Done():
 		if task.res != nil && task.err == nil && obj.isPool {
-			<-obj.bodyCtx.Done() //等待body close
+			<-obj.bodyCtx.Done() //wait body close
 		}
-	case <-obj.deleteCtx.Done(): //强制关闭
+	case <-obj.deleteCtx.Done(): //force conn close
 		task.err = obj.deleteCtx.Err()
 		task.cnl()
 	case <-afterTime.C:
@@ -390,15 +391,15 @@ func (obj *connPool) rwMain(conn *Connecotr) {
 		}
 	}()
 	select {
-	case <-conn.deleteCtx.Done(): //强制关闭所有连接
+	case <-conn.deleteCtx.Done(): //force close all conn
 		return
-	case <-conn.bodyCtx.Done(): //等待连接占用被释放
+	case <-conn.bodyCtx.Done(): //wait body close
 	}
 	for {
 		select {
-		case <-conn.closeCtx.Done(): //连接池通知关闭，等待连接被释放掉
+		case <-conn.closeCtx.Done(): //safe close conn
 			return
-		case task := <-obj.tasks: //接收到任务
+		case task := <-obj.tasks: //recv task
 			res, err, notice := conn.taskMain(task, afterTime, obj.rt.responseHeaderTimeout)
 			if notice {
 				obj.notice(task)
@@ -429,8 +430,8 @@ type RoundTripperOption struct {
 	DialTimeout           time.Duration
 	KeepAlive             time.Duration
 	ResponseHeaderTimeout time.Duration
-	LocalAddr             *net.TCPAddr //使用本地网卡
-	AddrType              AddrType     //优先使用的地址类型,ipv4,ipv6 ,或自动选项
+	LocalAddr             *net.TCPAddr //network card ip
+	AddrType              AddrType     //first ip type
 	GetAddrType           func(string) AddrType
 	Dns                   net.IP
 	GetProxy              func(ctx context.Context, url *url.URL) (string, error)

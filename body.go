@@ -10,12 +10,11 @@ import (
 	"github.com/gospider007/tools"
 )
 
-// 构造一个文件
 type File struct {
-	Name        string //字段的key
-	FileName    string //文件名
-	Content     []byte //文件的内容
-	ContentType string //文件类型
+	Name        string
+	FileName    string
+	Content     []byte
+	ContentType string
 }
 type bodyType = int
 
@@ -32,7 +31,7 @@ func newBody(val any, valType bodyType, dataMap map[string][]string) (*bytes.Rea
 	switch value := val.(type) {
 	case *gson.Client:
 		if !value.IsObject() {
-			return nil, errors.New("body-type错误")
+			return nil, errors.New("body-type error")
 		}
 		switch valType {
 		case jsonType, textType, rawType:
@@ -63,21 +62,21 @@ func newBody(val any, valType bodyType, dataMap map[string][]string) (*bytes.Rea
 			}
 			return nil, nil
 		default:
-			return nil, fmt.Errorf("未知的content-type：%d", valType)
+			return nil, fmt.Errorf("unknow content-type：%d", valType)
 		}
 	case string:
 		switch valType {
 		case jsonType, textType, dataType, rawType:
 			return bytes.NewReader(tools.StringToBytes(value)), nil
 		default:
-			return nil, fmt.Errorf("未知的content-type：%d", valType)
+			return nil, fmt.Errorf("unknow content-type：%d", valType)
 		}
 	case []byte:
 		switch valType {
 		case jsonType, textType, dataType, rawType:
 			return bytes.NewReader(value), nil
 		default:
-			return nil, fmt.Errorf("未知的content-type：%d", valType)
+			return nil, fmt.Errorf("unknow content-type：%d", valType)
 		}
 	default:
 		result, err := gson.Decode(value)

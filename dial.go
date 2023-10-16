@@ -24,7 +24,7 @@ type DialClient struct {
 	dns         *net.UDPAddr
 	dialer      *net.Dialer
 	dnsIpData   sync.Map
-	addrType    AddrType //使用ipv4,ipv6 ,或自动选项
+	addrType    AddrType
 	getAddrType func(string) AddrType
 	ctx         context.Context
 }
@@ -43,8 +43,8 @@ const (
 type DialOption struct {
 	DialTimeout time.Duration
 	KeepAlive   time.Duration
-	LocalAddr   *net.TCPAddr //使用本地网卡
-	AddrType    AddrType     //优先使用的地址类型,ipv4,ipv6 ,或自动选项
+	LocalAddr   *net.TCPAddr //network card ip
+	AddrType    AddrType     //first ip type
 	GetAddrType func(string) AddrType
 	Dns         net.IP
 }
@@ -94,7 +94,7 @@ func (obj *DialClient) loadHost(host string) (string, bool) {
 func (obj *DialClient) AddrToIp(ctx context.Context, addr string) (string, error) {
 	host, port, err := net.SplitHostPort(addr)
 	if err != nil {
-		return addr, tools.WrapError(err, "addrToIp 错误,SplitHostPort")
+		return addr, tools.WrapError(err, "addrToIp error,SplitHostPort")
 	}
 	_, ipInt := gtls.ParseHost(host)
 	if ipInt == 4 || ipInt == 6 {
@@ -104,7 +104,7 @@ func (obj *DialClient) AddrToIp(ctx context.Context, addr string) (string, error
 	if !ok {
 		ip, err := obj.lookupIPAddr(ctx, host)
 		if err != nil {
-			return addr, tools.WrapError(err, "addrToIp 错误,lookupIPAddr")
+			return addr, tools.WrapError(err, "addrToIp error,lookupIPAddr")
 		}
 		host = ip.String()
 		obj.dnsIpData.Store(addr, msgClient{time: time.Now(), host: host})
@@ -123,18 +123,18 @@ func (obj *DialClient) clientVerifySocks5(ctx context.Context, proxyUrl *url.URL
 	switch readCon[1] {
 	case 2:
 		if proxyUrl.User == nil {
-			err = errors.New("需要验证")
+			err = errors.New("socks5 need auth")
 			return
 		}
 		pwd, pwdOk := proxyUrl.User.Password()
 		if !pwdOk {
-			err = errors.New("密码格式不对")
+			err = errors.New("socks5 auth error")
 			return
 		}
 		usr := proxyUrl.User.Username()
 
 		if usr == "" {
-			err = errors.New("用户名格式不对")
+			err = errors.New("socks5 auth user format error")
 			return
 		}
 		if _, err = conn.Write(append(
@@ -155,12 +155,12 @@ func (obj *DialClient) clientVerifySocks5(ctx context.Context, proxyUrl *url.URL
 		switch readCon[1] {
 		case 0:
 		default:
-			err = errors.New("验证失败")
+			err = errors.New("socks5 auth error")
 			return
 		}
 	case 0:
 	default:
-		err = errors.New("不支持的验证方式")
+		err = errors.New("not support auth format")
 		return
 	}
 	var host string
@@ -194,31 +194,31 @@ func (obj *DialClient) clientVerifySocks5(ctx context.Context, proxyUrl *url.URL
 		return
 	}
 	if readCon[0] != 5 {
-		err = errors.New("版本不对")
+		err = errors.New("socks version error")
 		return
 	}
 	if readCon[1] != 0 {
-		err = errors.New("连接失败")
+		err = errors.New("socks conn error")
 		return
 	}
 	if readCon[3] != 1 {
-		err = errors.New("连接类型不一致")
+		err = errors.New("socks conn type error")
 		return
 	}
 
 	switch readCon[3] {
-	case 1: //ipv4地址
+	case 1: //ipv4
 		if _, err = io.ReadFull(conn, readCon); err != nil {
 			return
 		}
-	case 3: //域名
-		if _, err = io.ReadFull(conn, readCon[:1]); err != nil { //域名的长度
+	case 3: //domain
+		if _, err = io.ReadFull(conn, readCon[:1]); err != nil {
 			return
 		}
 		if _, err = io.ReadFull(conn, make([]byte, readCon[0])); err != nil {
 			return
 		}
-	case 4: //IPv6地址
+	case 4: //IPv6
 		if _, err = io.ReadFull(conn, make([]byte, 16)); err != nil {
 			return
 		}
@@ -258,7 +258,7 @@ func (obj *DialClient) lookupIPAddr(ctx context.Context, host string) (net.IP, e
 			return ip, nil
 		}
 	}
-	return nil, errors.New("dns 解析host 失败")
+	return nil, errors.New("dns parse host error")
 }
 func (obj *DialClient) DnsDialContext(ctx context.Context, netword string, addr string) (net.Conn, error) {
 	if obj.dns != nil {
@@ -336,7 +336,7 @@ func (obj *DialClient) clientVerifyHttps(ctx context.Context, scheme string, pro
 		} else if scheme == "https" {
 			cHost = net.JoinHostPort(cHost, "443")
 		} else {
-			return errors.New("clientVerifyHttps 连接代理没有解析出端口")
+			return errors.New("clientVerifyHttps not found port")
 		}
 	}
 
