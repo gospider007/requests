@@ -13,6 +13,7 @@ import (
 )
 
 type ClientOption struct {
+	OrderHeaders    []string                                                   //order headers with http1
 	Ja3             bool                                                       //enable ja3 fingerprint
 	Ja3Spec         ja3.Ja3Spec                                                //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
 	H2Ja3Spec       ja3.H2Ja3Spec                                              //h2 fingerprint
@@ -42,6 +43,8 @@ type ClientOption struct {
 	Dns                   net.IP //dns
 }
 type Client struct {
+	orderHeaders []string
+
 	jar         *Jar
 	redirectNum int
 	disDecode   bool
@@ -154,6 +157,7 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 		noJarClient:     noJarClient,
 		requestCallBack: option.RequestCallBack,
 
+		orderHeaders:   option.OrderHeaders,
 		disCookie:      option.DisCookie,
 		redirectNum:    option.RedirectNum,
 		disDecode:      option.DisDecode,

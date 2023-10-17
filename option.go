@@ -17,6 +17,7 @@ import (
 )
 
 type RequestOption struct {
+	OrderHeaders    []string                                                   //order headers with http1
 	Ja3             bool                                                       //enable ja3 fingerprint
 	Ja3Spec         ja3.Ja3Spec                                                //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
 	H2Ja3Spec       ja3.H2Ja3Spec                                              //custom h2 fingerprint
@@ -221,7 +222,9 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	if !option.DisAlive {
 		option.DisAlive = obj.disAlive
 	}
-
+	if option.OrderHeaders == nil {
+		option.OrderHeaders = obj.orderHeaders
+	}
 	if !option.Ja3Spec.IsSet() {
 		if option.Ja3 {
 			option.Ja3Spec = ja3.DefaultJa3Spec()

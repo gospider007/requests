@@ -2,6 +2,7 @@ package requests
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/tls"
 	"errors"
@@ -9,6 +10,7 @@ import (
 	"io"
 	"net"
 	"net/url"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -19,6 +21,9 @@ import (
 	"github.com/gospider007/net/http2"
 	"github.com/gospider007/tools"
 	utls "github.com/refraction-networking/utls"
+	"golang.org/x/exp/slices"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 type roundTripper interface {
@@ -26,12 +31,13 @@ type roundTripper interface {
 }
 
 type reqTask struct {
-	ctx       context.Context
-	cnl       context.CancelFunc
-	req       *http.Request
-	res       *http.Response
-	emptyPool chan struct{}
-	err       error
+	ctx          context.Context
+	cnl          context.CancelFunc
+	req          *http.Request
+	res          *http.Response
+	emptyPool    chan struct{}
+	err          error
+	orderHeaders []string
 }
 
 func (obj *reqTask) isPool() bool {
@@ -316,9 +322,58 @@ func (obj *Connecotr) wrapBody(task *reqTask) {
 	body.conn = obj
 	task.res.Body = body
 }
+
+type orderHeadersConn struct {
+	w            io.Writer
+	raw          []byte
+	fin          bool
+	orderHeaders []string
+}
+
+func (obj *orderHeadersConn) Write(p []byte) (n int, err error) {
+	if obj.fin {
+		return obj.w.Write(p)
+	}
+	obj.raw = append(obj.raw, p...)
+	if lastIndex := bytes.Index(obj.raw, []byte{'\r', '\n', '\r', '\n'}); lastIndex != -1 {
+		if firstIndex := bytes.Index(obj.raw, []byte{'\r', '\n'}) + 2; firstIndex < lastIndex {
+			kvs := bytes.Split(obj.raw[firstIndex:lastIndex], []byte{'\r', '\n'})
+			sort.Slice(kvs, func(i, j int) bool {
+				iIndex := bytes.Index(kvs[i], []byte{':'})
+				jIndex := bytes.Index(kvs[j], []byte{':'})
+				if iIndex == -1 && jIndex == -1 {
+					return false
+				} else if iIndex == -1 {
+					return false
+				} else if jIndex == -1 {
+					return true
+				} else {
+					return slices.Index(obj.orderHeaders, tools.BytesToString(kvs[i][:iIndex])) > slices.Index(obj.orderHeaders, tools.BytesToString(kvs[j][:jIndex]))
+				}
+			})
+			copy(obj.raw[firstIndex:lastIndex], bytes.Join(kvs, []byte{'\r', '\n'}))
+		}
+		_, err = obj.w.Write(obj.raw)
+		obj.fin = true
+		obj.raw = nil
+	}
+	return len(p), err
+}
+
 func (obj *Connecotr) http1Req(task *reqTask) {
 	defer task.cnl()
-	if task.err = task.req.Write(obj); task.err == nil {
+	if task.orderHeaders != nil {
+		total := len(task.orderHeaders) * 2
+		orderHeaders := make([]string, total)
+		for i, val := range task.orderHeaders {
+			orderHeaders[total-(i*2+1)] = val
+			orderHeaders[total-(i*2+2)] = cases.Title(language.Und, cases.NoLower).String(val)
+		}
+		task.err = task.req.Write(&orderHeadersConn{w: obj, raw: []byte{}, orderHeaders: orderHeaders})
+	} else {
+		task.err = task.req.Write(obj)
+	}
+	if task.err == nil {
 		if task.res, task.err = http.ReadResponse(obj.r, task.req); task.res != nil && task.err == nil {
 			obj.wrapBody(task)
 		}
@@ -534,7 +589,7 @@ func (obj *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 		}
 	}
 	key := getKey(ctxData, req) //pool key
-	task := &reqTask{req: req, emptyPool: make(chan struct{})}
+	task := &reqTask{req: req, emptyPool: make(chan struct{}), orderHeaders: ctxData.orderHeaders}
 	task.ctx, task.cnl = context.WithCancel(obj.ctx)
 	defer task.cnl()
 	//get pool conn

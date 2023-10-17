@@ -75,6 +75,27 @@ func main() {
 	log.Print(resp.StatusCode()) //return status code
 }
 ```
+## setting order headers with http1
+```go
+package main
+
+import (
+	"log"
+
+	"github.com/gospider007/requests"
+)
+
+func main() {
+	resp, err := requests.Get(nil, "http://httpbin.org/anything", requests.RequestOption{
+		OrderHeaders: []string{"accept-encoding"}},
+	)
+	if err != nil {
+		log.Panic(err)
+	}
+	log.Print(resp.Text())
+}
+```
+
 ## send websocket
 ```go
 package main
