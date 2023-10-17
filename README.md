@@ -128,7 +128,7 @@ func main() {
 	log.Print(resp.Text())
 	log.Print(resp.StatusCode())
 }
-``` 
+```
 ## Generate Fingerprint from String
 ```go
 package main

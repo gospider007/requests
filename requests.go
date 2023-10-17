@@ -148,7 +148,7 @@ type reqCtxData struct {
 }
 
 func Get(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
-	client, _ := NewClient(preCtx)
+	client, _ := NewClient(preCtx, ClientOption{DisAlive: true})
 	resp, err = client.Request(preCtx, http.MethodGet, href, options...)
 	if err != nil || resp == nil || !resp.oneceAlive() {
 		client.Close()
@@ -156,7 +156,7 @@ func Get(preCtx context.Context, href string, options ...RequestOption) (resp *R
 	return
 }
 func Head(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
-	client, _ := NewClient(preCtx)
+	client, _ := NewClient(preCtx, ClientOption{DisAlive: true})
 	resp, err = client.Request(preCtx, http.MethodHead, href, options...)
 	if err != nil || resp == nil || !resp.oneceAlive() {
 		client.Close()
@@ -164,7 +164,7 @@ func Head(preCtx context.Context, href string, options ...RequestOption) (resp *
 	return
 }
 func Post(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
-	client, _ := NewClient(preCtx)
+	client, _ := NewClient(preCtx, ClientOption{DisAlive: true})
 	resp, err = client.Request(preCtx, http.MethodPost, href, options...)
 	if err != nil || resp == nil || !resp.oneceAlive() {
 		client.Close()
@@ -172,7 +172,7 @@ func Post(preCtx context.Context, href string, options ...RequestOption) (resp *
 	return
 }
 func Put(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
-	client, _ := NewClient(preCtx)
+	client, _ := NewClient(preCtx, ClientOption{DisAlive: true})
 	resp, err = client.Request(preCtx, http.MethodPut, href, options...)
 	if err != nil || resp == nil || !resp.oneceAlive() {
 		client.Close()
@@ -180,7 +180,7 @@ func Put(preCtx context.Context, href string, options ...RequestOption) (resp *R
 	return
 }
 func Patch(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
-	client, _ := NewClient(preCtx)
+	client, _ := NewClient(preCtx, ClientOption{DisAlive: true})
 	resp, err = client.Request(preCtx, http.MethodPatch, href, options...)
 	if err != nil || resp == nil || !resp.oneceAlive() {
 		client.Close()
@@ -188,7 +188,7 @@ func Patch(preCtx context.Context, href string, options ...RequestOption) (resp 
 	return
 }
 func Delete(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
-	client, _ := NewClient(preCtx)
+	client, _ := NewClient(preCtx, ClientOption{DisAlive: true})
 	resp, err = client.Request(preCtx, http.MethodDelete, href, options...)
 	if err != nil || resp == nil || !resp.oneceAlive() {
 		client.Close()
@@ -196,7 +196,7 @@ func Delete(preCtx context.Context, href string, options ...RequestOption) (resp
 	return
 }
 func Connect(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
-	client, _ := NewClient(preCtx)
+	client, _ := NewClient(preCtx, ClientOption{DisAlive: true})
 	resp, err = client.Request(preCtx, http.MethodConnect, href, options...)
 	if err != nil || resp == nil || !resp.oneceAlive() {
 		client.Close()
@@ -204,7 +204,7 @@ func Connect(preCtx context.Context, href string, options ...RequestOption) (res
 	return
 }
 func Options(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
-	client, _ := NewClient(preCtx)
+	client, _ := NewClient(preCtx, ClientOption{DisAlive: true})
 	resp, err = client.Request(preCtx, http.MethodOptions, href, options...)
 	if err != nil || resp == nil || !resp.oneceAlive() {
 		client.Close()
@@ -212,7 +212,7 @@ func Options(preCtx context.Context, href string, options ...RequestOption) (res
 	return
 }
 func Trace(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
-	client, _ := NewClient(preCtx)
+	client, _ := NewClient(preCtx, ClientOption{DisAlive: true})
 	resp, err = client.Request(preCtx, http.MethodTrace, href, options...)
 	if err != nil || resp == nil || !resp.oneceAlive() {
 		client.Close()
@@ -220,7 +220,7 @@ func Trace(preCtx context.Context, href string, options ...RequestOption) (resp 
 	return
 }
 func Request(preCtx context.Context, method string, href string, options ...RequestOption) (resp *Response, err error) {
-	client, _ := NewClient(preCtx)
+	client, _ := NewClient(preCtx, ClientOption{DisAlive: true})
 	resp, err = client.Request(preCtx, method, href, options...)
 	if err != nil || resp == nil || !resp.oneceAlive() {
 		client.Close()
@@ -422,7 +422,6 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 			reqs.AddCookie(vv)
 		}
 	}
-
 	if response.response, err = obj.getClient(option).Do(reqs); err != nil {
 		return
 	} else if response.response == nil {
