@@ -129,7 +129,7 @@ func main() {
 	log.Print(resp.StatusCode())
 }
 ```
-## Generate Fingerprint from String
+## Generate Ja3 Fingerprint from String
 ```go
 package main
 
@@ -152,7 +152,7 @@ func main() {
 	log.Print(jsonData.Get("ja3").String() == ja3Str)
 }
 ```
-## Generate Fingerprint from ID
+## Generate Ja3 Fingerprint from ID
 ```go
 package main
 
@@ -171,6 +171,29 @@ func main() {
 	}
 	jsonData, _ := resp.Json()
 	log.Print(jsonData.Get("ja3").String())
+}
+```
+## Generate H2 Fingerprint from String
+```go
+package main
+
+import (
+	"log"
+
+	"github.com/gospider007/ja3"
+	"github.com/gospider007/requests"
+)
+
+func main() {
+	h2ja3Str := "1:65536,2:0,4:6291456,6:262144|15663105|0|m,a,s,p"
+	h2ja3Spec, _ := ja3.CreateH2SpecWithStr(h2ja3Str) // Generate fingerprint from string
+	resp, err := requests.Get(nil, "https://tools.scrapfly.io/api/fp/akamai", requests.RequestOption{H2Ja3Spec: h2ja3Spec})
+	if err != nil {
+		log.Panic(err)
+	}
+	jsonData, _ := resp.Json()
+	log.Print(jsonData.Get("akamai_fp").String())
+	log.Print(jsonData.Get("akamai_fp").String() == h2ja3Str)
 }
 ```
 ## Modify H2 Fingerprint
