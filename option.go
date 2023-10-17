@@ -17,48 +17,46 @@ import (
 )
 
 type RequestOption struct {
-	Ja3       bool          //enable ja3 fingerprint
-	Ja3Spec   ja3.Ja3Spec   //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
-	H2Ja3Spec ja3.H2Ja3Spec //custom h2 fingerprint
+	Ja3             bool                                                       //enable ja3 fingerprint
+	Ja3Spec         ja3.Ja3Spec                                                //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
+	H2Ja3Spec       ja3.H2Ja3Spec                                              //custom h2 fingerprint
+	Proxy           string                                                     //proxy,support http,https,socks5,example：http://127.0.0.1:7005
+	DisCookie       bool                                                       //disable cookies,not use cookies
+	DisDecode       bool                                                       //disable auto decode
+	DisUnZip        bool                                                       //disable auto zip decode
+	DisAlive        bool                                                       //disable  keepalive
+	Bar             bool                                                       //enable bar display
+	Timeout         time.Duration                                              //request timeout
+	OptionCallBack  func(context.Context, *Client, *RequestOption) error       //option callback,if error is returnd, break request
+	ResultCallBack  func(context.Context, *Client, *Response) error            //result callback,if error is returnd,next errCallback
+	ErrCallBack     func(context.Context, *Client, error) error                //error callback,if error is returnd,break request
+	RequestCallBack func(context.Context, *http.Request, *http.Response) error //request and response callback,if error is returnd,reponse is error
+	TryNum          int                                                        //try num
+	RedirectNum     int                                                        //redirect num ,<0 no redirect,==0 no limit
+	Headers         any                                                        //request headers：json,map，header
 
+	DisRead     bool   //disable auto read
 	Referer     string //set headers referer value
 	Method      string //method
 	Url         *url.URL
 	Host        string
-	Proxy       string        //proxy,support http,https,socks5,example：http://127.0.0.1:7005
-	Timeout     time.Duration //request timeout
-	Headers     any           //request headers：json,map，header
-	Cookies     any           // cookies,support : json,map,str，http.Header
-	Files       []File        //send multipart/form-data, file upload
-	Params      any           //url params，join url query,support json,map
-	Form        any           //send multipart/form-data,file upload,support json,map
-	Data        any           //send application/x-www-form-urlencoded, support string,[]bytes,json,map
+	Cookies     any    // cookies,support : json,map,str，http.Header
+	Files       []File //send multipart/form-data, file upload
+	Params      any    //url params，join url query,support json,map
+	Form        any    //send multipart/form-data,file upload,support json,map
+	Data        any    //send application/x-www-form-urlencoded, support string,[]bytes,json,map
 	Body        io.Reader
 	Json        any    //send application/json,support：string,[]bytes,json,map
 	Text        any    //send text/xml,support: string,[]bytes,json,map
 	ContentType string //headers Content-Type value
 	Raw         any    //not setting context-type,support string,[]bytes,json,map
 
-	DisCookie bool //disable cookies,not use cookies
-	DisDecode bool //disable auto decode
-	DisRead   bool //disable auto read
-	DisAlive  bool //disable  keepalive
-
-	Bar      bool //enable bar display
 	DisProxy bool //force disable proxy
-	TryNum   int  //try num
-
-	OptionCallBack  func(context.Context, *Client, *RequestOption) error       //option callback,if error is returnd, break request
-	ResultCallBack  func(context.Context, *Client, *Response) error            //result callback,if error is returnd,next errCallback
-	ErrCallBack     func(context.Context, *Client, error) error                //error callback,if error is returnd,break request
-	RequestCallBack func(context.Context, *http.Request, *http.Response) error //request and response callback,if error is returnd,reponse is error
 
 	Jar *Jar //custom cookies
 
-	RedirectNum int              //redirect num ,<0 no redirect,==0 no limit
-	DisUnZip    bool             //disable auto zip decode
-	WsOption    websocket.Option //websocket option
-	converUrl   string
+	WsOption  websocket.Option //websocket option
+	converUrl string
 }
 
 func (obj *RequestOption) initBody() (err error) {

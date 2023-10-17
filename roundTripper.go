@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/url"
 	"sync"
@@ -150,7 +149,6 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, addr string, key string, req 
 			if err != nil {
 				return conne, tools.WrapError(err, "add tls error")
 			}
-			log.Print(tlsConn.ConnectionState().NegotiatedProtocol)
 			conne.h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
 			netConn = tlsConn
 		} else {
@@ -165,7 +163,7 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, addr string, key string, req 
 	conne.rawConn = netConn
 	if conne.h2 {
 		if conne.h2RawConn, err = http2.NewClientConn(func() {
-			conne.deleteCnl()
+			conne.closeCnl()
 		}, netConn, ctxData.h2Ja3Spec); err != nil {
 			return conne, err
 		}

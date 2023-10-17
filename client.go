@@ -13,39 +13,33 @@ import (
 )
 
 type ClientOption struct {
-	GetProxy func(ctx context.Context, url *url.URL) (string, error) //proxy callback:support https,http,socks5 proxy
-	Proxy    string                                                  //proxy,support https,http,socks5
-
-	DisCookie bool         //disable cookies
-	LocalAddr *net.TCPAddr //network card ip
-
-	DialTimeout           time.Duration //dial tcp timeout,default:15
-	TlsHandshakeTimeout   time.Duration //tls timeout,default:15
-	KeepAlive             time.Duration //keepalive,default:30
-	ResponseHeaderTimeout time.Duration //ResponseHeaderTimeout ,default:30
-
-	AddrType    AddrType //dns parse addr type
-	GetAddrType func(string) AddrType
-	Dns         net.IP //dns
-
-	Ja3       bool          //enable ja3 fingerprint
-	Ja3Spec   ja3.Ja3Spec   //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
-	H2Ja3Spec ja3.H2Ja3Spec //h2 fingerprint
-
-	RedirectNum int //redirect num ,<0 no redirect,==0 no limit
-
+	Ja3             bool                                                       //enable ja3 fingerprint
+	Ja3Spec         ja3.Ja3Spec                                                //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
+	H2Ja3Spec       ja3.H2Ja3Spec                                              //h2 fingerprint
+	Proxy           string                                                     //proxy,support https,http,socks5
+	DisCookie       bool                                                       //disable cookies
 	DisDecode       bool                                                       //disable auto decode
 	DisUnZip        bool                                                       //disable auto zip decode
 	DisAlive        bool                                                       //disable  keepalive
-	TryNum          int                                                        //try num
+	Bar             bool                                                       ////enable bar display
+	Timeout         time.Duration                                              //request timeout
 	OptionCallBack  func(context.Context, *Client, *RequestOption) error       //option callback,if error is returnd, break request
 	ResultCallBack  func(context.Context, *Client, *Response) error            //result callback,if error is returnd,next errCallback
 	ErrCallBack     func(context.Context, *Client, error) error                //error callback,if error is returnd,break request
 	RequestCallBack func(context.Context, *http.Request, *http.Response) error //request and response callback,if error is returnd,reponse is error
+	TryNum          int                                                        //try num
+	RedirectNum     int                                                        //redirect num ,<0 no redirect,==0 no limit
+	Headers         any                                                        //default headers
 
-	Timeout time.Duration //request timeout
-	Headers any           //default headers
-	Bar     bool          ////enable bar display
+	GetProxy              func(ctx context.Context, url *url.URL) (string, error) //proxy callback:support https,http,socks5 proxy
+	LocalAddr             *net.TCPAddr                                            //network card ip
+	DialTimeout           time.Duration                                           //dial tcp timeout,default:15
+	TlsHandshakeTimeout   time.Duration                                           //tls timeout,default:15
+	KeepAlive             time.Duration                                           //keepalive,default:30
+	ResponseHeaderTimeout time.Duration                                           //ResponseHeaderTimeout ,default:30
+	AddrType              AddrType                                                //dns parse addr type
+	GetAddrType           func(string) AddrType
+	Dns                   net.IP //dns
 }
 type Client struct {
 	jar         *Jar
