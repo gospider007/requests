@@ -8,7 +8,7 @@ require (
 	github.com/gospider007/gson v0.0.0-20231015042048-4fae1418931b
 	github.com/gospider007/gtls v0.0.0-20231015064159-7a2b27c0a8ef
 	github.com/gospider007/ja3 v0.0.0-20231018145748-a5a4695e5ec9
-	github.com/gospider007/net v0.0.0-20231019133932-25d3db566036
+	github.com/gospider007/net v0.0.0-20231021032248-9d6039f6176a
 	github.com/gospider007/re v0.0.0-20231015023348-717c984874af
 	github.com/gospider007/tools v0.0.0-20231015122431-2acd695704d6
 	github.com/gospider007/websocket v0.0.0-20231015042221-9176c1ebbdfc
@@ -49,5 +49,5 @@ require (
 	golang.org/x/crypto v0.14.0 // indirect
 	golang.org/x/image v0.13.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
-	nhooyr.io/websocket v1.8.7 // indirect
+	nhooyr.io/websocket v1.8.9 // indirect
 )

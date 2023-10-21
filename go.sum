@@ -91,6 +91,8 @@ github.com/gospider007/net v0.0.0-20231015031122-61ca42e0006f h1:Cj8eyFdQnOxTIt8
 github.com/gospider007/net v0.0.0-20231015031122-61ca42e0006f/go.mod h1:hadIeF78Sy2/gCvOAr/ABCKe7cmudBh9w2a5YhCaRXQ=
 github.com/gospider007/net v0.0.0-20231019133932-25d3db566036 h1:RbzrXjOad9Unu6fbcqwpuE0oVgUN5sitZNJPTE8rd34=
 github.com/gospider007/net v0.0.0-20231019133932-25d3db566036/go.mod h1:BEkMlByKS6R+ROt/wY0ysClMp27F1KWNC/h03CEYMv8=
+github.com/gospider007/net v0.0.0-20231021032248-9d6039f6176a h1:44z2wdH7AyY2z1V96KlkygTOOfwtFcWlmKJOfF4Cnik=
+github.com/gospider007/net v0.0.0-20231021032248-9d6039f6176a/go.mod h1:u2Eq/mZEtaEZMzh7EYAjKgJzsBP7SfzzLyprsDpksSU=
 github.com/gospider007/re v0.0.0-20231015023348-717c984874af h1:bYip5he4jUPslsEY3GtBndUUJppR84Ml9areZ/wG0Hk=
 github.com/gospider007/re v0.0.0-20231015023348-717c984874af/go.mod h1:fOcqR9yJHQjUmpLerdxJSoMJ4pFyMfRirM12rTMEH38=
 github.com/gospider007/tools v0.0.0-20231015122431-2acd695704d6 h1:0yKzCr0+F6RTKVppEP5o1PzmrSzy5OrtwDKVEW4uOx4=
@@ -245,5 +247,7 @@ gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
 gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 nhooyr.io/websocket v1.8.7 h1:usjR2uOr/zjjkVMy0lW+PPohFok7PCow5sDjLgX4P4g=
 nhooyr.io/websocket v1.8.7/go.mod h1:B70DZP8IakI65RVQ51MsWP/8jndNma26DVA/nFSCgW0=
+nhooyr.io/websocket v1.8.9 h1:+U/9DCNIH1XnzrWKs7yZp4jO0e/m6mUEh2kRPKRQYeg=
+nhooyr.io/websocket v1.8.9/go.mod h1:rN9OFWIUwuxg4fR5tELlYC04bXYowCP9GX47ivo2l+c=
 nullprogram.com/x/optparse v1.0.0/go.mod h1:KdyPE+Igbe0jQUrVfMqDMeJQIJZEuyV7pjYmp6pbG50=
 rsc.io/pdf v0.1.1/go.mod h1:n8OzWcQ6Sp37PL01nO98y4iUCRdTGarVfzxY20ICaU4=
