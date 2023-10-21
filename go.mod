@@ -11,7 +11,7 @@ require (
 	github.com/gospider007/net v0.0.0-20231021032248-9d6039f6176a
 	github.com/gospider007/re v0.0.0-20231015023348-717c984874af
 	github.com/gospider007/tools v0.0.0-20231015122431-2acd695704d6
-	github.com/gospider007/websocket v0.0.0-20231015042221-9176c1ebbdfc
+	github.com/gospider007/websocket v0.0.0-20231021032557-2e1e47d58b54
 	github.com/refraction-networking/utls v1.5.4
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 	golang.org/x/net v0.17.0
@@ -22,27 +22,18 @@ require (
 	github.com/PuerkitoBio/goquery v1.8.1 // indirect
 	github.com/andybalholm/brotli v1.0.6 // indirect
 	github.com/andybalholm/cascadia v1.3.2 // indirect
-	github.com/chenzhuoyu/base64x v0.0.0-20230717121745-296ad89f973d // indirect
 	github.com/cloudflare/circl v1.3.5 // indirect
-	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
 	github.com/gaukas/godicttls v0.0.4 // indirect
-	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/gobwas/httphead v0.1.0 // indirect
-	github.com/gobwas/pool v0.2.1 // indirect
-	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/gospider007/blog v0.0.0-20231015040505-4b08187c11ee // indirect
 	github.com/gospider007/kinds v0.0.0-20231015025159-69ab7d8d9b94 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.17.1 // indirect
-	github.com/leodido/go-urn v1.2.4 // indirect
-	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/quic-go/quic-go v0.39.1 // indirect
 	github.com/tidwall/gjson v1.17.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
-	github.com/ugorji/go/codec v1.2.11 // indirect
 	go.mongodb.org/mongo-driver v1.12.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
