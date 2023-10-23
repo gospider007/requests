@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/textproto"
 	"net/url"
 	"sort"
 	"sync"
@@ -22,8 +23,6 @@ import (
 	"github.com/gospider007/tools"
 	utls "github.com/refraction-networking/utls"
 	"golang.org/x/exp/slices"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 type roundTripper interface {
@@ -326,12 +325,11 @@ func (obj *Connecotr) wrapBody(task *reqTask) {
 type orderHeadersConn struct {
 	w            io.Writer
 	raw          []byte
-	fin          bool
 	orderHeaders []string
 }
 
 func (obj *orderHeadersConn) Write(p []byte) (n int, err error) {
-	if obj.fin {
+	if obj.raw == nil {
 		return obj.w.Write(p)
 	}
 	obj.raw = append(obj.raw, p...)
@@ -341,20 +339,14 @@ func (obj *orderHeadersConn) Write(p []byte) (n int, err error) {
 			sort.Slice(kvs, func(i, j int) bool {
 				iIndex := bytes.Index(kvs[i], []byte{':'})
 				jIndex := bytes.Index(kvs[j], []byte{':'})
-				if iIndex == -1 && jIndex == -1 {
+				if iIndex == -1 || jIndex == -1 {
 					return false
-				} else if iIndex == -1 {
-					return false
-				} else if jIndex == -1 {
-					return true
-				} else {
-					return slices.Index(obj.orderHeaders, tools.BytesToString(kvs[i][:iIndex])) > slices.Index(obj.orderHeaders, tools.BytesToString(kvs[j][:jIndex]))
 				}
+				return slices.Index(obj.orderHeaders, tools.BytesToString(kvs[i][:iIndex])) > slices.Index(obj.orderHeaders, tools.BytesToString(kvs[j][:jIndex]))
 			})
 			copy(obj.raw[firstIndex:lastIndex], bytes.Join(kvs, []byte{'\r', '\n'}))
 		}
 		_, err = obj.w.Write(obj.raw)
-		obj.fin = true
 		obj.raw = nil
 	}
 	return len(p), err
@@ -362,12 +354,11 @@ func (obj *orderHeadersConn) Write(p []byte) (n int, err error) {
 
 func (obj *Connecotr) http1Req(task *reqTask) {
 	defer task.cnl()
-	if task.orderHeaders != nil {
-		total := len(task.orderHeaders) * 2
-		orderHeaders := make([]string, total)
+	if task.orderHeaders != nil && len(task.orderHeaders) > 0 {
+		orderHeaders := make([]string, len(task.orderHeaders))
+		total := len(task.orderHeaders) - 1
 		for i, val := range task.orderHeaders {
-			orderHeaders[total-(i*2+1)] = val
-			orderHeaders[total-(i*2+2)] = cases.Title(language.Und, cases.NoLower).String(val)
+			orderHeaders[total-i] = textproto.CanonicalMIMEHeaderKey(val)
 		}
 		task.err = task.req.Write(&orderHeadersConn{w: obj, raw: []byte{}, orderHeaders: orderHeaders})
 	} else {
