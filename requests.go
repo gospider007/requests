@@ -136,6 +136,7 @@ var (
 )
 
 type reqCtxData struct {
+	forceHttp1   bool
 	redirectNum  int
 	proxy        *url.URL
 	disProxy     bool
@@ -337,6 +338,7 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 	var reqs *http.Request
 	//init ctxData
 	ctxData := new(reqCtxData)
+	ctxData.forceHttp1 = option.ForceHttp1
 	ctxData.disAlive = option.DisAlive
 	ctxData.requestCallBack = option.RequestCallBack
 	ctxData.orderHeaders = option.OrderHeaders

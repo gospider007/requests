@@ -13,6 +13,7 @@ import (
 )
 
 type ClientOption struct {
+	ForceHttp1      bool                                                       //force  use http1 send requests
 	OrderHeaders    []string                                                   //order headers with http1
 	Ja3             bool                                                       //enable ja3 fingerprint
 	Ja3Spec         ja3.Ja3Spec                                                //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
@@ -43,6 +44,7 @@ type ClientOption struct {
 	Dns                   net.IP //dns
 }
 type Client struct {
+	forceHttp1   bool
 	orderHeaders []string
 
 	jar         *Jar
@@ -155,21 +157,21 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 		client:          client,
 		transport:       transport,
 		noJarClient:     noJarClient,
+		forceHttp1:      option.ForceHttp1,
 		requestCallBack: option.RequestCallBack,
-
-		orderHeaders:   option.OrderHeaders,
-		disCookie:      option.DisCookie,
-		redirectNum:    option.RedirectNum,
-		disDecode:      option.DisDecode,
-		disUnZip:       option.DisUnZip,
-		disAlive:       option.DisAlive,
-		tryNum:         option.TryNum,
-		optionCallBack: option.OptionCallBack,
-		resultCallBack: option.ResultCallBack,
-		errCallBack:    option.ErrCallBack,
-		timeout:        option.Timeout,
-		headers:        option.Headers,
-		bar:            option.Bar,
+		orderHeaders:    option.OrderHeaders,
+		disCookie:       option.DisCookie,
+		redirectNum:     option.RedirectNum,
+		disDecode:       option.DisDecode,
+		disUnZip:        option.DisUnZip,
+		disAlive:        option.DisAlive,
+		tryNum:          option.TryNum,
+		optionCallBack:  option.OptionCallBack,
+		resultCallBack:  option.ResultCallBack,
+		errCallBack:     option.ErrCallBack,
+		timeout:         option.Timeout,
+		headers:         option.Headers,
+		bar:             option.Bar,
 	}
 	var err error
 	if option.Proxy != "" {

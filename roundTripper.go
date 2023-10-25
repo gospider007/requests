@@ -145,19 +145,25 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, addr string, key string, req 
 	conne.rn = make(chan int)
 	conne.rc = make(chan []byte)
 	conne.WithCancel(obj.ctx)
-	isWebSocket := req.URL.Scheme == "wss"
-	if req.URL.Scheme == "https" || isWebSocket {
+	if isWssWebSocket := req.URL.Scheme == "wss"; isWssWebSocket || req.URL.Scheme == "https" {
+		if !isWssWebSocket {
+			isWssWebSocket = ctxData.forceHttp1
+		}
 		ctx, cnl := context.WithTimeout(req.Context(), obj.tlsHandshakeTimeout)
 		defer cnl()
 		if ctxData.ja3Spec.IsSet() {
-			tlsConn, err := obj.dialer.AddJa3Tls(ctx, netConn, host, isWebSocket, ctxData.ja3Spec, obj.UtlsConfig())
+			tlsConfig := obj.UtlsConfig()
+			if ctxData.forceHttp1 {
+				tlsConfig.NextProtos = []string{"http/1.1"}
+			}
+			tlsConn, err := obj.dialer.AddJa3Tls(ctx, netConn, host, isWssWebSocket, ctxData.ja3Spec, tlsConfig)
 			if err != nil {
 				return conne, tools.WrapError(err, "add tls error")
 			}
 			conne.h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
 			netConn = tlsConn
 		} else {
-			tlsConn, err := obj.dialer.AddTls(ctx, netConn, host, isWebSocket, obj.TlsConfig())
+			tlsConn, err := obj.dialer.AddTls(ctx, netConn, host, isWssWebSocket, obj.TlsConfig())
 			if err != nil {
 				return conne, tools.WrapError(err, "add tls error")
 			}
@@ -222,15 +228,15 @@ func (obj *Connecotr) read() {
 		b := con[:i]
 		for once := true; once || len(b) > 0; once = false {
 			select {
-			case <-obj.deleteCtx.Done():
-				return
 			case obj.rc <- b:
 				select {
-				case <-obj.deleteCtx.Done():
-					return
 				case nw := <-obj.rn:
 					b = b[nw:]
+				case <-obj.deleteCtx.Done():
+					return
 				}
+			case <-obj.deleteCtx.Done():
+				return
 			}
 		}
 	}
@@ -240,21 +246,21 @@ func (obj *Connecotr) Read(b []byte) (i int, err error) {
 		return obj.rawConn.Read(b)
 	}
 	select {
-	case <-obj.deleteCtx.Done():
-		if err = obj.err; err == nil {
-			err = tools.WrapError(obj.deleteCtx.Err(), "connecotr close")
-		}
 	case con := <-obj.rc:
 		i, err = copy(b, con), obj.err
 		select {
-		case <-obj.deleteCtx.Done():
-			if err = obj.err; err == nil {
-				err = tools.WrapError(obj.deleteCtx.Err(), "connecotr close")
-			}
 		case obj.rn <- i:
 			if i < len(con) {
 				err = nil
 			}
+		case <-obj.deleteCtx.Done():
+			if err = obj.err; err == nil {
+				err = tools.WrapError(obj.deleteCtx.Err(), "connecotr close")
+			}
+		}
+	case <-obj.deleteCtx.Done():
+		if err = obj.err; err == nil {
+			err = tools.WrapError(obj.deleteCtx.Err(), "connecotr close")
 		}
 	}
 	return

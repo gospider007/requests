@@ -17,6 +17,7 @@ import (
 )
 
 type RequestOption struct {
+	ForceHttp1      bool                                                       //force  use http1 send requests
 	OrderHeaders    []string                                                   //order headers with http1
 	Ja3             bool                                                       //enable ja3 fingerprint
 	Ja3Spec         ja3.Ja3Spec                                                //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
@@ -217,6 +218,10 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	}
 	if !option.DisUnZip {
 		option.DisUnZip = obj.disUnZip
+	}
+
+	if !option.ForceHttp1 {
+		option.ForceHttp1 = obj.forceHttp1
 	}
 
 	if !option.DisAlive {
