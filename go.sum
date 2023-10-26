@@ -49,6 +49,8 @@ github.com/gospider007/ja3 v0.0.0-20231018145748-a5a4695e5ec9 h1:HN0mL+XKJ9KWuoV
 github.com/gospider007/ja3 v0.0.0-20231018145748-a5a4695e5ec9/go.mod h1:oWaiUYLnk/RcprmDyZjgch+PYA7y4X+sY3THS3r/Wb8=
 github.com/gospider007/ja3 v0.0.0-20231024093217-2de3491f0fe3 h1:D1+cjymqnpi5lE0O/Rq+XR7Q7GIVtrlZyUDmYNEdCZE=
 github.com/gospider007/ja3 v0.0.0-20231024093217-2de3491f0fe3/go.mod h1:dBFCulBJWzGEikp1LmEXUo6yOBDEqMcVQ9dfqVqFg3k=
+github.com/gospider007/ja3 v0.0.0-20231026054255-377f28e5972e h1:9rNMGTpeOj9bj6q+f7SGs83mySVXuS5rs+rL0BfW/aI=
+github.com/gospider007/ja3 v0.0.0-20231026054255-377f28e5972e/go.mod h1:SxgiJOCbj2WNv+2ZbQycNHrqX8dIryi/5CiiQl2eeVY=
 github.com/gospider007/kinds v0.0.0-20231015025159-69ab7d8d9b94 h1:K2XYy6B6M62o35KMabuzl9DmA4WQftanUgKomb2YYU4=
 github.com/gospider007/kinds v0.0.0-20231015025159-69ab7d8d9b94/go.mod h1:5e4rIpZmhwqOLVVRZa0uZFAuMPH15dO0qqzKf1s3IgI=
 github.com/gospider007/kinds v0.0.0-20231024093643-7a4424f2d30e h1:lmX6IQKkrNDbXfHsvrv1Uz0MoG2v5+4VC6Gdh9irUNY=
@@ -97,6 +99,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/quic-go/quic-go v0.39.1 h1:d/m3oaN/SD2c+f7/yEjZxe2zEVotXprnrCCJ2y/ZZFE=
 github.com/quic-go/quic-go v0.39.1/go.mod h1:T09QsDQWjLiQ74ZmacDfqZmhY/NLnw5BC40MANNNZ1Q=
+github.com/quic-go/quic-go v0.39.2 h1:hmwAf8zAHlvan0Y5PXxeeBFZEW17IW99sXLry8I2kjk=
+github.com/quic-go/quic-go v0.39.2/go.mod h1:T09QsDQWjLiQ74ZmacDfqZmhY/NLnw5BC40MANNNZ1Q=
 github.com/refraction-networking/utls v1.5.4 h1:9k6EO2b8TaOGsQ7Pl7p9w6PUhx18/ZCeT0WNTZ7Uw4o=
 github.com/refraction-networking/utls v1.5.4/go.mod h1:SPuDbBmgLGp8s+HLNc83FuavwZCFoMmExj+ltUHiHUw=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
@@ -188,3 +192,5 @@ gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
 gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 nhooyr.io/websocket v1.8.9 h1:+U/9DCNIH1XnzrWKs7yZp4jO0e/m6mUEh2kRPKRQYeg=
 nhooyr.io/websocket v1.8.9/go.mod h1:rN9OFWIUwuxg4fR5tELlYC04bXYowCP9GX47ivo2l+c=
+nhooyr.io/websocket v1.8.10 h1:mv4p+MnGrLDcPlBoWsvPP7XCzTYMXP9F9eIGoKbgx7Q=
+nhooyr.io/websocket v1.8.10/go.mod h1:rN9OFWIUwuxg4fR5tELlYC04bXYowCP9GX47ivo2l+c=

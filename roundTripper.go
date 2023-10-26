@@ -145,10 +145,7 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, addr string, key string, req 
 	conne.rn = make(chan int)
 	conne.rc = make(chan []byte)
 	conne.WithCancel(obj.ctx)
-	if isWssWebSocket := req.URL.Scheme == "wss"; isWssWebSocket || req.URL.Scheme == "https" {
-		if !isWssWebSocket {
-			isWssWebSocket = ctxData.forceHttp1
-		}
+	if req.URL.Scheme == "https" {
 		ctx, cnl := context.WithTimeout(req.Context(), obj.tlsHandshakeTimeout)
 		defer cnl()
 		if ctxData.ja3Spec.IsSet() {
@@ -156,14 +153,14 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, addr string, key string, req 
 			if ctxData.forceHttp1 {
 				tlsConfig.NextProtos = []string{"http/1.1"}
 			}
-			tlsConn, err := obj.dialer.AddJa3Tls(ctx, netConn, host, isWssWebSocket, ctxData.ja3Spec, tlsConfig)
+			tlsConn, err := obj.dialer.AddJa3Tls(ctx, netConn, host, ctxData.isWs || ctxData.forceHttp1, ctxData.ja3Spec, tlsConfig)
 			if err != nil {
 				return conne, tools.WrapError(err, "add tls error")
 			}
 			conne.h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
 			netConn = tlsConn
 		} else {
-			tlsConn, err := obj.dialer.AddTls(ctx, netConn, host, isWssWebSocket, obj.TlsConfig())
+			tlsConn, err := obj.dialer.AddTls(ctx, netConn, host, ctxData.isWs || ctxData.forceHttp1, obj.TlsConfig())
 			if err != nil {
 				return conne, tools.WrapError(err, "add tls error")
 			}

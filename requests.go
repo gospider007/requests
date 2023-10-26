@@ -136,6 +136,7 @@ var (
 )
 
 type reqCtxData struct {
+	isWs         bool
 	forceHttp1   bool
 	redirectNum  int
 	proxy        *url.URL
@@ -395,7 +396,13 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 
 	//parse Scheme
 	switch reqs.URL.Scheme {
-	case "ws", "wss":
+	case "ws":
+		ctxData.isWs = true
+		reqs.URL.Scheme = "http"
+		websocket.SetClientHeadersOption(reqs.Header, option.WsOption)
+	case "wss":
+		ctxData.isWs = true
+		reqs.URL.Scheme = "https"
 		websocket.SetClientHeadersOption(reqs.Header, option.WsOption)
 	case "file":
 		response.filePath = re.Sub(`^/+`, "", reqs.URL.Path)
