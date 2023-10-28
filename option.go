@@ -195,11 +195,7 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 		option.ErrCallBack = obj.errCallBack
 	}
 	if option.Headers == nil {
-		if obj.headers == nil {
-			option.Headers = DefaultHeaders()
-		} else {
-			option.Headers = obj.headers
-		}
+		option.Headers = obj.headers
 	}
 	if !option.Bar {
 		option.Bar = obj.bar

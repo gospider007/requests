@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 
+	"net/textproto"
 	"net/url"
 	"os"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	"github.com/gospider007/re"
 	"github.com/gospider007/tools"
 	"github.com/gospider007/websocket"
+	"golang.org/x/exp/slices"
 )
 
 //go:linkname ReadRequest net/http.readRequest
@@ -342,7 +344,26 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 	ctxData.forceHttp1 = option.ForceHttp1
 	ctxData.disAlive = option.DisAlive
 	ctxData.requestCallBack = option.RequestCallBack
-	ctxData.orderHeaders = option.OrderHeaders
+	//init orderHeaders
+	if option.OrderHeaders == nil {
+		if option.Ja3Spec.IsSet() {
+			ctxData.orderHeaders = ja3.DefaultH1OrderHeaders()
+		}
+	} else {
+		orderHeaders := []string{}
+		for _, key := range option.OrderHeaders {
+			key = textproto.CanonicalMIMEHeaderKey(key)
+			if !slices.Contains(orderHeaders, key) {
+				orderHeaders = append(orderHeaders, key)
+			}
+		}
+		for _, key := range ja3.DefaultH1OrderHeaders() {
+			if !slices.Contains(orderHeaders, key) {
+				orderHeaders = append(orderHeaders, key)
+			}
+		}
+		ctxData.orderHeaders = orderHeaders
+	}
 	//init proxy
 	ctxData.disProxy = option.DisProxy
 	if !ctxData.disProxy {
@@ -381,12 +402,20 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 	}
 	//add headers
 	var headOk bool
-	if reqs.Header, headOk = option.Headers.(http.Header); !headOk {
-		return response, tools.WrapError(errFatal, "request headers 转换错误")
+	if option.Headers != nil {
+		if reqs.Header, headOk = option.Headers.(http.Header); !headOk {
+			return response, tools.WrapError(errFatal, "request headers 转换错误")
+		}
+	} else {
+		reqs.Header = DefaultHeaders()
 	}
 	//add Referer
-	if option.Referer != "" && reqs.Header.Get("Referer") == "" {
-		reqs.Header.Set("Referer", option.Referer)
+	if reqs.Header.Get("Referer") == "" {
+		if option.Referer != "" {
+			reqs.Header.Set("Referer", option.Referer)
+		} else {
+			reqs.Header.Set("Referer", fmt.Sprintf("%s://%s", reqs.URL.Scheme, reqs.URL.Host))
+		}
 	}
 
 	//set ContentType
@@ -422,7 +451,10 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 		reqs.Host = option.Host
 	} else if reqs.Header.Get("Host") != "" {
 		reqs.Host = reqs.Header.Get("Host")
+	} else {
+		reqs.Host = reqs.URL.Host
 	}
+
 	//add cookies
 	if option.Cookies != nil {
 		cooks, cookOk := option.Cookies.(Cookies)

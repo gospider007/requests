@@ -2,27 +2,26 @@ package requests
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
 	"net"
-	"net/textproto"
 	"net/url"
-	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"net/http"
+	_ "unsafe"
 
 	"github.com/gospider007/gtls"
 	"github.com/gospider007/net/http2"
 	"github.com/gospider007/tools"
 	utls "github.com/refraction-networking/utls"
 	"golang.org/x/exp/slices"
+	"golang.org/x/net/http/httpguts"
 )
 
 type roundTripper interface {
@@ -46,7 +45,7 @@ func (obj *reqTask) isPool() bool {
 type connPool struct {
 	ctx   context.Context
 	cnl   context.CancelFunc
-	key   string
+	key   poolKey
 	total atomic.Int64
 	tasks chan *reqTask
 	rt    *RoundTripper
@@ -54,6 +53,7 @@ type connPool struct {
 
 func (obj *connPool) Close() {
 	obj.cnl()
+	delete(obj.rt.connPools, obj.key)
 }
 func getAddr(uurl *url.URL) string {
 	if uurl == nil {
@@ -86,10 +86,27 @@ func getHost(req *http.Request) string {
 	}
 	return host
 }
-func getKey(ctxData *reqCtxData, req *http.Request) string {
-	return fmt.Sprintf("%s@%s@%s", ctxData.ja3Spec.String(), getAddr(ctxData.proxy), getAddr(req.URL))
+
+type poolKey struct {
+	proxy string
+	addr  string
+	ja3   string
+	h2Ja3 string
 }
-func (obj *RoundTripper) newConnPool(key string, conn *Connecotr) *connPool {
+
+func getKey(ctxData *reqCtxData, req *http.Request) poolKey {
+	var proxy string
+	if ctxData.proxy != nil {
+		proxy = ctxData.proxy.String()
+	}
+	return poolKey{
+		h2Ja3: ctxData.h2Ja3Spec.Fp(),
+		ja3:   ctxData.ja3Spec.String(),
+		proxy: proxy,
+		addr:  getAddr(req.URL),
+	}
+}
+func (obj *RoundTripper) newConnPool(key poolKey, conn *Connecotr) *connPool {
 	pool := new(connPool)
 	pool.ctx, pool.cnl = context.WithCancel(obj.ctx)
 	pool.tasks = make(chan *reqTask)
@@ -99,12 +116,12 @@ func (obj *RoundTripper) newConnPool(key string, conn *Connecotr) *connPool {
 	go pool.rwMain(conn)
 	return pool
 }
-func (obj *RoundTripper) getConnPool(key string) *connPool {
+func (obj *RoundTripper) getConnPool(key poolKey) *connPool {
 	obj.connsLock.Lock()
 	defer obj.connsLock.Unlock()
 	return obj.connPools[key]
 }
-func (obj *RoundTripper) putConnPool(key string, conn *Connecotr) {
+func (obj *RoundTripper) putConnPool(key poolKey, conn *Connecotr) {
 	obj.connsLock.Lock()
 	defer obj.connsLock.Unlock()
 	conn.isPool = true
@@ -125,7 +142,7 @@ func (obj *RoundTripper) TlsConfig() *tls.Config {
 func (obj *RoundTripper) UtlsConfig() *utls.Config {
 	return obj.utlsConfig.Clone()
 }
-func (obj *RoundTripper) dial(ctxData *reqCtxData, addr string, key string, req *http.Request) (conn *Connecotr, err error) {
+func (obj *RoundTripper) dial(ctxData *reqCtxData, addr string, req *http.Request) (conn *Connecotr, err error) {
 	if !ctxData.disProxy && ctxData.proxy == nil {
 		if ctxData.proxy, err = obj.GetProxy(req.Context(), req.URL); err != nil {
 			return conn, err
@@ -177,6 +194,7 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, addr string, key string, req 
 		}
 	} else {
 		conne.r = bufio.NewReader(conne)
+		conne.w = bufio.NewWriter(conne)
 	}
 	return conne, err
 }
@@ -195,6 +213,7 @@ type Connecotr struct {
 	rawConn   net.Conn
 	h2        bool
 	r         *bufio.Reader
+	w         *bufio.Writer
 	h2RawConn *http2.ClientConn
 	rc        chan []byte
 	rn        chan int
@@ -325,45 +344,85 @@ func (obj *Connecotr) wrapBody(task *reqTask) {
 	task.res.Body = body
 }
 
-type orderHeadersConn struct {
-	w            io.Writer
-	raw          []byte
-	orderHeaders []string
+var replaceMap = map[string]string{
+	"Sec-Ch-Ua":          "sec-ch-ua",
+	"Sec-Ch-Ua-Mobile":   "sec-ch-ua-mobile",
+	"Sec-Ch-Ua-Platform": "sec-ch-ua-platform",
 }
 
-func (obj *orderHeadersConn) Write(p []byte) (n int, err error) {
-	if obj.raw == nil {
-		return obj.w.Write(p)
+//go:linkname removeZone net/http.removeZone
+func removeZone(host string) string
+
+//go:linkname chunked net/http.chunked
+func chunked(te []string) bool
+
+//go:linkname isIdentity net/http.isIdentity
+func isIdentity(te []string) bool
+
+//go:linkname shouldSendContentLength net/http.(*transferWriter).shouldSendContentLength
+func shouldSendContentLength(t *http.Request) bool
+
+func httpWrite(t *reqTask, c *Connecotr) error {
+	host, err := httpguts.PunycodeHostPort(t.req.Host)
+	if err != nil {
+		return err
 	}
-	obj.raw = append(obj.raw, p...)
-	if lastIndex := bytes.Index(obj.raw, []byte{'\r', '\n', '\r', '\n'}); lastIndex != -1 {
-		if firstIndex := bytes.Index(obj.raw, []byte{'\r', '\n'}) + 2; firstIndex < lastIndex {
-			kvs := bytes.Split(obj.raw[firstIndex:lastIndex], []byte{'\r', '\n'})
-			sort.Slice(kvs, func(i, j int) bool {
-				iIndex := bytes.Index(kvs[i], []byte{':'})
-				jIndex := bytes.Index(kvs[j], []byte{':'})
-				if iIndex == -1 || jIndex == -1 {
-					return false
-				}
-				return slices.Index(obj.orderHeaders, tools.BytesToString(kvs[i][:iIndex])) > slices.Index(obj.orderHeaders, tools.BytesToString(kvs[j][:jIndex]))
-			})
-			copy(obj.raw[firstIndex:lastIndex], bytes.Join(kvs, []byte{'\r', '\n'}))
+	host = removeZone(host)
+	if t.req.Header.Get("Host") == "" {
+		t.req.Header.Set("Host", host)
+	}
+	if t.req.Header.Get("User-Agent") == "" {
+		t.req.Header.Set("User-Agent", UserAgent)
+	}
+	if t.req.Header.Get("Content-Length") == "" && shouldSendContentLength(t.req) {
+		t.req.Header.Set("Content-Length", fmt.Sprint(t.req.ContentLength))
+	}
+	ruri := t.req.URL.RequestURI()
+	if t.req.Method == "CONNECT" && t.req.URL.Path == "" {
+		ruri = host
+		if t.req.URL.Opaque != "" {
+			ruri = t.req.URL.Opaque
 		}
-		_, err = obj.w.Write(obj.raw)
-		obj.raw = nil
 	}
-	return len(p), err
+	if _, err = fmt.Fprintf(c.w, "%s %s HTTP/1.1\r\n", t.req.Method, ruri); err != nil {
+		return err
+	}
+	for _, k := range t.orderHeaders {
+		if k2, ok := replaceMap[k]; ok {
+			k = k2
+		}
+		for _, v := range t.req.Header.Values(k) {
+			if _, err = fmt.Fprintf(c.w, "%s: %s\r\n", k, v); err != nil {
+				return err
+			}
+		}
+	}
+	for k, vs := range t.req.Header {
+		if !slices.Contains(t.orderHeaders, k) {
+			if k2, ok := replaceMap[k]; ok {
+				k = k2
+			}
+			for _, v := range vs {
+				if _, err = fmt.Fprintf(c.w, "%s: %s\r\n", k, v); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	if _, err = io.WriteString(c.w, "\r\n"); err != nil {
+		return err
+	}
+	if t.req.Body != nil {
+		if _, err = io.Copy(c.w, t.req.Body); err != nil {
+			return err
+		}
+	}
+	return c.w.Flush()
 }
-
 func (obj *Connecotr) http1Req(task *reqTask) {
 	defer task.cnl()
 	if task.orderHeaders != nil && len(task.orderHeaders) > 0 {
-		orderHeaders := make([]string, len(task.orderHeaders))
-		total := len(task.orderHeaders) - 1
-		for i, val := range task.orderHeaders {
-			orderHeaders[total-i] = textproto.CanonicalMIMEHeaderKey(val)
-		}
-		task.err = task.req.Write(&orderHeadersConn{w: obj, raw: []byte{}, orderHeaders: orderHeaders})
+		task.err = httpWrite(task, obj)
 	} else {
 		task.err = task.req.Write(obj)
 	}
@@ -436,7 +495,6 @@ func (obj *connPool) rwMain(conn *Connecotr) {
 		obj.total.Add(-1)
 		if obj.total.Load() <= 0 {
 			obj.Close()
-			delete(obj.rt.connPools, obj.key)
 		}
 	}()
 	select {
@@ -464,7 +522,7 @@ func (obj *connPool) rwMain(conn *Connecotr) {
 type RoundTripper struct {
 	ctx                   context.Context
 	cnl                   context.CancelFunc
-	connPools             map[string]*connPool
+	connPools             map[poolKey]*connPool
 	connsLock             sync.Mutex
 	dialer                *DialClient
 	tlsConfig             *tls.Config
@@ -524,7 +582,7 @@ func newRoundTripper(preCtx context.Context, option RoundTripperOption) *RoundTr
 		utlsConfig:            utlsConfig,
 		ctx:                   ctx,
 		cnl:                   cnl,
-		connPools:             make(map[string]*connPool),
+		connPools:             make(map[poolKey]*connPool),
 		dialer:                dialClient,
 		getProxy:              option.GetProxy,
 		tlsHandshakeTimeout:   option.TlsHandshakeTimeout,
@@ -545,7 +603,7 @@ func (obj *RoundTripper) GetProxy(ctx context.Context, proxyUrl *url.URL) (*url.
 	return gtls.VerifyProxy(proxy)
 }
 
-func (obj *RoundTripper) poolRoundTrip(task *reqTask, key string) (bool, error) {
+func (obj *RoundTripper) poolRoundTrip(task *reqTask, key poolKey) (bool, error) {
 	pool := obj.getConnPool(key)
 	if pool == nil {
 		return false, nil
@@ -600,8 +658,7 @@ func (obj *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 		}
 	}
 newConn:
-	addr := getAddr(req.URL)
-	conn, err := obj.dial(ctxData, addr, key, req)
+	conn, err := obj.dial(ctxData, key.addr, req)
 	if err != nil {
 		return nil, err
 	}

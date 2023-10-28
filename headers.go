@@ -2,26 +2,32 @@ package requests
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gospider007/gson"
 )
 
-var UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36 Edg/117.0.2045.31"
+var chromeV = "117"
+var edgeV = "117"
+var UserAgent = fmt.Sprintf("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/%s.0.0.0 Safari/537.36 Edg/%s.0.2045.31", chromeV, edgeV)
+var SecChUa = fmt.Sprintf(`"Chromium";v="%s", "Microsoft Edge";v="%s", "Not=A?Brand";v="99"`, chromeV, edgeV)
 var AcceptLanguage = "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6"
 
 // 请求操作========================================================================= start
 func DefaultHeaders() http.Header {
 	return http.Header{
-		"User-Agent":      []string{UserAgent},
-		"Accept":          []string{"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"},
-		"Accept-Encoding": []string{"gzip, deflate, br"},
-		"Accept-Language": []string{AcceptLanguage},
+		"User-Agent":         []string{UserAgent},
+		"Accept":             []string{"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"},
+		"Accept-Encoding":    []string{"gzip, deflate, br"},
+		"Accept-Language":    []string{AcceptLanguage},
+		"Sec-Ch-Ua":          []string{SecChUa},
+		"Sec-Ch-Ua-Mobile":   []string{"?0"},
+		"Sec-Ch-Ua-Platform": []string{`"Windows"`},
 	}
 }
 func (obj *RequestOption) initHeaders() error {
 	if obj.Headers == nil {
-		obj.Headers = DefaultHeaders()
 		return nil
 	}
 	switch headers := obj.Headers.(type) {
