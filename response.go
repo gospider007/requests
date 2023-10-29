@@ -329,6 +329,21 @@ func (obj *Response) ForceDelete() {
 	obj.response.Body.(interface{ ForceDelete() }).ForceDelete()
 }
 
+// conn proxy
+func (obj *Response) Proxy() string {
+	return obj.response.Body.(interface{ Proxy() string }).Proxy()
+}
+
+// conn ja3
+func (obj *Response) Ja3() string {
+	return obj.response.Body.(interface{ Ja3() string }).Ja3()
+}
+
+// conn h2ja3
+func (obj *Response) H2Ja3() string {
+	return obj.response.Body.(interface{ H2Ja3() string }).H2Ja3()
+}
+
 // close body
 func (obj *Response) Close() error {
 	if obj.cnl != nil {
