@@ -60,7 +60,7 @@ func (obj *Jar) SetCookies(href string, cookies ...any) error {
 				cook.Path = "/"
 			}
 			if cook.Domain == "" {
-				cook.Domain, err = publicsuffix.EffectiveTLDPlusOne(u.Hostname())
+				cook.Domain, _ = publicsuffix.PublicSuffix(u.Hostname())
 				if err != nil {
 					return err
 				}

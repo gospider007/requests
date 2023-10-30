@@ -664,6 +664,27 @@ func (obj *RoundTripper) CloseConnections() {
 	}
 }
 
+func (obj *RoundTripper) CloseIdleConnectionsWithProxy(proxy string) {
+	obj.connsLock.Lock()
+	defer obj.connsLock.Unlock()
+	for key, pool := range obj.connPools {
+		if key.proxy == proxy {
+			pool.Close()
+			delete(obj.connPools, key)
+		}
+	}
+}
+func (obj *RoundTripper) CloseConnectionsWithProxy(proxy string) {
+	obj.connsLock.Lock()
+	defer obj.connsLock.Unlock()
+	for key, pool := range obj.connPools {
+		if key.proxy == proxy {
+			pool.Close()
+			delete(obj.connPools, key)
+		}
+	}
+}
+
 func (obj *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	ctxData := req.Context().Value(keyPrincipalID).(*reqCtxData)
 	if ctxData.requestCallBack != nil {

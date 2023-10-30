@@ -200,10 +200,16 @@ func (obj *Client) SetGetProxy(getProxy func(ctx context.Context, url *url.URL) 
 func (obj *Client) CloseIdleConnections() {
 	obj.transport.CloseIdleConnections()
 }
-
 func (obj *Client) CloseConnections() {
 	obj.transport.CloseConnections()
 }
+func (obj *Client) CloseIdleConnectionsWithProxy(proxy string) {
+	obj.transport.CloseIdleConnectionsWithProxy(proxy)
+}
+func (obj *Client) CloseConnectionsWithProxy(proxy string) {
+	obj.transport.CloseConnectionsWithProxy(proxy)
+}
+
 func (obj *Client) Close() {
 	obj.CloseConnections()
 	obj.cnl()
