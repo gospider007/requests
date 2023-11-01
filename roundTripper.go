@@ -47,7 +47,7 @@ type connPool struct {
 	deleteCnl context.CancelFunc
 	closeCtx  context.Context
 	closeCnl  context.CancelFunc
-	key       poolKey
+	key       connParams
 	total     atomic.Int64
 	tasks     chan *reqTask
 	rt        *RoundTripper
@@ -55,11 +55,11 @@ type connPool struct {
 
 func (obj *connPool) ForceClose() {
 	obj.deleteCnl()
-	delete(obj.rt.connPools, obj.key)
+	delete(obj.rt.connPools, obj.key.connKey)
 }
 func (obj *connPool) Close() {
 	obj.closeCnl()
-	delete(obj.rt.connPools, obj.key)
+	delete(obj.rt.connPools, obj.key.connKey)
 }
 func getAddr(uurl *url.URL) string {
 	if uurl == nil {
@@ -93,26 +93,39 @@ func getHost(req *http.Request) string {
 	return host
 }
 
-type poolKey struct {
+type connParams struct {
+	connKey connKey
+	params  connKey
+}
+
+type connKey struct {
 	proxy string
 	addr  string
 	ja3   string
 	h2Ja3 string
 }
 
-func getKey(ctxData *reqCtxData, req *http.Request) poolKey {
+func getKey(ctxData *reqCtxData, req *http.Request) connParams {
 	var proxy string
 	if ctxData.proxy != nil {
 		proxy = ctxData.proxy.String()
 	}
-	return poolKey{
-		h2Ja3: ctxData.h2Ja3Spec.Fp(),
-		ja3:   ctxData.ja3Spec.String(),
-		proxy: proxy,
-		addr:  getAddr(req.URL),
+	return connParams{
+		connKey: connKey{
+			h2Ja3: ctxData.h2Ja3Spec.Fp(),
+			ja3:   ctxData.ja3Spec.String(),
+			proxy: proxy,
+			addr:  getAddr(req.URL),
+		},
+		params: connKey{
+			h2Ja3: ctxData.h2Ja3Spec.Fp(),
+			ja3:   ctxData.ja3Spec.String(),
+			proxy: proxy,
+			addr:  getAddr(req.URL),
+		},
 	}
 }
-func (obj *RoundTripper) newConnPool(key poolKey, conn *Connecotr) *connPool {
+func (obj *RoundTripper) newConnPool(key connParams, conn *Connecotr) *connPool {
 	pool := new(connPool)
 	pool.deleteCtx, pool.deleteCnl = context.WithCancel(obj.ctx)
 	pool.closeCtx, pool.closeCnl = context.WithCancel(pool.deleteCtx)
@@ -123,24 +136,24 @@ func (obj *RoundTripper) newConnPool(key poolKey, conn *Connecotr) *connPool {
 	go pool.rwMain(conn)
 	return pool
 }
-func (obj *RoundTripper) getConnPool(key poolKey) *connPool {
+func (obj *RoundTripper) getConnPool(key connParams) *connPool {
 	obj.connsLock.Lock()
 	defer obj.connsLock.Unlock()
-	return obj.connPools[key]
+	return obj.connPools[key.connKey]
 }
-func (obj *RoundTripper) putConnPool(key poolKey, conn *Connecotr) {
+func (obj *RoundTripper) putConnPool(key connParams, conn *Connecotr) {
 	obj.connsLock.Lock()
 	defer obj.connsLock.Unlock()
 	conn.isPool = true
 	if !conn.h2 {
 		go conn.read()
 	}
-	pool, ok := obj.connPools[key]
+	pool, ok := obj.connPools[key.connKey]
 	if ok {
 		pool.total.Add(1)
 		go pool.rwMain(conn)
 	} else {
-		obj.connPools[key] = obj.newConnPool(key, conn)
+		obj.connPools[key.connKey] = obj.newConnPool(key, conn)
 	}
 }
 func (obj *RoundTripper) TlsConfig() *tls.Config {
@@ -149,15 +162,14 @@ func (obj *RoundTripper) TlsConfig() *tls.Config {
 func (obj *RoundTripper) UtlsConfig() *utls.Config {
 	return obj.utlsConfig.Clone()
 }
-func (obj *RoundTripper) dial(ctxData *reqCtxData, key poolKey, req *http.Request) (conn *Connecotr, connKey poolKey, err error) {
-	connKey = key
+func (obj *RoundTripper) dial(ctxData *reqCtxData, key *connKey, req *http.Request) (conn *Connecotr, err error) {
 	if !ctxData.disProxy && ctxData.proxy == nil {
 		if ctxData.proxy, err = obj.GetProxy(req.Context(), req.URL); err != nil {
-			return conn, connKey, err
+			return conn, err
 		}
 	}
 	if ctxData.proxy != nil {
-		connKey.proxy = ctxData.proxy.String()
+		key.proxy = ctxData.proxy.String()
 	}
 	var netConn net.Conn
 	host := getHost(req)
@@ -167,7 +179,7 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, key poolKey, req *http.Reques
 		netConn, err = obj.dialer.DialContextWithProxy(req.Context(), "tcp", req.URL.Scheme, key.addr, host, ctxData.proxy, obj.TlsConfig())
 	}
 	if err != nil {
-		return conn, connKey, err
+		return conn, err
 	}
 	conne := new(Connecotr)
 	conne.rn = make(chan int)
@@ -183,14 +195,14 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, key poolKey, req *http.Reques
 			}
 			tlsConn, err := obj.dialer.AddJa3Tls(ctx, netConn, host, ctxData.isWs || ctxData.forceHttp1, ctxData.ja3Spec, tlsConfig)
 			if err != nil {
-				return conne, connKey, tools.WrapError(err, "add tls error")
+				return conne, tools.WrapError(err, "add tls error")
 			}
 			conne.h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
 			netConn = tlsConn
 		} else {
 			tlsConn, err := obj.dialer.AddTls(ctx, netConn, host, ctxData.isWs || ctxData.forceHttp1, obj.TlsConfig())
 			if err != nil {
-				return conne, connKey, tools.WrapError(err, "add tls error")
+				return conne, tools.WrapError(err, "add tls error")
 			}
 			conne.h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
 			netConn = tlsConn
@@ -201,17 +213,17 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, key poolKey, req *http.Reques
 		if conne.h2RawConn, err = http2.NewClientConn(func() {
 			conne.closeCnl()
 		}, netConn, ctxData.h2Ja3Spec); err != nil {
-			return conne, connKey, err
+			return conne, err
 		}
 	} else {
 		conne.r = bufio.NewReader(conne)
 		conne.w = bufio.NewWriter(conne)
 	}
-	return conne, connKey, err
+	return conne, err
 }
 
 type Connecotr struct {
-	key       poolKey
+	key       connParams
 	err       error
 	deleteCtx context.Context //force close
 	deleteCnl context.CancelFunc
@@ -339,13 +351,13 @@ func (obj *ReadWriteCloser) Close() (err error) {
 }
 
 func (obj *ReadWriteCloser) Proxy() string {
-	return obj.conn.key.proxy
+	return obj.conn.key.params.proxy
 }
 func (obj *ReadWriteCloser) Ja3() string {
-	return obj.conn.key.ja3
+	return obj.conn.key.params.ja3
 }
 func (obj *ReadWriteCloser) H2Ja3() string {
-	return obj.conn.key.h2Ja3
+	return obj.conn.key.params.h2Ja3
 }
 
 // safe close conn
@@ -431,7 +443,7 @@ func httpWrite(t *reqTask, c *Connecotr) error {
 			}
 		}
 	}
-	if _, err = io.WriteString(c.w, "\r\n"); err != nil {
+	if _, err = c.w.WriteString("\r\n"); err != nil {
 		return err
 	}
 	if t.req.Body != nil {
@@ -446,7 +458,9 @@ func (obj *Connecotr) http1Req(task *reqTask) {
 	if task.orderHeaders != nil && len(task.orderHeaders) > 0 {
 		task.err = httpWrite(task, obj)
 	} else {
-		task.err = task.req.Write(obj)
+		if task.err = task.req.Write(obj); task.err == nil {
+			task.err = obj.w.Flush()
+		}
 	}
 	if task.err == nil {
 		if task.res, task.err = http.ReadResponse(obj.r, task.req); task.res != nil && task.err == nil {
@@ -544,7 +558,7 @@ func (obj *connPool) rwMain(conn *Connecotr) {
 type RoundTripper struct {
 	ctx                   context.Context
 	cnl                   context.CancelFunc
-	connPools             map[poolKey]*connPool
+	connPools             map[connKey]*connPool
 	connsLock             sync.Mutex
 	dialer                *DialClient
 	tlsConfig             *tls.Config
@@ -604,7 +618,7 @@ func newRoundTripper(preCtx context.Context, option RoundTripperOption) *RoundTr
 		utlsConfig:            utlsConfig,
 		ctx:                   ctx,
 		cnl:                   cnl,
-		connPools:             make(map[poolKey]*connPool),
+		connPools:             make(map[connKey]*connPool),
 		dialer:                dialClient,
 		getProxy:              option.GetProxy,
 		tlsHandshakeTimeout:   option.TlsHandshakeTimeout,
@@ -625,7 +639,7 @@ func (obj *RoundTripper) GetProxy(ctx context.Context, proxyUrl *url.URL) (*url.
 	return gtls.VerifyProxy(proxy)
 }
 
-func (obj *RoundTripper) poolRoundTrip(task *reqTask, key poolKey) (bool, error) {
+func (obj *RoundTripper) poolRoundTrip(task *reqTask, key connParams) (bool, error) {
 	pool := obj.getConnPool(key)
 	if pool == nil {
 		return false, nil
@@ -655,6 +669,7 @@ func (obj *RoundTripper) CloseIdleConnections() {
 		delete(obj.connPools, key)
 	}
 }
+
 func (obj *RoundTripper) CloseConnections() {
 	obj.connsLock.Lock()
 	defer obj.connsLock.Unlock()
@@ -668,17 +683,18 @@ func (obj *RoundTripper) CloseIdleConnectionsWithProxy(proxy string) {
 	obj.connsLock.Lock()
 	defer obj.connsLock.Unlock()
 	for key, pool := range obj.connPools {
-		if key.proxy == proxy {
+		if pool.key.params.proxy == proxy {
 			pool.Close()
 			delete(obj.connPools, key)
 		}
 	}
 }
+
 func (obj *RoundTripper) CloseConnectionsWithProxy(proxy string) {
 	obj.connsLock.Lock()
 	defer obj.connsLock.Unlock()
 	for key, pool := range obj.connPools {
-		if key.proxy == proxy {
+		if pool.key.params.proxy == proxy {
 			pool.Close()
 			delete(obj.connPools, key)
 		}
@@ -710,11 +726,10 @@ func (obj *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 		}
 	}
 newConn:
-	conn, connKey, err := obj.dial(ctxData, key, req)
+	conn, err := obj.dial(ctxData, &key.params, req)
 	if err != nil {
 		return nil, err
 	}
-	conn.key = connKey
 	if _, _, notice := conn.taskMain(task, nil, obj.responseHeaderTimeout); notice {
 		goto newConn
 	}
