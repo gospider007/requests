@@ -203,12 +203,6 @@ func (obj *Client) CloseIdleConnections() {
 func (obj *Client) CloseConnections() {
 	obj.transport.CloseConnections()
 }
-func (obj *Client) CloseIdleConnectionsWithProxy(proxy string) {
-	obj.transport.CloseIdleConnectionsWithProxy(proxy)
-}
-func (obj *Client) CloseConnectionsWithProxy(proxy string) {
-	obj.transport.CloseConnectionsWithProxy(proxy)
-}
 
 func (obj *Client) Close() {
 	obj.CloseConnections()
