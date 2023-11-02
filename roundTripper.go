@@ -377,84 +377,87 @@ var replaceMap = map[string]string{
 //go:linkname removeZone net/http.removeZone
 func removeZone(host string) string
 
-//go:linkname chunked net/http.chunked
-func chunked(te []string) bool
-
-//go:linkname isIdentity net/http.isIdentity
-func isIdentity(te []string) bool
-
-//go:linkname readTransfer net/http.readTransfer
-func readTransfer(msg any, r *bufio.Reader) (err error)
-
 //go:linkname shouldSendContentLength net/http.(*transferWriter).shouldSendContentLength
 func shouldSendContentLength(t *http.Request) bool
 
-func httpWrite(t *reqTask, c *Connecotr) error {
-	host, err := httpguts.PunycodeHostPort(t.req.Host)
+//go:linkname stringContainsCTLByte net/http.stringContainsCTLByte
+func stringContainsCTLByte(s string) bool
+
+func httpWrite(r *http.Request, w *bufio.Writer, orderHeaders []string) (err error) {
+	host := r.Host
+	if host == "" {
+		host = r.URL.Host
+	}
+	host, err = httpguts.PunycodeHostPort(host)
 	if err != nil {
 		return err
 	}
+	if !httpguts.ValidHostHeader(host) {
+		return errors.New("http: invalid Host header")
+	}
 	host = removeZone(host)
-	if t.req.Header.Get("Host") == "" {
-		t.req.Header.Set("Host", host)
-	}
-	if t.req.Header.Get("User-Agent") == "" {
-		t.req.Header.Set("User-Agent", UserAgent)
-	}
-	if t.req.Header.Get("Content-Length") == "" && shouldSendContentLength(t.req) {
-		t.req.Header.Set("Content-Length", fmt.Sprint(t.req.ContentLength))
-	}
-	ruri := t.req.URL.RequestURI()
-	if t.req.Method == "CONNECT" && t.req.URL.Path == "" {
+	ruri := r.URL.RequestURI()
+	if r.Method == "CONNECT" && r.URL.Path == "" {
+		// CONNECT requests normally give just the host and port, not a full URL.
 		ruri = host
-		if t.req.URL.Opaque != "" {
-			ruri = t.req.URL.Opaque
+		if r.URL.Opaque != "" {
+			ruri = r.URL.Opaque
 		}
 	}
-	if _, err = fmt.Fprintf(c.w, "%s %s HTTP/1.1\r\n", t.req.Method, ruri); err != nil {
+	if stringContainsCTLByte(ruri) {
+		return errors.New("net/http: can't write control character in Request.URL")
+	}
+	if r.Header.Get("Host") == "" {
+		r.Header.Set("Host", host)
+	}
+	if r.Header.Get("User-Agent") == "" {
+		r.Header.Set("User-Agent", UserAgent)
+	}
+	if r.Header.Get("Content-Length") == "" && shouldSendContentLength(r) {
+		r.Header.Set("Content-Length", fmt.Sprint(r.ContentLength))
+	}
+	if _, err = fmt.Fprintf(w, "%s %s HTTP/1.1\r\n", r.Method, ruri); err != nil {
 		return err
 	}
-	for _, k := range t.orderHeaders {
+	for _, k := range orderHeaders {
 		if k2, ok := replaceMap[k]; ok {
 			k = k2
 		}
-		for _, v := range t.req.Header.Values(k) {
-			if _, err = fmt.Fprintf(c.w, "%s: %s\r\n", k, v); err != nil {
+		for _, v := range r.Header.Values(k) {
+			if _, err = fmt.Fprintf(w, "%s: %s\r\n", k, v); err != nil {
 				return err
 			}
 		}
 	}
-	for k, vs := range t.req.Header {
-		if !slices.Contains(t.orderHeaders, k) {
+	for k, vs := range r.Header {
+		if !slices.Contains(orderHeaders, k) {
 			if k2, ok := replaceMap[k]; ok {
 				k = k2
 			}
 			for _, v := range vs {
-				if _, err = fmt.Fprintf(c.w, "%s: %s\r\n", k, v); err != nil {
+				if _, err = fmt.Fprintf(w, "%s: %s\r\n", k, v); err != nil {
 					return err
 				}
 			}
 		}
 	}
-	if _, err = c.w.WriteString("\r\n"); err != nil {
+	if _, err = w.WriteString("\r\n"); err != nil {
 		return err
 	}
-	if t.req.Body != nil {
-		if _, err = io.Copy(c.w, t.req.Body); err != nil {
+	if r.Body != nil {
+		if _, err = io.Copy(w, r.Body); err != nil {
 			return err
 		}
 	}
-	return c.w.Flush()
+	return w.Flush()
 }
 
 func (obj *Connecotr) http1Req(task *reqTask) {
 	defer task.cnl()
 	if task.orderHeaders != nil && len(task.orderHeaders) > 0 {
-		task.err = httpWrite(task, obj)
-	} else {
-		if task.err = task.req.Write(obj); task.err == nil {
-			task.err = obj.w.Flush()
-		}
+		task.err = httpWrite(task.req, obj.w, task.orderHeaders)
+	} else if task.err = task.req.Write(obj); task.err == nil {
+		task.err = obj.w.Flush()
 	}
 	if task.err == nil {
 		if task.res, task.err = http.ReadResponse(obj.r, task.req); task.res != nil && task.err == nil {
