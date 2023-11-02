@@ -350,7 +350,7 @@ func (obj *Response) Close() error {
 		defer obj.cnl()
 	}
 	if obj.webSocket != nil {
-		obj.webSocket.Close("close")
+		obj.webSocket.Close()
 	}
 	if obj.response != nil && obj.response.Body != nil {
 		if err := tools.CopyWitchContext(obj.ctx, io.Discard, obj.response.Body, false); err != nil {
