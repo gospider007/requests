@@ -243,14 +243,15 @@ func (obj *Connecotr) Close() error {
 	return obj.rawConn.Close()
 }
 func (obj *Connecotr) read() {
+	if obj.isRead {
+		return
+	}
 	obj.isRead = true
 	defer obj.Close()
 	con := make([]byte, 4096)
 	var i int
 	for {
-		if i, obj.err = obj.rawConn.Read(con); obj.err != nil && i == 0 {
-			return
-		}
+		i, obj.err = obj.rawConn.Read(con)
 		b := con[:i]
 		for once := true; once || len(b) > 0; once = false {
 			select {
@@ -264,6 +265,9 @@ func (obj *Connecotr) read() {
 			case <-obj.deleteCtx.Done():
 				return
 			}
+		}
+		if obj.err != nil {
+			return
 		}
 	}
 }
@@ -379,6 +383,9 @@ func chunked(te []string) bool
 //go:linkname isIdentity net/http.isIdentity
 func isIdentity(te []string) bool
 
+//go:linkname readTransfer net/http.readTransfer
+func readTransfer(msg any, r *bufio.Reader) (err error)
+
 //go:linkname shouldSendContentLength net/http.(*transferWriter).shouldSendContentLength
 func shouldSendContentLength(t *http.Request) bool
 
@@ -439,6 +446,7 @@ func httpWrite(t *reqTask, c *Connecotr) error {
 	}
 	return c.w.Flush()
 }
+
 func (obj *Connecotr) http1Req(task *reqTask) {
 	defer task.cnl()
 	if task.orderHeaders != nil && len(task.orderHeaders) > 0 {
@@ -451,7 +459,11 @@ func (obj *Connecotr) http1Req(task *reqTask) {
 	if task.err == nil {
 		if task.res, task.err = http.ReadResponse(obj.r, task.req); task.res != nil && task.err == nil {
 			obj.wrapBody(task)
+		} else if task.err != nil {
+			task.err = tools.WrapError(task.err, "http1 read error")
 		}
+	} else {
+		task.err = tools.WrapError(task.err, "http1 write error")
 	}
 }
 
@@ -459,6 +471,8 @@ func (obj *Connecotr) http2Req(task *reqTask) {
 	defer task.cnl()
 	if task.res, task.err = obj.h2RawConn.RoundTrip(task.req); task.res != nil && task.err == nil {
 		obj.wrapBody(task)
+	} else if task.err != nil {
+		task.err = tools.WrapError(task.err, "http2 roundTrip error")
 	}
 }
 func (obj *connPool) notice(task *reqTask) {

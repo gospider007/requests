@@ -466,6 +466,7 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 		}
 	}
 	if response.response, err = obj.getClient(option).Do(reqs); err != nil {
+		err = tools.WrapError(err, "roundTripper error")
 		return
 	} else if response.response == nil {
 		err = errors.New("response is nil")
