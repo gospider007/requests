@@ -1,23 +1,22 @@
 # introduce
-Lightning fast HTTP client
+Lightning fast HTTP client with no memory leaks and minimal code to send requests
 # get started
 ## install
 ```
 go get github.com/gospider007/requests
 ```
 # Function Overview
+- No memory leakage
 - Only a few lines of code are needed to complete the request
-- HTTP2 Fingerprint, JA3 Fingerprint
+- JA3 Fingerprint, HTTP2 Fingerprint, JA4 Fingerprint
 - SOCKS5 proxy, HTTP proxy, HTTPS proxy
 - WebSocket protocol, SSE protocol ,HTTPS protocol,HTTP protocol
-- Cookie switch
-- Connection pool
+- Connection pool, Cookies Jar
 - Automatic decompression and decoding
-- DNS caching
 - Automatic type conversion
-- Retry attempts, request callbacks
-- Force connection closure
-- Powerful and convenient request callback, very convenient to obtain every request detail
+- DNS caching
+- Request Retry
+- Powerful and convenient request callback
 
 # quick start
 ## Quickly send requests
