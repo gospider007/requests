@@ -38,7 +38,7 @@ type reqTask struct {
 	orderHeaders []string
 }
 
-func (obj *reqTask) isPool() bool {
+func (obj *reqTask) inPool() bool {
 	return obj.err == nil && obj.res != nil && obj.res.StatusCode != 101 && obj.res.Header.Get("Content-Type") != "text/event-stream"
 }
 
@@ -181,7 +181,7 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, key *connKey, req *http.Reque
 			}
 			tlsConn, err := obj.dialer.AddJa3Tls(ctx, netConn, host, ctxData.isWs || ctxData.forceHttp1, ctxData.ja3Spec, tlsConfig)
 			if err != nil {
-				return conne, tools.WrapError(err, "add tls error")
+				return conne, tools.WrapError(err, "add ja3 tls error")
 			}
 			conne.h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
 			netConn = tlsConn
@@ -332,14 +332,16 @@ func (obj *ReadWriteCloser) Read(p []byte) (n int, err error) {
 }
 func (obj *ReadWriteCloser) Close() (err error) {
 	err = obj.body.Close()
-	if !obj.conn.isPool {
+	if !obj.InPool() {
 		obj.ForceDelete()
 	} else {
 		obj.conn.bodyCnl()
 	}
 	return
 }
-
+func (obj *ReadWriteCloser) InPool() bool {
+	return obj.conn.isPool
+}
 func (obj *ReadWriteCloser) Proxy() string {
 	return obj.conn.key.proxy
 }
@@ -719,7 +721,7 @@ newConn:
 		task.err = obj.ctx.Err()
 	}
 	conn.key = ckey
-	if task.isPool() && !ctxData.disAlive {
+	if task.inPool() && !ctxData.disAlive {
 		obj.putConnPool(key, conn)
 	}
 	if ctxData.requestCallBack != nil {

@@ -307,7 +307,7 @@ func (obj *Client) Request(preCtx context.Context, method string, href string, o
 func (obj *Client) request(preCtx context.Context, option RequestOption) (response *Response, err error) {
 	response = new(Response)
 	defer func() {
-		if err == nil && !response.oneceAlive() && !option.DisRead {
+		if err == nil && !response.oneceAlive() {
 			err = response.ReadBody()
 			defer response.Close()
 		}
@@ -335,6 +335,7 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 	response.bar = option.Bar
 	response.disUnzip = option.DisUnZip
 	response.disDecode = option.DisDecode
+	response.disRead = option.DisRead
 
 	method := strings.ToUpper(option.Method)
 	href := option.converUrl

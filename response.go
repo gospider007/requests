@@ -31,6 +31,7 @@ type Response struct {
 	cnl       context.CancelFunc
 	content   []byte
 	encoding  string
+	disRead   bool
 	disDecode bool
 	disUnzip  bool
 	filePath  string
@@ -282,12 +283,12 @@ func (obj *Response) Read(con []byte) (i int, err error) {
 }
 
 func (obj *Response) oneceAlive() bool {
-	return obj.webSocket != nil || obj.sseClient != nil
+	return obj.webSocket != nil || obj.sseClient != nil || obj.disDecode
 }
 
 // read body
 func (obj *Response) ReadBody() error {
-	if obj.oneceAlive() {
+	if obj.webSocket != nil || obj.sseClient != nil {
 		return errors.New("ws or sse can not read")
 	}
 	var bBody *bytes.Buffer
@@ -332,6 +333,11 @@ func (obj *Response) ForceDelete() {
 // conn proxy
 func (obj *Response) Proxy() string {
 	return obj.response.Body.(interface{ Proxy() string }).Proxy()
+}
+
+// conn is in pool ?
+func (obj *Response) InPool() bool {
+	return obj.response.Body.(interface{ InPool() bool }).InPool()
 }
 
 // conn ja3
