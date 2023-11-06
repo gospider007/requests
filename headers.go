@@ -2,17 +2,18 @@ package requests
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/gospider007/gson"
 )
 
-var chromeV = "117"
-var edgeV = "117"
-var UserAgent = fmt.Sprintf("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/%s.0.0.0 Safari/537.36 Edg/%s.0.2045.31", chromeV, edgeV)
-var SecChUa = fmt.Sprintf(`"Chromium";v="%s", "Microsoft Edge";v="%s", "Not=A?Brand";v="99"`, chromeV, edgeV)
-var AcceptLanguage = "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6"
+const (
+	chromeV        = "117"
+	edgeV          = "117"
+	UserAgent      = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/" + chromeV + ".0.0.0 Safari/537.36 Edg/" + edgeV + ".0.2045.31"
+	SecChUa        = `"Chromium";v="%s` + chromeV + `", "Microsoft Edge";v="` + edgeV + `", "Not=A?Brand";v="99"`
+	AcceptLanguage = "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6"
+)
 
 // 请求操作========================================================================= start
 func DefaultHeaders() http.Header {

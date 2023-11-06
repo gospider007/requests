@@ -11,9 +11,10 @@ import (
 )
 
 type File struct {
-	Name        string
+	Key string
+	Val []byte
+
 	FileName    string
-	Content     []byte
 	ContentType string
 }
 type bodyType = int

@@ -61,6 +61,31 @@ type RequestOption struct {
 	converUrl string
 }
 
+var escapeQuotes = strings.NewReplacer("\\", "\\\\", `"`, "\\\"")
+
+func (obj *RequestOption) fileWrite(writer *multipart.Writer) (err error) {
+	for _, file := range obj.Files {
+		h := make(textproto.MIMEHeader)
+		h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`, escapeQuotes.Replace(file.Key), escapeQuotes.Replace(file.FileName)))
+		if file.ContentType == "" {
+			h.Set("Content-Type", "application/octet-stream")
+		} else {
+			h.Set("Content-Type", file.ContentType)
+		}
+		if wp, err := writer.CreatePart(h); err != nil {
+			return err
+		} else if _, err = wp.Write(file.Val); err != nil {
+			return err
+		}
+	}
+	if err = writer.Close(); err != nil {
+		return err
+	}
+	if obj.ContentType == "" {
+		obj.ContentType = writer.FormDataContentType()
+	}
+	return err
+}
 func (obj *RequestOption) initBody() (err error) {
 	if obj.Body != nil {
 		return nil
@@ -82,51 +107,15 @@ func (obj *RequestOption) initBody() (err error) {
 				}
 			}
 		}
-		escapeQuotes := strings.NewReplacer("\\", "\\\\", `"`, "\\\"")
-		for _, file := range obj.Files {
-			h := make(textproto.MIMEHeader)
-			h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`, escapeQuotes.Replace(file.Name), escapeQuotes.Replace(file.FileName)))
-			if file.ContentType == "" {
-				h.Set("Content-Type", "application/octet-stream")
-			} else {
-				h.Set("Content-Type", file.ContentType)
-			}
-			if wp, err := writer.CreatePart(h); err != nil {
-				return err
-			} else if _, err = wp.Write(file.Content); err != nil {
-				return err
-			}
-		}
-		if err = writer.Close(); err != nil {
+		if err = obj.fileWrite(writer); err != nil {
 			return err
-		}
-		if obj.ContentType == "" {
-			obj.ContentType = writer.FormDataContentType()
 		}
 		obj.Body = tempBody
 	} else if obj.Files != nil {
 		tempBody := bytes.NewBuffer(nil)
 		writer := multipart.NewWriter(tempBody)
-		escapeQuotes := strings.NewReplacer("\\", "\\\\", `"`, "\\\"")
-		for _, file := range obj.Files {
-			h := make(textproto.MIMEHeader)
-			h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`, escapeQuotes.Replace(file.Name), escapeQuotes.Replace(file.FileName)))
-			if file.ContentType == "" {
-				h.Set("Content-Type", "application/octet-stream")
-			} else {
-				h.Set("Content-Type", file.ContentType)
-			}
-			if wp, err := writer.CreatePart(h); err != nil {
-				return err
-			} else if _, err = wp.Write(file.Content); err != nil {
-				return err
-			}
-		}
-		if err = writer.Close(); err != nil {
+		if err = obj.fileWrite(writer); err != nil {
 			return err
-		}
-		if obj.ContentType == "" {
-			obj.ContentType = writer.FormDataContentType()
 		}
 		obj.Body = tempBody
 	} else if obj.Data != nil {

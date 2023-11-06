@@ -2,7 +2,6 @@ package requests
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -25,109 +24,6 @@ import (
 
 //go:linkname ReadRequest net/http.readRequest
 func ReadRequest(b *bufio.Reader) (*http.Request, error)
-
-type RequestDebug struct {
-	Proto  string
-	Url    *url.URL
-	Method string
-	Header http.Header
-	con    *bytes.Buffer
-}
-type ResponseDebug struct {
-	Proto   string
-	Url     *url.URL
-	Method  string
-	Header  http.Header
-	con     *bytes.Buffer
-	request *http.Request
-	Status  string
-}
-
-func (obj *RequestDebug) Request() (*http.Request, error) {
-	return ReadRequest(bufio.NewReader(bytes.NewBuffer(obj.con.Bytes())))
-}
-func (obj *RequestDebug) String() string {
-	return obj.con.String()
-}
-func (obj *RequestDebug) HeadBuffer() *bytes.Buffer {
-	con := bytes.NewBuffer(nil)
-	con.WriteString(fmt.Sprintf("%s %s %s\r\n", obj.Method, obj.Url, obj.Proto))
-	obj.Header.Write(con)
-	con.WriteString("\r\n")
-	return con
-}
-
-func CloneRequest(r *http.Request, bodys ...bool) (*RequestDebug, error) {
-	request := new(RequestDebug)
-	request.Proto = r.Proto
-	request.Method = r.Method
-	request.Url = r.URL
-	request.Header = r.Header
-	var err error
-	var body bool
-	if len(bodys) > 0 {
-		body = bodys[0]
-	}
-	if body {
-		request.con = bytes.NewBuffer(nil)
-		if err = r.Write(request.con); err != nil {
-			return request, err
-		}
-		req, err := request.Request()
-		if err != nil {
-			return nil, err
-		}
-		r.Body = req.Body
-	} else {
-		request.con = request.HeadBuffer()
-	}
-	return request, err
-}
-
-func (obj *ResponseDebug) Response() (*http.Response, error) {
-	return http.ReadResponse(bufio.NewReader(bytes.NewBuffer(obj.con.Bytes())), obj.request)
-}
-func (obj *ResponseDebug) String() string {
-	return obj.con.String()
-}
-
-func (obj *ResponseDebug) HeadBuffer() *bytes.Buffer {
-	con := bytes.NewBuffer(nil)
-	con.WriteString(fmt.Sprintf("%s %s\r\n", obj.Proto, obj.Status))
-	obj.Header.Write(con)
-	con.WriteString("\r\n")
-	return con
-}
-func CloneResponse(r *http.Response, bodys ...bool) (*ResponseDebug, error) {
-	response := new(ResponseDebug)
-	response.con = bytes.NewBuffer(nil)
-	response.Url = r.Request.URL
-	response.Method = r.Request.Method
-	response.Proto = r.Proto
-	response.Status = r.Status
-	response.Header = r.Header
-	response.request = r.Request
-
-	var err error
-	var body bool
-	if len(bodys) > 0 {
-		body = bodys[0]
-	}
-	if body {
-		response.con = bytes.NewBuffer(nil)
-		if err = r.Write(response.con); err != nil {
-			return response, err
-		}
-		rsp, err := response.Response()
-		if err != nil {
-			return nil, err
-		}
-		r.Body = rsp.Body
-	} else {
-		response.con = response.HeadBuffer()
-	}
-	return response, err
-}
 
 type keyPrincipal string
 
