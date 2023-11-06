@@ -31,7 +31,7 @@ type Response struct {
 	cnl       context.CancelFunc
 	content   []byte
 	encoding  string
-	disRead   bool
+	stream    bool
 	disDecode bool
 	disUnzip  bool
 	filePath  string
@@ -283,7 +283,7 @@ func (obj *Response) Read(con []byte) (i int, err error) {
 }
 
 func (obj *Response) oneceAlive() bool {
-	return obj.webSocket != nil || obj.sseClient != nil || obj.disDecode
+	return obj.webSocket != nil || obj.sseClient != nil || obj.stream
 }
 
 // read body

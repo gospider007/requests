@@ -37,7 +37,7 @@ type RequestOption struct {
 	RedirectNum     int                                                        //redirect num ,<0 no redirect,==0 no limit
 	Headers         any                                                        //request headers：json,map，header
 
-	DisRead     bool   //disable auto read
+	Stream      bool   //disable auto read
 	Referer     string //set headers referer value
 	Method      string //method
 	Url         *url.URL

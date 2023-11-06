@@ -335,7 +335,7 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 	response.bar = option.Bar
 	response.disUnzip = option.DisUnZip
 	response.disDecode = option.DisDecode
-	response.disRead = option.DisRead
+	response.stream = option.Stream
 
 	method := strings.ToUpper(option.Method)
 	href := option.converUrl
