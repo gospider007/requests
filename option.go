@@ -17,48 +17,51 @@ import (
 )
 
 type RequestOption struct {
-	ForceHttp1      bool                                                       //force  use http1 send requests
-	OrderHeaders    []string                                                   //order headers with http1
-	Ja3             bool                                                       //enable ja3 fingerprint
-	Ja3Spec         ja3.Ja3Spec                                                //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
-	H2Ja3Spec       ja3.H2Ja3Spec                                              //custom h2 fingerprint
-	Proxy           string                                                     //proxy,support http,https,socks5,example：http://127.0.0.1:7005
-	DisCookie       bool                                                       //disable cookies,not use cookies
-	DisDecode       bool                                                       //disable auto decode
-	DisUnZip        bool                                                       //disable auto zip decode
-	DisAlive        bool                                                       //disable  keepalive
-	Bar             bool                                                       //enable bar display
-	Timeout         time.Duration                                              //request timeout
-	OptionCallBack  func(context.Context, *Client, *RequestOption) error       //option callback,if error is returnd, break request
-	ResultCallBack  func(context.Context, *Client, *Response) error            //result callback,if error is returnd,next errCallback
-	ErrCallBack     func(context.Context, *Client, error) error                //error callback,if error is returnd,break request
-	RequestCallBack func(context.Context, *http.Request, *http.Response) error //request and response callback,if error is returnd,reponse is error
-	TryNum          int                                                        //try num
-	RedirectNum     int                                                        //redirect num ,<0 no redirect,==0 no limit
-	Headers         any                                                        //request headers：json,map，header
+	ForceHttp1            bool                                                       //force  use http1 send requests
+	OrderHeaders          []string                                                   //order headers with http1
+	Ja3                   bool                                                       //enable ja3 fingerprint
+	Ja3Spec               ja3.Ja3Spec                                                //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
+	H2Ja3Spec             ja3.H2Ja3Spec                                              //custom h2 fingerprint
+	Proxy                 string                                                     //proxy,support http,https,socks5,example：http://127.0.0.1:7005
+	DisCookie             bool                                                       //disable cookies,not use cookies
+	DisDecode             bool                                                       //disable auto decode
+	DisUnZip              bool                                                       //disable auto zip decode
+	DisAlive              bool                                                       //disable  keepalive
+	Bar                   bool                                                       //enable bar display
+	Timeout               time.Duration                                              //request timeout
+	OptionCallBack        func(context.Context, *Client, *RequestOption) error       //option callback,if error is returnd, break request
+	ResultCallBack        func(context.Context, *Client, *Response) error            //result callback,if error is returnd,next errCallback
+	ErrCallBack           func(context.Context, *Client, error) error                //error callback,if error is returnd,break request
+	RequestCallBack       func(context.Context, *http.Request, *http.Response) error //request and response callback,if error is returnd,reponse is error
+	TryNum                int                                                        //try num
+	RedirectNum           int                                                        //redirect num ,<0 no redirect,==0 no limit
+	Headers               any                                                        //request headers：json,map，header
+	ResponseHeaderTimeout time.Duration                                              //ResponseHeaderTimeout ,default:30
 
-	Stream      bool   //disable auto read
-	Referer     string //set headers referer value
-	Method      string //method
-	Url         *url.URL
-	Host        string
-	Cookies     any    // cookies,support : json,map,str，http.Header
-	Files       []File //send multipart/form-data, file upload
-	Params      any    //url params，join url query,support json,map
-	Form        any    //send multipart/form-data,file upload,support json,map
-	Data        any    //send application/x-www-form-urlencoded, support string,[]bytes,json,map
-	Body        io.Reader
-	Json        any    //send application/json,support：string,[]bytes,json,map
-	Text        any    //send text/xml,support: string,[]bytes,json,map
+	Stream  bool   //disable auto read
+	Referer string //set headers referer value
+	Method  string //method
+	Url     *url.URL
+	Host    string
+	Cookies any    // cookies,support :json,map,str，http.Header
+	Files   []File //send multipart/form-data, file upload
+	Params  any    //url params，join url query,json,map
+
+	Json any //send application/json,support io.Reader,：string,[]bytes,json,map
+	Data any //send application/x-www-form-urlencoded, support io.Reader, string,[]bytes,json,map
+	Form any //send multipart/form-data,file upload,support io.Reader, json,map
+	Text any //send text/xml,support: io.Reader, string,[]bytes,json,map
+	Body any //not setting context-type,support io.Reader, string,[]bytes,json,map
+
 	ContentType string //headers Content-Type value
-	Raw         any    //not setting context-type,support string,[]bytes,json,map
-
-	DisProxy bool //force disable proxy
+	DisProxy    bool   //force disable proxy
 
 	Jar *Jar //custom cookies
 
 	WsOption  websocket.Option //websocket option
 	converUrl string
+	body      io.Reader
+	once      bool
 }
 
 var escapeQuotes = strings.NewReplacer("\\", "\\\\", `"`, "\\\"")
@@ -87,15 +90,15 @@ func (obj *RequestOption) fileWrite(writer *multipart.Writer) (err error) {
 	return err
 }
 func (obj *RequestOption) initBody() (err error) {
-	if obj.Body != nil {
+	if obj.body != nil {
 		return nil
-	} else if obj.Raw != nil {
-		if obj.Body, err = newBody(obj.Raw, rawType, nil); err != nil {
+	} else if obj.Body != nil {
+		if err = obj.newBody(obj.Body, rawType, nil); err != nil {
 			return err
 		}
 	} else if obj.Form != nil {
 		dataMap := map[string][]string{}
-		if obj.Body, err = newBody(obj.Form, formType, dataMap); err != nil {
+		if err = obj.newBody(obj.Form, formType, dataMap); err != nil {
 			return err
 		}
 		tempBody := bytes.NewBuffer(nil)
@@ -110,30 +113,30 @@ func (obj *RequestOption) initBody() (err error) {
 		if err = obj.fileWrite(writer); err != nil {
 			return err
 		}
-		obj.Body = tempBody
+		obj.body = tempBody
 	} else if obj.Files != nil {
 		tempBody := bytes.NewBuffer(nil)
 		writer := multipart.NewWriter(tempBody)
 		if err = obj.fileWrite(writer); err != nil {
 			return err
 		}
-		obj.Body = tempBody
+		obj.body = tempBody
 	} else if obj.Data != nil {
-		if obj.Body, err = newBody(obj.Data, dataType, nil); err != nil {
+		if err = obj.newBody(obj.Data, dataType, nil); err != nil {
 			return err
 		}
 		if obj.ContentType == "" {
 			obj.ContentType = "application/x-www-form-urlencoded"
 		}
 	} else if obj.Json != nil {
-		if obj.Body, err = newBody(obj.Json, jsonType, nil); err != nil {
+		if err = obj.newBody(obj.Json, jsonType, nil); err != nil {
 			return err
 		}
 		if obj.ContentType == "" {
 			obj.ContentType = "application/json"
 		}
 	} else if obj.Text != nil {
-		if obj.Body, err = newBody(obj.Text, textType, nil); err != nil {
+		if err = obj.newBody(obj.Text, textType, nil); err != nil {
 			return err
 		}
 		if obj.ContentType == "" {
@@ -150,7 +153,7 @@ func (obj *RequestOption) optionInit() error {
 	}
 	if obj.Params != nil {
 		dataMap := map[string][]string{}
-		if _, err = newBody(obj.Params, paramsType, dataMap); err != nil {
+		if err = obj.newBody(obj.Params, paramsType, dataMap); err != nil {
 			return err
 		}
 		pu := cloneUrl(obj.Url)
@@ -194,6 +197,9 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	}
 	if option.Timeout == 0 {
 		option.Timeout = obj.timeout
+	}
+	if option.ResponseHeaderTimeout == 0 {
+		option.ResponseHeaderTimeout = obj.responseHeaderTimeout
 	}
 	if !option.DisCookie {
 		option.DisCookie = obj.disCookie

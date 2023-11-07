@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"net/url"
 
 	"github.com/gospider007/gson"
@@ -28,15 +29,21 @@ const (
 	paramsType
 )
 
-func newBody(val any, valType bodyType, dataMap map[string][]string) (*bytes.Reader, error) {
+func (obj *RequestOption) newBody(val any, valType bodyType, dataMap map[string][]string) error {
+	if reader, ok := val.(io.Reader); ok {
+		obj.once = true
+		obj.body = reader
+		return nil
+	}
 	switch value := val.(type) {
 	case *gson.Client:
 		if !value.IsObject() {
-			return nil, errors.New("body-type error")
+			return errors.New("body-type error")
 		}
 		switch valType {
 		case jsonType, textType, rawType:
-			return bytes.NewReader(value.Bytes()), nil
+			obj.body = bytes.NewReader(value.Bytes())
+			return nil
 		case dataType:
 			tempVal := url.Values{}
 			for kk, vv := range value.Map() {
@@ -48,7 +55,8 @@ func newBody(val any, valType bodyType, dataMap map[string][]string) (*bytes.Rea
 					tempVal.Add(kk, vv.String())
 				}
 			}
-			return bytes.NewReader(tools.StringToBytes(tempVal.Encode())), nil
+			obj.body = bytes.NewReader(tools.StringToBytes(tempVal.Encode()))
+			return nil
 		case formType, paramsType:
 			for kk, vv := range value.Map() {
 				kkvv := []string{}
@@ -61,29 +69,32 @@ func newBody(val any, valType bodyType, dataMap map[string][]string) (*bytes.Rea
 				}
 				dataMap[kk] = kkvv
 			}
-			return nil, nil
+			return nil
 		default:
-			return nil, fmt.Errorf("unknow content-type：%d", valType)
+			return fmt.Errorf("unknow content-type：%d", valType)
 		}
 	case string:
 		switch valType {
 		case jsonType, textType, dataType, rawType:
-			return bytes.NewReader(tools.StringToBytes(value)), nil
+			obj.body = bytes.NewReader(tools.StringToBytes(value))
+			return nil
+		case formType, paramsType:
 		default:
-			return nil, fmt.Errorf("unknow content-type：%d", valType)
+			return fmt.Errorf("unknow content-type：%d", valType)
 		}
 	case []byte:
 		switch valType {
 		case jsonType, textType, dataType, rawType:
-			return bytes.NewReader(value), nil
+			obj.body = bytes.NewReader(value)
+			return nil
+		case formType, paramsType:
 		default:
-			return nil, fmt.Errorf("unknow content-type：%d", valType)
+			return fmt.Errorf("unknow content-type：%d", valType)
 		}
-	default:
-		result, err := gson.Decode(value)
-		if err != nil {
-			return nil, err
-		}
-		return newBody(result, valType, dataMap)
 	}
+	result, err := gson.Decode(val)
+	if err != nil {
+		return err
+	}
+	return obj.newBody(result, valType, dataMap)
 }

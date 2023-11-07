@@ -13,35 +13,35 @@ import (
 )
 
 type ClientOption struct {
-	ForceHttp1      bool                                                       //force  use http1 send requests
-	OrderHeaders    []string                                                   //order headers with http1
-	Ja3             bool                                                       //enable ja3 fingerprint
-	Ja3Spec         ja3.Ja3Spec                                                //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
-	H2Ja3Spec       ja3.H2Ja3Spec                                              //h2 fingerprint
-	Proxy           string                                                     //proxy,support https,http,socks5
-	DisCookie       bool                                                       //disable cookies
-	DisDecode       bool                                                       //disable auto decode
-	DisUnZip        bool                                                       //disable auto zip decode
-	DisAlive        bool                                                       //disable  keepalive
-	Bar             bool                                                       ////enable bar display
-	Timeout         time.Duration                                              //request timeout
-	OptionCallBack  func(context.Context, *Client, *RequestOption) error       //option callback,if error is returnd, break request
-	ResultCallBack  func(context.Context, *Client, *Response) error            //result callback,if error is returnd,next errCallback
-	ErrCallBack     func(context.Context, *Client, error) error                //error callback,if error is returnd,break request
-	RequestCallBack func(context.Context, *http.Request, *http.Response) error //request and response callback,if error is returnd,reponse is error
-	TryNum          int                                                        //try num
-	RedirectNum     int                                                        //redirect num ,<0 no redirect,==0 no limit
-	Headers         any                                                        //default headers
+	ForceHttp1            bool                                                       //force  use http1 send requests
+	OrderHeaders          []string                                                   //order headers with http1
+	Ja3                   bool                                                       //enable ja3 fingerprint
+	Ja3Spec               ja3.Ja3Spec                                                //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
+	H2Ja3Spec             ja3.H2Ja3Spec                                              //h2 fingerprint
+	Proxy                 string                                                     //proxy,support https,http,socks5
+	DisCookie             bool                                                       //disable cookies
+	DisDecode             bool                                                       //disable auto decode
+	DisUnZip              bool                                                       //disable auto zip decode
+	DisAlive              bool                                                       //disable  keepalive
+	Bar                   bool                                                       ////enable bar display
+	Timeout               time.Duration                                              //request timeout
+	OptionCallBack        func(context.Context, *Client, *RequestOption) error       //option callback,if error is returnd, break request
+	ResultCallBack        func(context.Context, *Client, *Response) error            //result callback,if error is returnd,next errCallback
+	ErrCallBack           func(context.Context, *Client, error) error                //error callback,if error is returnd,break request
+	RequestCallBack       func(context.Context, *http.Request, *http.Response) error //request and response callback,if error is returnd,reponse is error
+	TryNum                int                                                        //try num
+	RedirectNum           int                                                        //redirect num ,<0 no redirect,==0 no limit
+	Headers               any                                                        //default headers
+	ResponseHeaderTimeout time.Duration                                              //ResponseHeaderTimeout ,default:30
 
-	GetProxy              func(ctx context.Context, url *url.URL) (string, error) //proxy callback:support https,http,socks5 proxy
-	LocalAddr             *net.TCPAddr                                            //network card ip
-	DialTimeout           time.Duration                                           //dial tcp timeout,default:15
-	TlsHandshakeTimeout   time.Duration                                           //tls timeout,default:15
-	KeepAlive             time.Duration                                           //keepalive,default:30
-	ResponseHeaderTimeout time.Duration                                           //ResponseHeaderTimeout ,default:30
-	AddrType              AddrType                                                //dns parse addr type
-	GetAddrType           func(string) AddrType
-	Dns                   net.IP //dns
+	GetProxy            func(ctx context.Context, url *url.URL) (string, error) //proxy callback:support https,http,socks5 proxy
+	LocalAddr           *net.TCPAddr                                            //network card ip
+	DialTimeout         time.Duration                                           //dial tcp timeout,default:15
+	TlsHandshakeTimeout time.Duration                                           //tls timeout,default:15
+	KeepAlive           time.Duration                                           //keepalive,default:30
+	AddrType            AddrType                                                //dns parse addr type
+	GetAddrType         func(string) AddrType
+	Dns                 net.IP //dns
 }
 type Client struct {
 	forceHttp1   bool
@@ -61,14 +61,15 @@ type Client struct {
 	resultCallBack func(context.Context, *Client, *Response) error
 	errCallBack    func(context.Context, *Client, error) error
 
-	timeout time.Duration
+	timeout               time.Duration
+	responseHeaderTimeout time.Duration
+
 	headers any
 	bar     bool
 
-	disCookie   bool
-	client      *http.Client
-	noJarClient *http.Client
-	proxy       *url.URL
+	disCookie bool
+	client    *http.Client
+	proxy     *url.URL
 
 	ctx       context.Context
 	cnl       context.CancelFunc
@@ -90,9 +91,6 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	}
 	if option.KeepAlive == 0 {
 		option.KeepAlive = time.Second * 30
-	}
-	if option.ResponseHeaderTimeout == 0 {
-		option.ResponseHeaderTimeout = time.Second * 30
 	}
 	if option.DialTimeout == 0 {
 		option.DialTimeout = time.Second * 15
@@ -119,10 +117,9 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	// 	}
 	// }
 	transport := newRoundTripper(ctx, RoundTripperOption{
-		TlsHandshakeTimeout:   option.TlsHandshakeTimeout,
-		DialTimeout:           option.DialTimeout,
-		KeepAlive:             option.KeepAlive,
-		ResponseHeaderTimeout: option.ResponseHeaderTimeout,
+		TlsHandshakeTimeout: option.TlsHandshakeTimeout,
+		DialTimeout:         option.DialTimeout,
+		KeepAlive:           option.KeepAlive,
 
 		LocalAddr:   option.LocalAddr,
 		AddrType:    option.AddrType,
@@ -143,35 +140,28 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	if jar != nil {
 		client.Jar = jar.jar
 	}
-	var noJarClient *http.Client
-	if client.Jar != nil {
-		noJarClient = &http.Client{
-			Transport:     transport,
-			CheckRedirect: client.CheckRedirect,
-		}
-	}
 	result := &Client{
-		jar:             jar,
-		ctx:             ctx,
-		cnl:             cnl,
-		client:          client,
-		transport:       transport,
-		noJarClient:     noJarClient,
-		forceHttp1:      option.ForceHttp1,
-		requestCallBack: option.RequestCallBack,
-		orderHeaders:    option.OrderHeaders,
-		disCookie:       option.DisCookie,
-		redirectNum:     option.RedirectNum,
-		disDecode:       option.DisDecode,
-		disUnZip:        option.DisUnZip,
-		disAlive:        option.DisAlive,
-		tryNum:          option.TryNum,
-		optionCallBack:  option.OptionCallBack,
-		resultCallBack:  option.ResultCallBack,
-		errCallBack:     option.ErrCallBack,
-		timeout:         option.Timeout,
-		headers:         option.Headers,
-		bar:             option.Bar,
+		jar:                   jar,
+		ctx:                   ctx,
+		cnl:                   cnl,
+		client:                client,
+		transport:             transport,
+		forceHttp1:            option.ForceHttp1,
+		requestCallBack:       option.RequestCallBack,
+		orderHeaders:          option.OrderHeaders,
+		disCookie:             option.DisCookie,
+		redirectNum:           option.RedirectNum,
+		disDecode:             option.DisDecode,
+		disUnZip:              option.DisUnZip,
+		disAlive:              option.DisAlive,
+		tryNum:                option.TryNum,
+		optionCallBack:        option.OptionCallBack,
+		resultCallBack:        option.ResultCallBack,
+		errCallBack:           option.ErrCallBack,
+		timeout:               option.Timeout,
+		responseHeaderTimeout: option.ResponseHeaderTimeout,
+		headers:               option.Headers,
+		bar:                   option.Bar,
 	}
 	var err error
 	if option.Proxy != "" {
@@ -209,9 +199,21 @@ func (obj *Client) Close() {
 	obj.cnl()
 }
 
-func (obj *Client) getClient(option RequestOption) *http.Client {
-	if option.DisCookie && obj.noJarClient != nil {
-		return obj.noJarClient
+func (obj *Client) getClient(option *RequestOption) *http.Client {
+	if option.DisCookie {
+		return &http.Client{
+			Transport:     obj.client.Transport,
+			CheckRedirect: obj.client.CheckRedirect,
+			Timeout:       obj.client.Timeout,
+		}
+	}
+	if option.Jar != nil {
+		return &http.Client{
+			Transport:     obj.client.Transport,
+			CheckRedirect: obj.client.CheckRedirect,
+			Timeout:       obj.client.Timeout,
+			Jar:           option.Jar.jar,
+		}
 	}
 	return obj.client
 }

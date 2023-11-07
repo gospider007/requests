@@ -29,13 +29,14 @@ type roundTripper interface {
 }
 
 type reqTask struct {
-	ctx          context.Context
-	cnl          context.CancelFunc
-	req          *http.Request
-	res          *http.Response
-	emptyPool    chan struct{}
-	err          error
-	orderHeaders []string
+	ctx                   context.Context
+	cnl                   context.CancelFunc
+	req                   *http.Request
+	res                   *http.Response
+	emptyPool             chan struct{}
+	err                   error
+	orderHeaders          []string
+	responseHeaderTimeout time.Duration
 }
 
 func (obj *reqTask) inPool() bool {
@@ -486,7 +487,7 @@ func (obj *connPool) notice(task *reqTask) {
 	case task.emptyPool <- struct{}{}:
 	}
 }
-func (obj *Connecotr) taskMain(task *reqTask, afterTime *time.Timer, responseHeaderTimeout time.Duration) (*http.Response, error, bool) {
+func (obj *Connecotr) taskMain(task *reqTask, afterTime *time.Timer) (*http.Response, error, bool) {
 	if obj.h2 && obj.h2Closed() {
 		return nil, errors.New("conn is closed"), true
 	}
@@ -501,9 +502,9 @@ func (obj *Connecotr) taskMain(task *reqTask, afterTime *time.Timer, responseHea
 		go obj.http1Req(task)
 	}
 	if afterTime == nil {
-		afterTime = time.NewTimer(responseHeaderTimeout)
+		afterTime = time.NewTimer(task.responseHeaderTimeout)
 	} else {
-		afterTime.Reset(responseHeaderTimeout)
+		afterTime.Reset(task.responseHeaderTimeout)
 	}
 	if !obj.isPool {
 		defer afterTime.Stop()
@@ -548,7 +549,7 @@ func (obj *connPool) rwMain(conn *Connecotr) {
 		case <-conn.closeCtx.Done(): //safe close conn
 			return
 		case task := <-obj.tasks: //recv task
-			res, err, notice := conn.taskMain(task, afterTime, obj.rt.responseHeaderTimeout)
+			res, err, notice := conn.taskMain(task, afterTime)
 			if notice {
 				obj.notice(task)
 				return
@@ -561,28 +562,26 @@ func (obj *connPool) rwMain(conn *Connecotr) {
 }
 
 type RoundTripper struct {
-	ctx                   context.Context
-	cnl                   context.CancelFunc
-	connPools             map[connKey]*connPool
-	connsLock             sync.Mutex
-	dialer                *DialClient
-	tlsConfig             *tls.Config
-	utlsConfig            *utls.Config
-	getProxy              func(ctx context.Context, url *url.URL) (string, error)
-	tlsHandshakeTimeout   time.Duration
-	responseHeaderTimeout time.Duration
+	ctx                 context.Context
+	cnl                 context.CancelFunc
+	connPools           map[connKey]*connPool
+	connsLock           sync.Mutex
+	dialer              *DialClient
+	tlsConfig           *tls.Config
+	utlsConfig          *utls.Config
+	getProxy            func(ctx context.Context, url *url.URL) (string, error)
+	tlsHandshakeTimeout time.Duration
 }
 
 type RoundTripperOption struct {
-	TlsHandshakeTimeout   time.Duration
-	DialTimeout           time.Duration
-	KeepAlive             time.Duration
-	ResponseHeaderTimeout time.Duration
-	LocalAddr             *net.TCPAddr //network card ip
-	AddrType              AddrType     //first ip type
-	GetAddrType           func(string) AddrType
-	Dns                   net.IP
-	GetProxy              func(ctx context.Context, url *url.URL) (string, error)
+	TlsHandshakeTimeout time.Duration
+	DialTimeout         time.Duration
+	KeepAlive           time.Duration
+	LocalAddr           *net.TCPAddr //network card ip
+	AddrType            AddrType     //first ip type
+	GetAddrType         func(string) AddrType
+	Dns                 net.IP
+	GetProxy            func(ctx context.Context, url *url.URL) (string, error)
 }
 
 func newRoundTripper(preCtx context.Context, option RoundTripperOption) *RoundTripper {
@@ -602,9 +601,6 @@ func newRoundTripper(preCtx context.Context, option RoundTripperOption) *RoundTr
 	if option.TlsHandshakeTimeout == 0 {
 		option.TlsHandshakeTimeout = time.Second * 15
 	}
-	if option.ResponseHeaderTimeout == 0 {
-		option.ResponseHeaderTimeout = time.Second * 30
-	}
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: true,
 		SessionTicketKey:   [32]byte{},
@@ -619,15 +615,14 @@ func newRoundTripper(preCtx context.Context, option RoundTripperOption) *RoundTr
 		PreferSkipResumptionOnNilExtension: true,
 	}
 	return &RoundTripper{
-		tlsConfig:             tlsConfig,
-		utlsConfig:            utlsConfig,
-		ctx:                   ctx,
-		cnl:                   cnl,
-		connPools:             make(map[connKey]*connPool),
-		dialer:                dialClient,
-		getProxy:              option.GetProxy,
-		tlsHandshakeTimeout:   option.TlsHandshakeTimeout,
-		responseHeaderTimeout: option.ResponseHeaderTimeout,
+		tlsConfig:           tlsConfig,
+		utlsConfig:          utlsConfig,
+		ctx:                 ctx,
+		cnl:                 cnl,
+		connPools:           make(map[connKey]*connPool),
+		dialer:              dialClient,
+		getProxy:            option.GetProxy,
+		tlsHandshakeTimeout: option.TlsHandshakeTimeout,
 	}
 }
 func (obj *RoundTripper) SetGetProxy(getProxy func(ctx context.Context, url *url.URL) (string, error)) {
@@ -683,7 +678,17 @@ func (obj *RoundTripper) CloseConnections() {
 		delete(obj.connPools, key)
 	}
 }
-
+func newReqTask(req *http.Request, ctxData *reqCtxData) *reqTask {
+	if ctxData.responseHeaderTimeout == 0 {
+		ctxData.responseHeaderTimeout = time.Second * 30
+	}
+	return &reqTask{
+		req:                   req,
+		emptyPool:             make(chan struct{}),
+		orderHeaders:          ctxData.orderHeaders,
+		responseHeaderTimeout: ctxData.responseHeaderTimeout,
+	}
+}
 func (obj *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	ctxData := req.Context().Value(keyPrincipalID).(*reqCtxData)
 	if ctxData.requestCallBack != nil {
@@ -692,7 +697,7 @@ func (obj *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 		}
 	}
 	key := getKey(ctxData, req) //pool key
-	task := &reqTask{req: req, emptyPool: make(chan struct{}), orderHeaders: ctxData.orderHeaders}
+	task := newReqTask(req, ctxData)
 	task.ctx, task.cnl = context.WithCancel(obj.ctx)
 	defer task.cnl()
 	//get pool conn
@@ -714,7 +719,7 @@ newConn:
 	if err != nil {
 		return nil, err
 	}
-	if _, _, notice := conn.taskMain(task, nil, obj.responseHeaderTimeout); notice {
+	if _, _, notice := conn.taskMain(task, nil); notice {
 		goto newConn
 	}
 	if task.err == nil && task.res == nil {

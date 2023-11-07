@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"net/textproto"
 	"net/url"
@@ -34,13 +35,14 @@ var (
 )
 
 type reqCtxData struct {
-	isWs         bool
-	forceHttp1   bool
-	redirectNum  int
-	proxy        *url.URL
-	disProxy     bool
-	disAlive     bool
-	orderHeaders []string
+	isWs                  bool
+	forceHttp1            bool
+	redirectNum           int
+	proxy                 *url.URL
+	disProxy              bool
+	disAlive              bool
+	orderHeaders          []string
+	responseHeaderTimeout time.Duration
 
 	requestCallBack func(context.Context, *http.Request, *http.Response) error
 
@@ -168,9 +170,6 @@ func (obj *Client) Request(preCtx context.Context, method string, href string, o
 		rawOption = options[0]
 	}
 	optionBak := obj.newRequestOption(rawOption)
-	if rawOption.Body != nil {
-		optionBak.TryNum = 0
-	}
 	for tryNum := 0; tryNum <= optionBak.TryNum; tryNum++ {
 		select {
 		case <-obj.ctx.Done():
@@ -189,8 +188,8 @@ func (obj *Client) Request(preCtx context.Context, method string, href string, o
 					return
 				}
 			}
-			resp, err = obj.request(preCtx, option)
-			if err == nil || errors.Is(err, errFatal) {
+			resp, err = obj.request(preCtx, &option)
+			if err == nil || errors.Is(err, errFatal) || option.once {
 				return
 			}
 		}
@@ -200,7 +199,7 @@ func (obj *Client) Request(preCtx context.Context, method string, href string, o
 	}
 	return resp, err
 }
-func (obj *Client) request(preCtx context.Context, option RequestOption) (response *Response, err error) {
+func (obj *Client) request(preCtx context.Context, option *RequestOption) (response *Response, err error) {
 	response = new(Response)
 	defer func() {
 		if err == nil && !response.oneceAlive() {
@@ -220,7 +219,7 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 		}
 	}()
 	if option.OptionCallBack != nil {
-		if err = option.OptionCallBack(preCtx, obj, &option); err != nil {
+		if err = option.OptionCallBack(preCtx, obj, option); err != nil {
 			return
 		}
 	}
@@ -241,6 +240,7 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 	ctxData.forceHttp1 = option.ForceHttp1
 	ctxData.disAlive = option.DisAlive
 	ctxData.requestCallBack = option.RequestCallBack
+	ctxData.responseHeaderTimeout = option.ResponseHeaderTimeout
 	//init orderHeaders
 	if option.OrderHeaders == nil {
 		if option.Ja3Spec.IsSet() {
@@ -289,8 +289,8 @@ func (obj *Client) request(preCtx context.Context, option RequestOption) (respon
 		response.ctx, response.cnl = context.WithCancel(context.WithValue(preCtx, keyPrincipalID, ctxData))
 	}
 	//create request
-	if option.Body != nil {
-		reqs, err = http.NewRequestWithContext(response.ctx, method, href, option.Body)
+	if option.body != nil {
+		reqs, err = http.NewRequestWithContext(response.ctx, method, href, option.body)
 	} else {
 		reqs, err = http.NewRequestWithContext(response.ctx, method, href, nil)
 	}

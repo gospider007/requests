@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -125,13 +124,10 @@ func (obj Cookies) GetVal(name string) string {
 	}
 }
 
-func (obj *Response) Response() *http.Response {
-	return obj.response
-}
-
 func (obj *Response) WebSocket() *websocket.Conn {
 	return obj.webSocket
 }
+
 func (obj *Response) SseClient() *SseClient {
 	return obj.sseClient
 }
@@ -184,11 +180,10 @@ func (obj *Response) Decode(encoding string) {
 	}
 }
 
-func (obj *Response) Map() (map[string]any, error) {
-	var data map[string]any
-	return data, json.Unmarshal(obj.Content(), &data)
+func (obj *Response) Map() (data map[string]any, err error) {
+	_, err = gson.Decode(obj.Content(), &data)
+	return
 }
-
 func (obj *Response) Json(vals ...any) (*gson.Client, error) {
 	return gson.Decode(obj.Content(), vals...)
 }
