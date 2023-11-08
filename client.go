@@ -30,28 +30,29 @@ type ClientOption struct {
 	ErrCallBack           func(context.Context, *Client, error) error                //error callback,if error is returnd,break request
 	RequestCallBack       func(context.Context, *http.Request, *http.Response) error //request and response callback,if error is returnd,reponse is error
 	TryNum                int                                                        //try num
-	RedirectNum           int                                                        //redirect num ,<0 no redirect,==0 no limit
+	MaxRedirectNum        int                                                        //redirect num ,<0 no redirect,==0 no limit
 	Headers               any                                                        //default headers
 	ResponseHeaderTimeout time.Duration                                              //ResponseHeaderTimeout ,default:30
+	TlsHandshakeTimeout   time.Duration                                              //tls timeout,default:15
 
-	GetProxy            func(ctx context.Context, url *url.URL) (string, error) //proxy callback:support https,http,socks5 proxy
-	LocalAddr           *net.TCPAddr                                            //network card ip
-	DialTimeout         time.Duration                                           //dial tcp timeout,default:15
-	TlsHandshakeTimeout time.Duration                                           //tls timeout,default:15
-	KeepAlive           time.Duration                                           //keepalive,default:30
-	AddrType            AddrType                                                //dns parse addr type
-	GetAddrType         func(string) AddrType
-	Dns                 net.IP //dns
+	GetProxy func(ctx context.Context, url *url.URL) (string, error) //proxy callback:support https,http,socks5 proxy
+	//network card ip
+	DialTimeout time.Duration //dial tcp timeout,default:15
+	Dns         net.IP        //dns
+	KeepAlive   time.Duration //keepalive,default:30
+	LocalAddr   *net.TCPAddr
+	AddrType    AddrType //dns parse addr type
+	GetAddrType func(string) AddrType
 }
 type Client struct {
 	forceHttp1   bool
 	orderHeaders []string
 
-	jar         *Jar
-	redirectNum int
-	disDecode   bool
-	disUnZip    bool
-	disAlive    bool
+	jar            *Jar
+	maxRedirectNum int
+	disDecode      bool
+	disUnZip       bool
+	disAlive       bool
 
 	tryNum int
 
@@ -63,6 +64,7 @@ type Client struct {
 
 	timeout               time.Duration
 	responseHeaderTimeout time.Duration
+	tlsHandshakeTimeout   time.Duration
 
 	headers any
 	bar     bool
@@ -89,37 +91,9 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	if len(options) > 0 {
 		option = options[0]
 	}
-	if option.KeepAlive == 0 {
-		option.KeepAlive = time.Second * 30
-	}
-	if option.DialTimeout == 0 {
-		option.DialTimeout = time.Second * 15
-	}
-	if option.TlsHandshakeTimeout == 0 {
-		option.TlsHandshakeTimeout = time.Second * 15
-	}
-	//cookiesjar
-	var jar *Jar
-	if !option.DisCookie {
-		jar = NewJar()
-	}
-	// var http3Transport *http3.RoundTripper
-	// if option.Http3 {
-	// 	http3Transport = &http3.RoundTripper{
-	// 		TLSClientConfig: tlsConfig,
-	// 		QuicConfig: &quic.Config{
-	// 			EnableDatagrams:      true,
-	// 			HandshakeIdleTimeout: option.TLSHandshakeTimeout,
-	// 			MaxIdleTimeout:       option.IdleConnTimeout,
-	// 			KeepAlivePeriod:      option.KeepAlive,
-	// 		},
-	// 		EnableDatagrams: true,
-	// 	}
-	// }
 	transport := newRoundTripper(ctx, RoundTripperOption{
-		TlsHandshakeTimeout: option.TlsHandshakeTimeout,
-		DialTimeout:         option.DialTimeout,
-		KeepAlive:           option.KeepAlive,
+		DialTimeout: option.DialTimeout,
+		KeepAlive:   option.KeepAlive,
 
 		LocalAddr:   option.LocalAddr,
 		AddrType:    option.AddrType,
@@ -131,17 +105,13 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 		Transport: transport,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			ctxData := req.Context().Value(keyPrincipalID).(*reqCtxData)
-			if ctxData.redirectNum == 0 || ctxData.redirectNum >= len(via) {
+			if ctxData.maxRedirectNum == 0 || ctxData.maxRedirectNum >= len(via) {
 				return nil
 			}
 			return http.ErrUseLastResponse
 		},
 	}
-	if jar != nil {
-		client.Jar = jar.jar
-	}
 	result := &Client{
-		jar:                   jar,
 		ctx:                   ctx,
 		cnl:                   cnl,
 		client:                client,
@@ -150,7 +120,7 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 		requestCallBack:       option.RequestCallBack,
 		orderHeaders:          option.OrderHeaders,
 		disCookie:             option.DisCookie,
-		redirectNum:           option.RedirectNum,
+		maxRedirectNum:        option.MaxRedirectNum,
 		disDecode:             option.DisDecode,
 		disUnZip:              option.DisUnZip,
 		disAlive:              option.DisAlive,
@@ -160,8 +130,14 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 		errCallBack:           option.ErrCallBack,
 		timeout:               option.Timeout,
 		responseHeaderTimeout: option.ResponseHeaderTimeout,
+		tlsHandshakeTimeout:   option.TlsHandshakeTimeout,
 		headers:               option.Headers,
 		bar:                   option.Bar,
+	}
+	//cookiesjar
+	if !option.DisCookie {
+		result.jar = NewJar()
+		result.client.Jar = result.jar.jar
 	}
 	var err error
 	if option.Proxy != "" {

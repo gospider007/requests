@@ -1,7 +1,6 @@
 package requests
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -11,7 +10,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	_ "unsafe"
 
 	"net/http"
 
@@ -23,26 +21,22 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-//go:linkname ReadRequest net/http.readRequest
-func ReadRequest(b *bufio.Reader) (*http.Request, error)
-
 type keyPrincipal string
 
 const keyPrincipalID keyPrincipal = "gospiderContextData"
 
-var (
-	errFatal = errors.New("Fatal error")
-)
+var errFatal = errors.New("Fatal error")
 
 type reqCtxData struct {
 	isWs                  bool
 	forceHttp1            bool
-	redirectNum           int
+	maxRedirectNum        int
 	proxy                 *url.URL
 	disProxy              bool
 	disAlive              bool
 	orderHeaders          []string
 	responseHeaderTimeout time.Duration
+	tlsHandshakeTimeout   time.Duration
 
 	requestCallBack func(context.Context, *http.Request, *http.Response) error
 
@@ -237,10 +231,20 @@ func (obj *Client) request(preCtx context.Context, option *RequestOption) (respo
 	var reqs *http.Request
 	//init ctxData
 	ctxData := new(reqCtxData)
+	ctxData.ja3Spec = option.Ja3Spec
+	ctxData.h2Ja3Spec = option.H2Ja3Spec
 	ctxData.forceHttp1 = option.ForceHttp1
 	ctxData.disAlive = option.DisAlive
+	ctxData.maxRedirectNum = option.MaxRedirectNum
 	ctxData.requestCallBack = option.RequestCallBack
 	ctxData.responseHeaderTimeout = option.ResponseHeaderTimeout
+
+	//init tls timeout
+	if option.TlsHandshakeTimeout == 0 {
+		ctxData.tlsHandshakeTimeout = time.Second * 15
+	} else {
+		ctxData.tlsHandshakeTimeout = option.TlsHandshakeTimeout
+	}
 	//init orderHeaders
 	if option.OrderHeaders == nil {
 		if option.Ja3Spec.IsSet() {
@@ -273,14 +277,6 @@ func (obj *Client) request(preCtx context.Context, option *RequestOption) (respo
 		} else if obj.proxy != nil {
 			ctxData.proxy = obj.proxy
 		}
-	}
-	//fingerprint
-	ctxData.ja3Spec = option.Ja3Spec
-	ctxData.h2Ja3Spec = option.H2Ja3Spec
-
-	//redirect
-	if option.RedirectNum != 0 {
-		ctxData.redirectNum = option.RedirectNum
 	}
 	//init ctx,cnl
 	if option.Timeout > 0 { //超时

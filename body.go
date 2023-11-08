@@ -11,13 +11,6 @@ import (
 	"github.com/gospider007/tools"
 )
 
-type File struct {
-	Key string
-	Val []byte
-
-	FileName    string
-	ContentType string
-}
 type bodyType = int
 
 const (

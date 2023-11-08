@@ -16,7 +16,6 @@ import (
 	"github.com/gospider007/bar"
 	"github.com/gospider007/bs4"
 	"github.com/gospider007/gson"
-	"github.com/gospider007/gtls"
 	"github.com/gospider007/tools"
 	"github.com/gospider007/websocket"
 )
@@ -206,11 +205,11 @@ func (obj *Response) Html() *bs4.Client {
 
 func (obj *Response) ContentType() string {
 	if obj.filePath != "" {
-		return gtls.GetContentTypeWithBytes(obj.content)
+		return http.DetectContentType(obj.content)
 	}
 	contentType := obj.response.Header.Get("Content-Type")
 	if contentType == "" {
-		contentType = gtls.GetContentTypeWithBytes(obj.content)
+		contentType = http.DetectContentType(obj.content)
 	}
 	return contentType
 }

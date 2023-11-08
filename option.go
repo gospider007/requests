@@ -34,9 +34,10 @@ type RequestOption struct {
 	ErrCallBack           func(context.Context, *Client, error) error                //error callback,if error is returnd,break request
 	RequestCallBack       func(context.Context, *http.Request, *http.Response) error //request and response callback,if error is returnd,reponse is error
 	TryNum                int                                                        //try num
-	RedirectNum           int                                                        //redirect num ,<0 no redirect,==0 no limit
+	MaxRedirectNum        int                                                        //redirect num ,<0 no redirect,==0 no limit
 	Headers               any                                                        //request headers：json,map，header
 	ResponseHeaderTimeout time.Duration                                              //ResponseHeaderTimeout ,default:30
+	TlsHandshakeTimeout   time.Duration                                              //tls timeout,default:15
 
 	Stream  bool   //disable auto read
 	Referer string //set headers referer value
@@ -63,6 +64,13 @@ type RequestOption struct {
 	body      io.Reader
 	once      bool
 }
+type File struct {
+	Key string
+	Val []byte
+
+	FileName    string
+	ContentType string
+}
 
 var escapeQuotes = strings.NewReplacer("\\", "\\\\", `"`, "\\\"")
 
@@ -71,7 +79,7 @@ func (obj *RequestOption) fileWrite(writer *multipart.Writer) (err error) {
 		h := make(textproto.MIMEHeader)
 		h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`, escapeQuotes.Replace(file.Key), escapeQuotes.Replace(file.FileName)))
 		if file.ContentType == "" {
-			h.Set("Content-Type", "application/octet-stream")
+			h.Set("Content-Type", http.DetectContentType(file.Val))
 		} else {
 			h.Set("Content-Type", file.ContentType)
 		}
@@ -192,14 +200,17 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	if !option.Bar {
 		option.Bar = obj.bar
 	}
-	if option.RedirectNum == 0 {
-		option.RedirectNum = obj.redirectNum
+	if option.MaxRedirectNum == 0 {
+		option.MaxRedirectNum = obj.maxRedirectNum
 	}
 	if option.Timeout == 0 {
 		option.Timeout = obj.timeout
 	}
 	if option.ResponseHeaderTimeout == 0 {
 		option.ResponseHeaderTimeout = obj.responseHeaderTimeout
+	}
+	if option.TlsHandshakeTimeout == 0 {
+		option.TlsHandshakeTimeout = obj.tlsHandshakeTimeout
 	}
 	if !option.DisCookie {
 		option.DisCookie = obj.disCookie
@@ -221,11 +232,12 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	if option.OrderHeaders == nil {
 		option.OrderHeaders = obj.orderHeaders
 	}
+
 	if !option.Ja3Spec.IsSet() {
-		if option.Ja3 {
-			option.Ja3Spec = ja3.DefaultJa3Spec()
-		} else {
+		if obj.ja3Spec.IsSet() {
 			option.Ja3Spec = obj.ja3Spec
+		} else if option.Ja3 {
+			option.Ja3Spec = ja3.DefaultJa3Spec()
 		}
 	}
 	if !option.H2Ja3Spec.IsSet() {

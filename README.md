@@ -1,25 +1,73 @@
-# introduce
-Lightning fast HTTP client with no memory leaks and minimal code to send requests
-# get started
-## install
-```
+<p align="center">
+  <a href="https://github.com/gospider007/requests"><img src="https://go.dev/images/favicon-gopher.png"></a>
+</p>
+<p align="center"><strong>Requests</strong> <em>- A next-generation HTTP client for Golang.</em></p>
+<p align="center">
+<a href="https://github.com/gospider007/requests">
+    <img src="https://img.shields.io/github/last-commit/gospider007/requests">
+</a>
+<a href="https://github.com/gospider007/requests">
+    <img src="https://img.shields.io/badge/build-passing-brightgreen">
+</a>
+<a href="https://github.com/gospider007/requests">
+    <img src="https://img.shields.io/badge/language-golang-brightgreen">
+</a>
+</p>
+
+Requests is a fully featured HTTP client library for Golang. Network requests can be completed with just a few lines of code
+---
+## Features
+  * GET, POST, PUT, DELETE, HEAD, PATCH, OPTIONS, etc.
+  * Simple for settings and request
+  * [Request](https://github.com/gospider007/requests#Request) Body can be `string`, `[]byte`, `struct`, `map`, `slice` and `io.Reader` too
+    * Auto detects `Content-Type`
+    * Buffer less processing for `io.Reader`
+  * [Response](https://github.com/gospider007/requests#Response) object gives you more possibility
+  * Automatic marshal and unmarshal for  content
+  * Easy to upload one or more file(s) via `multipart/form-data`
+    * Auto detects file content type
+  * Request URL Path Params (aka URI Params)
+  * Backoff Retry Mechanism with retry condition function
+  * Optionally allows GET request with payload
+  * Request design
+    * Have client level settings & options and also override at Request level if you want to
+    * Request and Response middleware
+    * goroutine concurrent safe
+    * Gzip - Go does it automatically also requests has fallback handling too
+    * Works fine with `HTTP/2` and `HTTP/1.1`
+  * DNS caching
+  * Fingerprint
+    * JA3
+    * HTTP2
+    * JA4
+    * OrderHeaders
+    * Request header capitalization
+  * Proxy
+    * HTTP
+    * HTTPS
+    * SOCKS5
+  * Protocol
+    * HTTP 
+    * HTTPS 
+    * WebSocket
+    * SSE  
+  * Well tested client library
+  
+## Supported Go Versions
+Recommended to use `go1.21.3` and above.
+Initially Requests started supporting `go modules`
+
+## Installation
+
+```bash
 go get github.com/gospider007/requests
 ```
-# Function Overview
-- No memory leakage
-- Only a few lines of code are needed to complete the request
-- JA3 Fingerprint, HTTP2 Fingerprint, JA4 Fingerprint
-- SOCKS5 proxy, HTTP proxy, HTTPS proxy
-- WebSocket protocol, SSE protocol ,HTTPS protocol,HTTP protocol
-- Connection pool, Cookies Jar
-- Automatic decompression and decoding
-- Automatic type conversion
-- DNS caching
-- Request Retry
-- Powerful and convenient request callback
-
-# quick start
-## Quickly send requests
+## Usage
+```go
+import "github.com/gospider007/requests"
+```
+## Quick Start
+### Quickly send requests
 ```go
 package main
 
@@ -51,7 +99,7 @@ func main() {
     log.Print(resp.Cookies()) // Get cookies
 }
 ```
-## use session
+### use session
 ```go
 package main
 
@@ -74,7 +122,7 @@ func main() {
 	log.Print(resp.StatusCode()) //return status code
 }
 ```
-## setting order headers with http1
+### setting order headers with http1
 ```go
 package main
 
@@ -95,7 +143,7 @@ func main() {
 }
 ```
 
-## send websocket
+### send websocket
 ```go
 package main
 
@@ -126,7 +174,7 @@ func main() {
 	log.Print(string(con)) // Message content
 }
 ```
-## IPv4, IPv6 Address Control Parsing
+### IPv4, IPv6 Address Control Parsing
 ```go
 package main
 
@@ -149,7 +197,7 @@ func main() {
 	log.Print(resp.StatusCode())
 }
 ```
-## Generate Ja3 Fingerprint from String
+### Generate Ja3 Fingerprint from String
 ```go
 package main
 
@@ -172,7 +220,7 @@ func main() {
 	log.Print(jsonData.Get("ja3").String() == ja3Str)
 }
 ```
-## Generate Ja3 Fingerprint from ID
+### Generate Ja3 Fingerprint from ID
 ```go
 package main
 
@@ -193,7 +241,7 @@ func main() {
 	log.Print(jsonData.Get("ja3").String())
 }
 ```
-## Generate H2 Fingerprint from String
+### Generate H2 Fingerprint from String
 ```go
 package main
 
@@ -216,7 +264,7 @@ func main() {
 	log.Print(jsonData.Get("akamai_fp").String() == h2ja3Str)
 }
 ```
-## Modify H2 Fingerprint
+### Modify H2 Fingerprint
 ```go
 package main
 

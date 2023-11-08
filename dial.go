@@ -64,12 +64,10 @@ func NewDail(ctx context.Context, option DialOption) *DialClient {
 		dialer: &net.Dialer{
 			Timeout:   option.DialTimeout,
 			KeepAlive: option.KeepAlive,
+			LocalAddr: option.LocalAddr,
 		},
 		addrType:    option.AddrType,
 		getAddrType: option.GetAddrType,
-	}
-	if option.LocalAddr != nil {
-		dialCli.dialer.LocalAddr = option.LocalAddr
 	}
 	if option.Dns != nil {
 		dialCli.dns = &net.UDPAddr{IP: option.Dns, Port: 53}
@@ -111,7 +109,6 @@ func (obj *DialClient) AddrToIp(ctx context.Context, addr string) (string, error
 	}
 	return net.JoinHostPort(host, port), nil
 }
-
 func (obj *DialClient) clientVerifySocks5(ctx context.Context, proxyUrl *url.URL, addr string, conn net.Conn) (err error) {
 	if _, err = conn.Write([]byte{5, 2, 0, 2}); err != nil {
 		return
@@ -228,10 +225,6 @@ func (obj *DialClient) clientVerifySocks5(ctx context.Context, proxyUrl *url.URL
 	}
 	_, err = io.ReadFull(conn, readCon[:2])
 	return
-}
-func cloneUrl(u *url.URL) *url.URL {
-	r := *u
-	return &r
 }
 func (obj *DialClient) lookupIPAddr(ctx context.Context, host string) (net.IP, error) {
 	var addrType int

@@ -2,18 +2,10 @@ package requests
 
 import (
 	"errors"
-	_ "unsafe"
-
 	"net/http"
 
 	"github.com/gospider007/gson"
 )
-
-//go:linkname readCookies net/http.readCookies
-func readCookies(h http.Header, filter string) []*http.Cookie
-
-//go:linkname readSetCookies net/http.readSetCookies
-func readSetCookies(h http.Header) []*http.Cookie
 
 // 支持json,map,[]string,http.Header,string
 func ReadCookies(val any) (Cookies, error) {
