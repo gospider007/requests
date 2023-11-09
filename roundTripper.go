@@ -77,9 +77,9 @@ type RoundTripper struct {
 type RoundTripperOption struct {
 	DialTimeout time.Duration
 	KeepAlive   time.Duration
-	LocalAddr   *net.TCPAddr //network card ip
-	AddrType    AddrType     //first ip type
-	GetAddrType func(string) AddrType
+	LocalAddr   *net.TCPAddr  //network card ip
+	AddrType    gtls.AddrType //first ip type
+	GetAddrType func(string) gtls.AddrType
 	Dns         *net.UDPAddr
 	GetProxy    func(ctx context.Context, url *url.URL) (string, error)
 }

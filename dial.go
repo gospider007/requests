@@ -25,35 +25,28 @@ type DialClient struct {
 	dnsIpData   sync.Map
 	dns         *net.UDPAddr
 	localAddr   *net.TCPAddr
-	getAddrType func(string) AddrType
+	getAddrType func(string) gtls.AddrType
 }
 type msgClient struct {
 	time time.Time
 	host string
 }
-type AddrType int
-
-const (
-	Auto AddrType = 0
-	Ipv4 AddrType = 4
-	Ipv6 AddrType = 6
-)
 
 type DialOption struct {
 	DialTimeout time.Duration
 	KeepAlive   time.Duration
-	LocalAddr   *net.TCPAddr //network card ip
-	AddrType    AddrType     //first ip type
+	LocalAddr   *net.TCPAddr  //network card ip
+	AddrType    gtls.AddrType //first ip type
 	Dns         *net.UDPAddr
-	GetAddrType func(string) AddrType
+	GetAddrType func(string) gtls.AddrType
 }
 type DialerOption struct {
 	DialTimeout time.Duration
 	KeepAlive   time.Duration
-	LocalAddr   *net.TCPAddr //network card ip
-	AddrType    AddrType     //first ip type
+	LocalAddr   *net.TCPAddr  //network card ip
+	AddrType    gtls.AddrType //first ip type
 	Dns         *net.UDPAddr
-	GetAddrType func(string) AddrType
+	GetAddrType func(string) gtls.AddrType
 }
 
 func NewDialer(option DialerOption) *net.Dialer {
@@ -110,7 +103,7 @@ func (obj *DialClient) loadHost(host string) (string, bool) {
 	}
 	return host, false
 }
-func (obj *DialClient) AddrToIp(ctx context.Context, host string, ips []net.IPAddr, addrType AddrType) (string, error) {
+func (obj *DialClient) AddrToIp(ctx context.Context, host string, ips []net.IPAddr, addrType gtls.AddrType) (string, error) {
 	ip, err := obj.lookupIPAddr(ctx, host, ips, addrType)
 	if err != nil {
 		return host, tools.WrapError(err, "addrToIp error,lookupIPAddr")
@@ -235,10 +228,10 @@ func (obj *DialClient) clientVerifySocks5(ctx context.Context, proxyUrl *url.URL
 	_, err = io.ReadFull(conn, readCon[:2])
 	return
 }
-func (obj *DialClient) lookupIPAddr(ctx context.Context, host string, ips []net.IPAddr, addrType AddrType) (net.IP, error) {
+func (obj *DialClient) lookupIPAddr(ctx context.Context, host string, ips []net.IPAddr, addrType gtls.AddrType) (net.IP, error) {
 	for _, ipAddr := range ips {
 		ip := ipAddr.IP
-		if ipType := ParseIp(ip); ipType == 4 || ipType == 6 {
+		if ipType := gtls.ParseIp(ip); ipType == 4 || ipType == 6 {
 			if addrType == 0 || addrType == ipType {
 				return ip, nil
 			}
@@ -246,7 +239,7 @@ func (obj *DialClient) lookupIPAddr(ctx context.Context, host string, ips []net.
 	}
 	for _, ipAddr := range ips {
 		ip := ipAddr.IP
-		if ipType := ParseIp(ip); ipType == 4 || ipType == 6 {
+		if ipType := gtls.ParseIp(ip); ipType == 4 || ipType == 6 {
 			return ip, nil
 		}
 	}
@@ -307,7 +300,7 @@ func (obj *DialClient) DialContext(ctx context.Context, network string, addr str
 		host, ok := obj.loadHost(host)
 		if !ok { //dns parse
 			dialer = obj.getDialer(ctxData, true)
-			var addrType AddrType
+			var addrType gtls.AddrType
 			if ctxData.addrType != 0 {
 				addrType = ctxData.addrType
 			} else if obj.getAddrType != nil {

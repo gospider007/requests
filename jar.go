@@ -5,6 +5,7 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 
+	"github.com/gospider007/gtls"
 	"golang.org/x/net/publicsuffix"
 )
 
@@ -50,6 +51,12 @@ func (obj *Jar) SetCookies(href string, cookies ...any) error {
 	if err != nil {
 		return err
 	}
+	domain := u.Hostname()
+	if _, addType := gtls.ParseHost(domain); addType == 0 {
+		if domain, err = publicsuffix.EffectiveTLDPlusOne(domain); err != nil {
+			return err
+		}
+	}
 	for _, cookie := range cookies {
 		cooks, err := ReadCookies(cookie)
 		if err != nil {
@@ -60,10 +67,7 @@ func (obj *Jar) SetCookies(href string, cookies ...any) error {
 				cook.Path = "/"
 			}
 			if cook.Domain == "" {
-				cook.Domain, _ = publicsuffix.PublicSuffix(u.Hostname())
-				if err != nil {
-					return err
-				}
+				cook.Domain = domain
 			}
 		}
 		obj.jar.SetCookies(u, cooks)

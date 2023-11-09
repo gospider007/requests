@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/gospider007/gtls"
 	"github.com/gospider007/ja3"
 	"github.com/gospider007/websocket"
 )
@@ -43,8 +44,8 @@ type RequestOption struct {
 	DialTimeout time.Duration //dial tcp timeout,default:15
 	KeepAlive   time.Duration //keepalive,default:30
 	LocalAddr   *net.TCPAddr
-	Dns         *net.UDPAddr //dns
-	AddrType    AddrType     //dns parse addr type                                             //tls timeout,default:15
+	Dns         *net.UDPAddr  //dns
+	AddrType    gtls.AddrType //dns parse addr type                                             //tls timeout,default:15
 
 	Stream  bool   //disable auto read
 	Referer string //set headers referer value

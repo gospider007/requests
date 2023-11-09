@@ -15,7 +15,7 @@ const (
 	AcceptLanguage = "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6"
 )
 
-// 请求操作========================================================================= start
+// get default headers
 func DefaultHeaders() http.Header {
 	return http.Header{
 		"User-Agent":         []string{UserAgent},

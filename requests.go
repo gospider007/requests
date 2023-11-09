@@ -46,8 +46,8 @@ type reqCtxData struct {
 
 	dialTimeout time.Duration
 	keepAlive   time.Duration
-	localAddr   *net.TCPAddr //network card ip
-	addrType    AddrType     //first ip type
+	localAddr   *net.TCPAddr  //network card ip
+	addrType    gtls.AddrType //first ip type
 	dns         *net.UDPAddr
 }
 

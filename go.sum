@@ -39,6 +39,8 @@ github.com/gospider007/gtls v0.0.0-20231024092712-01193b9f0404 h1:Qp/o+l3KgWmviE
 github.com/gospider007/gtls v0.0.0-20231024092712-01193b9f0404/go.mod h1:fLcidMDKVv8b9NvLy0P/ZclltTaXJvTHANWiPCgDbSI=
 github.com/gospider007/gtls v0.0.0-20231108025158-443489ca9953 h1:CN2nz4q88S3BhNR1QSmXubOgMGnxzWwdDL2OIASwYBs=
 github.com/gospider007/gtls v0.0.0-20231108025158-443489ca9953/go.mod h1:EACbjhpG22ykBPE0xIKxc6D3N3YWTBoWrvsLLyhYqto=
+github.com/gospider007/gtls v0.0.0-20231109073720-32fe741c06d3 h1:vyqxzWp1OQapjYY3St9CsI6Kln6QZrxwOM7cqgNlt9Y=
+github.com/gospider007/gtls v0.0.0-20231109073720-32fe741c06d3/go.mod h1:8GOdq5AxbOweohgOQ7YNWwEqzIZHLtM5gHHQOPdwfFI=
 github.com/gospider007/ja3 v0.0.0-20231029025157-38fc2f8f2d91 h1:qQokihfTAX+/U8GIMvZauRtE4G+/1Jq8XIJx8xLr04A=
 github.com/gospider007/ja3 v0.0.0-20231029025157-38fc2f8f2d91/go.mod h1:ur78/uhYDDULSy1ldA/pPpGhjk973Q1VsPnbktXGU/g=
 github.com/gospider007/kinds v0.0.0-20231024093643-7a4424f2d30e h1:lmX6IQKkrNDbXfHsvrv1Uz0MoG2v5+4VC6Gdh9irUNY=

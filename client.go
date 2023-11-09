@@ -39,11 +39,11 @@ type ClientOption struct {
 	DialTimeout time.Duration //dial tcp timeout,default:15
 	KeepAlive   time.Duration //keepalive,default:30
 	LocalAddr   *net.TCPAddr
-	Dns         *net.UDPAddr //dns
-	AddrType    AddrType     //dns parse addr type
+	Dns         *net.UDPAddr  //dns
+	AddrType    gtls.AddrType //dns parse addr type
 
 	GetProxy    func(ctx context.Context, url *url.URL) (string, error) //proxy callback:support https,http,socks5 proxy
-	GetAddrType func(string) AddrType
+	GetAddrType func(string) gtls.AddrType
 }
 type Client struct {
 	forceHttp1   bool
@@ -81,7 +81,7 @@ type Client struct {
 	ja3Spec   ja3.Ja3Spec
 	h2Ja3Spec ja3.H2Ja3Spec
 
-	addrType AddrType
+	addrType gtls.AddrType
 }
 
 func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error) {
@@ -147,7 +147,6 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	if option.Proxy != "" {
 		result.proxy, err = gtls.VerifyProxy(option.Proxy)
 	}
-
 	if option.Ja3Spec.IsSet() {
 		result.ja3Spec = option.Ja3Spec
 	} else if option.Ja3 {
