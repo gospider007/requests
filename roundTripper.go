@@ -80,7 +80,7 @@ type RoundTripperOption struct {
 	LocalAddr   *net.TCPAddr //network card ip
 	AddrType    AddrType     //first ip type
 	GetAddrType func(string) AddrType
-	Dns         net.IP
+	Dns         *net.UDPAddr
 	GetProxy    func(ctx context.Context, url *url.URL) (string, error)
 }
 
@@ -89,7 +89,7 @@ func newRoundTripper(preCtx context.Context, option RoundTripperOption) *RoundTr
 		preCtx = context.TODO()
 	}
 	ctx, cnl := context.WithCancel(preCtx)
-	dialClient := NewDail(ctx, DialOption{
+	dialClient := NewDail(DialOption{
 		DialTimeout: option.DialTimeout,
 		Dns:         option.Dns,
 		KeepAlive:   option.KeepAlive,

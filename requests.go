@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"time"
 
 	"net/textproto"
@@ -42,6 +43,12 @@ type reqCtxData struct {
 
 	h2Ja3Spec ja3.H2Ja3Spec
 	ja3Spec   ja3.Ja3Spec
+
+	dialTimeout time.Duration
+	keepAlive   time.Duration
+	localAddr   *net.TCPAddr //network card ip
+	addrType    AddrType     //first ip type
+	dns         *net.UDPAddr
 }
 
 func Get(preCtx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
@@ -238,6 +245,12 @@ func (obj *Client) request(preCtx context.Context, option *RequestOption) (respo
 	ctxData.maxRedirectNum = option.MaxRedirectNum
 	ctxData.requestCallBack = option.RequestCallBack
 	ctxData.responseHeaderTimeout = option.ResponseHeaderTimeout
+	ctxData.addrType = option.AddrType
+
+	ctxData.dialTimeout = option.DialTimeout
+	ctxData.keepAlive = option.KeepAlive
+	ctxData.localAddr = option.LocalAddr
+	ctxData.dns = option.Dns
 
 	//init tls timeout
 	if option.TlsHandshakeTimeout == 0 {
@@ -338,7 +351,6 @@ func (obj *Client) request(preCtx context.Context, option *RequestOption) (respo
 		err = tools.WrapError(errFatal, fmt.Errorf("url scheme error: %s", reqs.URL.Scheme))
 		return
 	}
-
 	//add host
 	if option.Host != "" {
 		reqs.Host = option.Host

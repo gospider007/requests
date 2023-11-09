@@ -35,13 +35,14 @@ type ClientOption struct {
 	ResponseHeaderTimeout time.Duration                                              //ResponseHeaderTimeout ,default:30
 	TlsHandshakeTimeout   time.Duration                                              //tls timeout,default:15
 
-	GetProxy func(ctx context.Context, url *url.URL) (string, error) //proxy callback:support https,http,socks5 proxy
 	//network card ip
 	DialTimeout time.Duration //dial tcp timeout,default:15
-	Dns         net.IP        //dns
 	KeepAlive   time.Duration //keepalive,default:30
 	LocalAddr   *net.TCPAddr
-	AddrType    AddrType //dns parse addr type
+	Dns         *net.UDPAddr //dns
+	AddrType    AddrType     //dns parse addr type
+
+	GetProxy    func(ctx context.Context, url *url.URL) (string, error) //proxy callback:support https,http,socks5 proxy
 	GetAddrType func(string) AddrType
 }
 type Client struct {
@@ -79,6 +80,8 @@ type Client struct {
 
 	ja3Spec   ja3.Ja3Spec
 	h2Ja3Spec ja3.H2Ja3Spec
+
+	addrType AddrType
 }
 
 func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error) {
@@ -133,6 +136,7 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 		tlsHandshakeTimeout:   option.TlsHandshakeTimeout,
 		headers:               option.Headers,
 		bar:                   option.Bar,
+		addrType:              option.AddrType,
 	}
 	//cookiesjar
 	if !option.DisCookie {

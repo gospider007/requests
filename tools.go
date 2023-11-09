@@ -18,6 +18,44 @@ func cloneUrl(u *url.URL) *url.URL {
 	r := *u
 	return &r
 }
+func ParseIp(ip net.IP) AddrType {
+	if ip != nil {
+		if ip4 := ip.To4(); ip4 != nil {
+			return 4
+		} else if ip6 := ip.To16(); ip6 != nil {
+			return 6
+		}
+	}
+	return 0
+}
+func GetHost(addrTypes ...AddrType) net.IP {
+	hosts := GetHosts(addrTypes...)
+	if len(hosts) == 0 {
+		return nil
+	} else {
+		return hosts[0]
+	}
+}
+func GetHosts(addrTypes ...AddrType) []net.IP {
+	var addrType AddrType
+	if len(addrTypes) > 0 {
+		addrType = addrTypes[0]
+	}
+	result := []net.IP{}
+	lls, err := net.InterfaceAddrs()
+	if err != nil {
+		return result
+	}
+	for _, ll := range lls {
+		mm, ok := ll.(*net.IPNet)
+		if ok && mm.IP.IsPrivate() {
+			if addrType == 0 || ParseIp(mm.IP) == addrType {
+				result = append(result, mm.IP)
+			}
+		}
+	}
+	return result
+}
 func getAddr(uurl *url.URL) string {
 	if uurl == nil {
 		return ""
@@ -55,6 +93,9 @@ var replaceMap = map[string]string{
 	"Sec-Ch-Ua-Mobile":   "sec-ch-ua-mobile",
 	"Sec-Ch-Ua-Platform": "sec-ch-ua-platform",
 }
+
+//go:linkname escapeQuotes mime/multipart.escapeQuotes
+func escapeQuotes(string) string
 
 //go:linkname readCookies net/http.readCookies
 func readCookies(h http.Header, filter string) []*http.Cookie

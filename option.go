@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"net/textproto"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/gospider007/ja3"
@@ -37,7 +37,14 @@ type RequestOption struct {
 	MaxRedirectNum        int                                                        //redirect num ,<0 no redirect,==0 no limit
 	Headers               any                                                        //request headers：json,map，header
 	ResponseHeaderTimeout time.Duration                                              //ResponseHeaderTimeout ,default:30
-	TlsHandshakeTimeout   time.Duration                                              //tls timeout,default:15
+	TlsHandshakeTimeout   time.Duration
+
+	//network card ip
+	DialTimeout time.Duration //dial tcp timeout,default:15
+	KeepAlive   time.Duration //keepalive,default:30
+	LocalAddr   *net.TCPAddr
+	Dns         *net.UDPAddr //dns
+	AddrType    AddrType     //dns parse addr type                                             //tls timeout,default:15
 
 	Stream  bool   //disable auto read
 	Referer string //set headers referer value
@@ -72,12 +79,10 @@ type File struct {
 	ContentType string
 }
 
-var escapeQuotes = strings.NewReplacer("\\", "\\\\", `"`, "\\\"")
-
 func (obj *RequestOption) fileWrite(writer *multipart.Writer) (err error) {
 	for _, file := range obj.Files {
 		h := make(textproto.MIMEHeader)
-		h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`, escapeQuotes.Replace(file.Key), escapeQuotes.Replace(file.FileName)))
+		h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`, escapeQuotes(file.Key), escapeQuotes(file.FileName)))
 		if file.ContentType == "" {
 			h.Set("Content-Type", http.DetectContentType(file.Val))
 		} else {
@@ -208,6 +213,9 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	}
 	if option.ResponseHeaderTimeout == 0 {
 		option.ResponseHeaderTimeout = obj.responseHeaderTimeout
+	}
+	if option.AddrType == 0 {
+		option.AddrType = obj.addrType
 	}
 	if option.TlsHandshakeTimeout == 0 {
 		option.TlsHandshakeTimeout = obj.tlsHandshakeTimeout
