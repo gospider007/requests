@@ -17,27 +17,28 @@ import (
 	"github.com/gospider007/websocket"
 )
 
+// Options for sending requests
 type RequestOption struct {
-	ForceHttp1            bool                                                       //force  use http1 send requests
-	OrderHeaders          []string                                                   //order headers with http1
-	Ja3                   bool                                                       //enable ja3 fingerprint
-	Ja3Spec               ja3.Ja3Spec                                                //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
-	H2Ja3Spec             ja3.H2Ja3Spec                                              //custom h2 fingerprint
-	Proxy                 string                                                     //proxy,support http,https,socks5,example：http://127.0.0.1:7005
-	DisCookie             bool                                                       //disable cookies,not use cookies
-	DisDecode             bool                                                       //disable auto decode
-	DisUnZip              bool                                                       //disable auto zip decode
-	DisAlive              bool                                                       //disable  keepalive
-	Bar                   bool                                                       //enable bar display
-	Timeout               time.Duration                                              //request timeout
-	OptionCallBack        func(context.Context, *Client, *RequestOption) error       //option callback,if error is returnd, break request
-	ResultCallBack        func(context.Context, *Client, *Response) error            //result callback,if error is returnd,next errCallback
-	ErrCallBack           func(context.Context, *Client, error) error                //error callback,if error is returnd,break request
-	RequestCallBack       func(context.Context, *http.Request, *http.Response) error //request and response callback,if error is returnd,reponse is error
-	TryNum                int                                                        //try num
-	MaxRedirectNum        int                                                        //redirect num ,<0 no redirect,==0 no limit
-	Headers               any                                                        //request headers：json,map，header
-	ResponseHeaderTimeout time.Duration                                              //ResponseHeaderTimeout ,default:30
+	ForceHttp1            bool                                                                            //force  use http1 send requests
+	OrderHeaders          []string                                                                        //order headers with http1
+	Ja3                   bool                                                                            //enable ja3 fingerprint
+	Ja3Spec               ja3.Ja3Spec                                                                     //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
+	H2Ja3Spec             ja3.H2Ja3Spec                                                                   //custom h2 fingerprint
+	Proxy                 string                                                                          //proxy,support http,https,socks5,example：http://127.0.0.1:7005
+	DisCookie             bool                                                                            //disable cookies,not use cookies
+	DisDecode             bool                                                                            //disable auto decode
+	DisUnZip              bool                                                                            //disable auto zip decode
+	DisAlive              bool                                                                            //disable  keepalive
+	Bar                   bool                                                                            //enable bar display
+	Timeout               time.Duration                                                                   //request timeout
+	OptionCallBack        func(ctx context.Context, client *Client, option *RequestOption) error          //option callback,if error is returnd, break request
+	ResultCallBack        func(ctx context.Context, client *Client, response *Response) error             //result callback,if error is returnd,next errCallback
+	ErrCallBack           func(ctx context.Context, client *Client, err error) error                      //error callback,if error is returnd,break request
+	RequestCallBack       func(ctx context.Context, request *http.Request, response *http.Response) error //request and response callback,if error is returnd,reponse is error
+	TryNum                int                                                                             //try num
+	MaxRedirectNum        int                                                                             //redirect num ,<0 no redirect,==0 no limit
+	Headers               any                                                                             //request headers：json,map，header
+	ResponseHeaderTimeout time.Duration                                                                   //ResponseHeaderTimeout ,default:30
 	TlsHandshakeTimeout   time.Duration
 
 	//network card ip
@@ -71,6 +72,8 @@ type RequestOption struct {
 	// body      io.Reader
 	once bool
 }
+
+// Upload files with form-data
 type File struct {
 	Key string
 	Val []byte

@@ -9,10 +9,12 @@ import (
 	"golang.org/x/net/publicsuffix"
 )
 
+// cookies jar
 type Jar struct {
 	jar *cookiejar.Jar
 }
 
+// new cookies jar
 func NewJar() *Jar {
 	jar, _ := cookiejar.New(nil)
 	return &Jar{
@@ -20,19 +22,25 @@ func NewJar() *Jar {
 	}
 }
 
+// get cookies
 func (obj *Client) GetCookies(href string) (Cookies, error) {
 	return obj.jar.GetCookies(href)
 }
+
+// set cookies
 func (obj *Client) SetCookies(href string, cookies ...any) error {
 	return obj.jar.SetCookies(href, cookies...)
 }
 
+// clear cookies
 func (obj *Client) ClearCookies() {
 	if obj.client.Jar != nil {
 		obj.jar.ClearCookies()
 		obj.client.Jar = obj.jar.jar
 	}
 }
+
+// Get cookies
 func (obj *Jar) GetCookies(href string) (Cookies, error) {
 	if obj.jar == nil {
 		return nil, errors.New("jar is nil")
@@ -43,6 +51,8 @@ func (obj *Jar) GetCookies(href string) (Cookies, error) {
 	}
 	return obj.jar.Cookies(u), nil
 }
+
+// Set cookies
 func (obj *Jar) SetCookies(href string, cookies ...any) error {
 	if obj.jar == nil {
 		return errors.New("jar is nil")
@@ -74,6 +84,8 @@ func (obj *Jar) SetCookies(href string, cookies ...any) error {
 	}
 	return nil
 }
+
+// Clear cookies
 func (obj *Jar) ClearCookies() {
 	jar, _ := cookiejar.New(nil)
 	obj.jar = jar

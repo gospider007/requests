@@ -79,7 +79,7 @@ type roundTripperOption struct {
 	KeepAlive   time.Duration
 	LocalAddr   *net.TCPAddr  //network card ip
 	AddrType    gtls.AddrType //first ip type
-	GetAddrType func(string) gtls.AddrType
+	GetAddrType func(host string) gtls.AddrType
 	Dns         *net.UDPAddr
 	GetProxy    func(ctx context.Context, url *url.URL) (string, error)
 }
@@ -292,6 +292,7 @@ func (obj *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 			return task.res, task.err
 		}
 	}
+	ctxData.isNewConn = true
 newConn:
 	ckey := key
 	conn, err := obj.dial(ctxData, &ckey, req)

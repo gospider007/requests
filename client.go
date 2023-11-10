@@ -12,28 +12,29 @@ import (
 	"github.com/gospider007/ja3"
 )
 
+// Connection Management Options
 type ClientOption struct {
-	ForceHttp1            bool                                                       //force  use http1 send requests
-	OrderHeaders          []string                                                   //order headers with http1
-	Ja3                   bool                                                       //enable ja3 fingerprint
-	Ja3Spec               ja3.Ja3Spec                                                //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
-	H2Ja3Spec             ja3.H2Ja3Spec                                              //h2 fingerprint
-	Proxy                 string                                                     //proxy,support https,http,socks5
-	DisCookie             bool                                                       //disable cookies
-	DisDecode             bool                                                       //disable auto decode
-	DisUnZip              bool                                                       //disable auto zip decode
-	DisAlive              bool                                                       //disable  keepalive
-	Bar                   bool                                                       ////enable bar display
-	Timeout               time.Duration                                              //request timeout
-	OptionCallBack        func(context.Context, *Client, *RequestOption) error       //option callback,if error is returnd, break request
-	ResultCallBack        func(context.Context, *Client, *Response) error            //result callback,if error is returnd,next errCallback
-	ErrCallBack           func(context.Context, *Client, error) error                //error callback,if error is returnd,break request
-	RequestCallBack       func(context.Context, *http.Request, *http.Response) error //request and response callback,if error is returnd,reponse is error
-	TryNum                int                                                        //try num
-	MaxRedirectNum        int                                                        //redirect num ,<0 no redirect,==0 no limit
-	Headers               any                                                        //default headers
-	ResponseHeaderTimeout time.Duration                                              //ResponseHeaderTimeout ,default:30
-	TlsHandshakeTimeout   time.Duration                                              //tls timeout,default:15
+	ForceHttp1            bool                                                                            //force  use http1 send requests
+	OrderHeaders          []string                                                                        //order headers with http1
+	Ja3                   bool                                                                            //enable ja3 fingerprint
+	Ja3Spec               ja3.Ja3Spec                                                                     //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
+	H2Ja3Spec             ja3.H2Ja3Spec                                                                   //h2 fingerprint
+	Proxy                 string                                                                          //proxy,support https,http,socks5
+	DisCookie             bool                                                                            //disable cookies
+	DisDecode             bool                                                                            //disable auto decode
+	DisUnZip              bool                                                                            //disable auto zip decode
+	DisAlive              bool                                                                            //disable  keepalive
+	Bar                   bool                                                                            ////enable bar display
+	Timeout               time.Duration                                                                   //request timeout
+	OptionCallBack        func(ctx context.Context, client *Client, option *RequestOption) error          //option callback,if error is returnd, break request
+	ResultCallBack        func(ctx context.Context, client *Client, response *Response) error             //result callback,if error is returnd,next errCallback
+	ErrCallBack           func(ctx context.Context, client *Client, err error) error                      //error callback,if error is returnd,break request
+	RequestCallBack       func(ctx context.Context, request *http.Request, response *http.Response) error //request and response callback,if error is returnd,reponse is error
+	TryNum                int                                                                             //try num
+	MaxRedirectNum        int                                                                             //redirect num ,<0 no redirect,==0 no limit
+	Headers               any                                                                             //default headers
+	ResponseHeaderTimeout time.Duration                                                                   //ResponseHeaderTimeout ,default:30
+	TlsHandshakeTimeout   time.Duration                                                                   //tls timeout,default:15
 
 	//network card ip
 	DialTimeout time.Duration //dial tcp timeout,default:15
@@ -44,8 +45,10 @@ type ClientOption struct {
 	Jar         *Jar          //custom cookies
 
 	GetProxy    func(ctx context.Context, url *url.URL) (string, error) //proxy callback:support https,http,socks5 proxy
-	GetAddrType func(string) gtls.AddrType
+	GetAddrType func(host string) gtls.AddrType
 }
+
+// Connection Management
 type Client struct {
 	forceHttp1   bool
 	orderHeaders []string
@@ -61,7 +64,7 @@ type Client struct {
 	requestCallBack func(context.Context, *http.Request, *http.Response) error
 
 	optionCallBack func(context.Context, *Client, *RequestOption) error
-	resultCallBack func(context.Context, *Client, *Response) error
+	resultCallBack func(ctx context.Context, client *Client, response *Response) error
 	errCallBack    func(context.Context, *Client, error) error
 
 	timeout               time.Duration
@@ -85,6 +88,9 @@ type Client struct {
 	addrType gtls.AddrType
 }
 
+var defaultClient, _ = NewClient(nil)
+
+// New Connection Management
 func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error) {
 	if preCtx == nil {
 		preCtx = context.TODO()
@@ -160,21 +166,29 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	result.h2Ja3Spec = option.H2Ja3Spec
 	return result, err
 }
+
+// Modifying the client's proxy
 func (obj *Client) SetProxy(proxyUrl string) (err error) {
 	obj.proxy, err = gtls.VerifyProxy(proxyUrl)
 	return
 }
+
+// Modify the proxy method of the client
 func (obj *Client) SetGetProxy(getProxy func(ctx context.Context, url *url.URL) (string, error)) {
 	obj.transport.setGetProxy(getProxy)
 }
 
+// Close idle connections. If the connection is in use, wait until it ends before closing
 func (obj *Client) CloseIdleConnections() {
 	obj.transport.closeIdleConnections()
 }
+
+// Close the connection, even if it is in use, it will be closed
 func (obj *Client) CloseConnections() {
 	obj.transport.closeConnections()
 }
 
+// Close the client and cannot be used again after shutdown
 func (obj *Client) Close() {
 	obj.CloseConnections()
 	obj.cnl()

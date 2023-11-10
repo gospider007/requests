@@ -2,12 +2,68 @@ package requests
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gospider007/gson"
 )
 
-// 支持json,map,[]string,http.Header,string
+// cookies
+type Cookies []*http.Cookie
+
+// return cookies with string,join with '; '
+func (obj Cookies) String() string {
+	cooks := []string{}
+	for _, cook := range obj {
+		cooks = append(cooks, fmt.Sprintf("%s=%s", cook.Name, cook.Value))
+	}
+	return strings.Join(cooks, "; ")
+}
+
+// get cookies by name
+func (obj Cookies) Gets(name string) Cookies {
+	var result Cookies
+	for _, cook := range obj {
+		if cook.Name == name {
+			result = append(result, cook)
+		}
+	}
+	return result
+}
+
+// get cookie by name
+func (obj Cookies) Get(name string) *http.Cookie {
+	vals := obj.Gets(name)
+	if i := len(vals); i == 0 {
+		return nil
+	} else {
+		return vals[i-1]
+	}
+}
+
+// get cookie values by name, return []string
+func (obj Cookies) GetVals(name string) []string {
+	var result []string
+	for _, cook := range obj {
+		if cook.Name == name {
+			result = append(result, cook.Value)
+		}
+	}
+	return result
+}
+
+// get cookie value by name,return string
+func (obj Cookies) GetVal(name string) string {
+	vals := obj.GetVals(name)
+	if i := len(vals); i == 0 {
+		return ""
+	} else {
+		return vals[i-1]
+	}
+}
+
+// read cookies or parse cookies,support json,map,[]string,http.Header,string
 func ReadCookies(val any) (Cookies, error) {
 	switch cook := val.(type) {
 	case *http.Cookie:
@@ -33,6 +89,7 @@ func ReadCookies(val any) (Cookies, error) {
 	}
 }
 
+// read set cookies or parse set cookies,support json,map,[]string,http.Header,string
 func ReadSetCookies(val any) (Cookies, error) {
 	switch cook := val.(type) {
 	case Cookies:

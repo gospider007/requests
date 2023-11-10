@@ -25,7 +25,7 @@ type DialClient struct {
 	dnsIpData   sync.Map
 	dns         *net.UDPAddr
 	localAddr   *net.TCPAddr
-	getAddrType func(string) gtls.AddrType
+	getAddrType func(host string) gtls.AddrType
 }
 type msgClient struct {
 	time time.Time
@@ -38,7 +38,7 @@ type DialOption struct {
 	LocalAddr   *net.TCPAddr  //network card ip
 	AddrType    gtls.AddrType //first ip type
 	Dns         *net.UDPAddr
-	GetAddrType func(string) gtls.AddrType
+	GetAddrType func(host string) gtls.AddrType
 }
 type DialerOption struct {
 	DialTimeout time.Duration
@@ -46,7 +46,7 @@ type DialerOption struct {
 	LocalAddr   *net.TCPAddr  //network card ip
 	AddrType    gtls.AddrType //first ip type
 	Dns         *net.UDPAddr
-	GetAddrType func(string) gtls.AddrType
+	GetAddrType func(host string) gtls.AddrType
 }
 
 func NewDialer(option DialerOption) *net.Dialer {

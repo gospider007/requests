@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"net/url"
 	"strconv"
@@ -34,22 +33,25 @@ type Response struct {
 	disUnzip  bool
 	filePath  string
 	bar       bool
+	isNewConn bool
 }
 
 type SseClient struct {
 	reader *bufio.Reader
 }
 type Event struct {
-	Data    string
-	Event   string
-	Id      string
-	Retry   int
-	Comment string
+	Data    string //data
+	Event   string //event
+	Id      string //id
+	Retry   int    //retry num
+	Comment string //comment info
 }
 
 func newSseClient(rd io.Reader) *SseClient {
 	return &SseClient{reader: bufio.NewReader(rd)}
 }
+
+// recv sse envent data
 func (obj *SseClient) Recv() (Event, error) {
 	var event Event
 	for {
@@ -75,66 +77,22 @@ func (obj *SseClient) Recv() (Event, error) {
 	}
 }
 
-type Cookies []*http.Cookie
-
-func (obj Cookies) String() string {
-	cooks := []string{}
-	for _, cook := range obj {
-		cooks = append(cooks, fmt.Sprintf("%s=%s", cook.Name, cook.Value))
-	}
-	return strings.Join(cooks, "; ")
-}
-
-func (obj Cookies) Gets(name string) Cookies {
-	var result Cookies
-	for _, cook := range obj {
-		if cook.Name == name {
-			result = append(result, cook)
-		}
-	}
-	return result
-}
-
-func (obj Cookies) Get(name string) *http.Cookie {
-	vals := obj.Gets(name)
-	if i := len(vals); i == 0 {
-		return nil
-	} else {
-		return vals[i-1]
-	}
-}
-
-func (obj Cookies) GetVals(name string) []string {
-	var result []string
-	for _, cook := range obj {
-		if cook.Name == name {
-			result = append(result, cook.Value)
-		}
-	}
-	return result
-}
-
-func (obj Cookies) GetVal(name string) string {
-	vals := obj.GetVals(name)
-	if i := len(vals); i == 0 {
-		return ""
-	} else {
-		return vals[i-1]
-	}
-}
-
+// return websocket client
 func (obj *Response) WebSocket() *websocket.Conn {
 	return obj.webSocket
 }
 
+// return sse client
 func (obj *Response) SseClient() *SseClient {
 	return obj.sseClient
 }
 
+// return URL redirected address
 func (obj *Response) Location() (*url.URL, error) {
 	return obj.response.Location()
 }
 
+// return response cookies
 func (obj *Response) Cookies() Cookies {
 	if obj.filePath != "" {
 		return nil
@@ -142,6 +100,7 @@ func (obj *Response) Cookies() Cookies {
 	return obj.response.Cookies()
 }
 
+// return response status code
 func (obj *Response) StatusCode() int {
 	if obj.filePath != "" {
 		return 200
@@ -149,6 +108,7 @@ func (obj *Response) StatusCode() int {
 	return obj.response.StatusCode
 }
 
+// return response status
 func (obj *Response) Status() string {
 	if obj.filePath != "" {
 		return "200 OK"
@@ -156,6 +116,7 @@ func (obj *Response) Status() string {
 	return obj.response.Status
 }
 
+// return response url
 func (obj *Response) Url() *url.URL {
 	if obj.filePath != "" {
 		return nil
@@ -163,6 +124,7 @@ func (obj *Response) Url() *url.URL {
 	return obj.response.Request.URL
 }
 
+// return response headers
 func (obj *Response) Headers() http.Header {
 	if obj.filePath != "" {
 		return http.Header{
@@ -172,6 +134,7 @@ func (obj *Response) Headers() http.Header {
 	return obj.response.Header
 }
 
+// change decoding with content
 func (obj *Response) Decode(encoding string) {
 	if obj.encoding != encoding {
 		obj.encoding = encoding
@@ -179,30 +142,38 @@ func (obj *Response) Decode(encoding string) {
 	}
 }
 
+// return content with map[string]any
 func (obj *Response) Map() (data map[string]any, err error) {
 	_, err = gson.Decode(obj.Content(), &data)
 	return
 }
+
+// return content with json and you can parse struct
 func (obj *Response) Json(vals ...any) (*gson.Client, error) {
 	return gson.Decode(obj.Content(), vals...)
 }
 
+// return content with string
 func (obj *Response) Text() string {
 	return tools.BytesToString(obj.Content())
 }
 
+// set response content with []byte
 func (obj *Response) SetContent(val []byte) {
 	obj.content = val
 }
 
+// return content with []byte
 func (obj *Response) Content() []byte {
 	return obj.content
 }
 
+// return content with parse html
 func (obj *Response) Html() *bs4.Client {
 	return bs4.NewClient(obj.Text(), obj.Url().String())
 }
 
+// return content type
 func (obj *Response) ContentType() string {
 	if obj.filePath != "" {
 		return http.DetectContentType(obj.content)
@@ -214,6 +185,7 @@ func (obj *Response) ContentType() string {
 	return contentType
 }
 
+// return content encoding
 func (obj *Response) ContentEncoding() string {
 	if obj.filePath != "" {
 		return ""
@@ -221,6 +193,7 @@ func (obj *Response) ContentEncoding() string {
 	return obj.response.Header.Get("Content-Encoding")
 }
 
+// return content length
 func (obj *Response) ContentLength() int64 {
 	if obj.filePath != "" {
 		return int64(len(obj.content))
@@ -332,6 +305,11 @@ func (obj *Response) Proxy() string {
 // conn is in pool ?
 func (obj *Response) InPool() bool {
 	return obj.response.Body.(interface{ InPool() bool }).InPool()
+}
+
+// conn is new conn
+func (obj *Response) IsNewConn() bool {
+	return obj.isNewConn
 }
 
 // conn ja3
