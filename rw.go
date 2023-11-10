@@ -7,7 +7,7 @@ import (
 
 type readWriteCloser struct {
 	body io.ReadCloser
-	conn *Connecotr
+	conn *connecotr
 }
 
 func (obj *readWriteCloser) Conn() net.Conn {

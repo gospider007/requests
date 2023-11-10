@@ -120,7 +120,7 @@ func newRoundTripper(preCtx context.Context, option roundTripperOption) *RoundTr
 		proxy:      option.GetProxy,
 	}
 }
-func (obj *RoundTripper) newConnPool(conn *Connecotr) *connPool {
+func (obj *RoundTripper) newConnPool(conn *connecotr) *connPool {
 	pool := new(connPool)
 	pool.deleteCtx, pool.deleteCnl = context.WithCancel(obj.ctx)
 	pool.closeCtx, pool.closeCnl = context.WithCancel(pool.deleteCtx)
@@ -135,7 +135,7 @@ func (obj *RoundTripper) getConnPool(key connKey) *connPool {
 	defer obj.connsLock.Unlock()
 	return obj.connPools[key]
 }
-func (obj *RoundTripper) putConnPool(key connKey, conn *Connecotr) {
+func (obj *RoundTripper) putConnPool(key connKey, conn *connecotr) {
 	obj.connsLock.Lock()
 	defer obj.connsLock.Unlock()
 	conn.isPool = true
@@ -156,7 +156,7 @@ func (obj *RoundTripper) tlsConfigClone() *tls.Config {
 func (obj *RoundTripper) utlsConfigClone() *utls.Config {
 	return obj.utlsConfig.Clone()
 }
-func (obj *RoundTripper) dial(ctxData *reqCtxData, key *connKey, req *http.Request) (conn *Connecotr, err error) {
+func (obj *RoundTripper) dial(ctxData *reqCtxData, key *connKey, req *http.Request) (conn *connecotr, err error) {
 	if !ctxData.disProxy && ctxData.proxy == nil {
 		if ctxData.proxy, err = obj.getProxy(req.Context(), req.URL); err != nil {
 			return conn, err
@@ -175,7 +175,7 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, key *connKey, req *http.Reque
 	if err != nil {
 		return conn, err
 	}
-	conne := new(Connecotr)
+	conne := new(connecotr)
 	conne.rn = make(chan int)
 	conne.rc = make(chan []byte)
 	conne.withCancel(obj.ctx, obj.ctx)

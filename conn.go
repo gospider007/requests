@@ -13,7 +13,7 @@ import (
 	"github.com/gospider007/tools"
 )
 
-type Connecotr struct {
+type connecotr struct {
 	key       connKey
 	err       error
 	deleteCtx context.Context //force close
@@ -36,18 +36,18 @@ type Connecotr struct {
 	isPool    bool
 }
 
-func (obj *Connecotr) withCancel(deleteCtx context.Context, closeCtx context.Context) {
+func (obj *connecotr) withCancel(deleteCtx context.Context, closeCtx context.Context) {
 	obj.deleteCtx, obj.deleteCnl = context.WithCancel(deleteCtx)
 	obj.closeCtx, obj.closeCnl = context.WithCancel(closeCtx)
 }
-func (obj *Connecotr) Close() error {
+func (obj *connecotr) Close() error {
 	obj.deleteCnl()
 	if obj.h2RawConn != nil {
 		obj.h2RawConn.Close()
 	}
 	return obj.rawConn.Close()
 }
-func (obj *Connecotr) read() {
+func (obj *connecotr) read() {
 	if obj.isRead {
 		return
 	}
@@ -76,7 +76,7 @@ func (obj *Connecotr) read() {
 		}
 	}
 }
-func (obj *Connecotr) Read(b []byte) (i int, err error) {
+func (obj *connecotr) Read(b []byte) (i int, err error) {
 	if !obj.isRead {
 		return obj.rawConn.Read(b)
 	}
@@ -100,37 +100,37 @@ func (obj *Connecotr) Read(b []byte) (i int, err error) {
 	}
 	return
 }
-func (obj *Connecotr) Write(b []byte) (int, error) {
+func (obj *connecotr) Write(b []byte) (int, error) {
 	return obj.rawConn.Write(b)
 }
-func (obj *Connecotr) LocalAddr() net.Addr {
+func (obj *connecotr) LocalAddr() net.Addr {
 	return obj.rawConn.LocalAddr()
 }
-func (obj *Connecotr) RemoteAddr() net.Addr {
+func (obj *connecotr) RemoteAddr() net.Addr {
 	return obj.rawConn.RemoteAddr()
 }
-func (obj *Connecotr) SetDeadline(t time.Time) error {
+func (obj *connecotr) SetDeadline(t time.Time) error {
 	return obj.rawConn.SetDeadline(t)
 }
-func (obj *Connecotr) SetReadDeadline(t time.Time) error {
+func (obj *connecotr) SetReadDeadline(t time.Time) error {
 	return obj.rawConn.SetReadDeadline(t)
 }
-func (obj *Connecotr) SetWriteDeadline(t time.Time) error {
+func (obj *connecotr) SetWriteDeadline(t time.Time) error {
 	return obj.rawConn.SetWriteDeadline(t)
 }
 
-func (obj *Connecotr) h2Closed() bool {
+func (obj *connecotr) h2Closed() bool {
 	state := obj.h2RawConn.State()
 	return state.Closed || state.Closing
 }
-func (obj *Connecotr) wrapBody(task *reqTask) {
+func (obj *connecotr) wrapBody(task *reqTask) {
 	body := new(readWriteCloser)
 	obj.bodyCtx, obj.bodyCnl = context.WithCancel(obj.deleteCtx)
 	body.body = task.res.Body
 	body.conn = obj
 	task.res.Body = body
 }
-func (obj *Connecotr) http1Req(task *reqTask) {
+func (obj *connecotr) http1Req(task *reqTask) {
 	defer task.cnl()
 	if task.orderHeaders != nil && len(task.orderHeaders) > 0 {
 		task.err = httpWrite(task.req, obj.w, task.orderHeaders)
@@ -148,7 +148,7 @@ func (obj *Connecotr) http1Req(task *reqTask) {
 	}
 }
 
-func (obj *Connecotr) http2Req(task *reqTask) {
+func (obj *connecotr) http2Req(task *reqTask) {
 	defer task.cnl()
 	if task.res, task.err = obj.h2RawConn.RoundTrip(task.req); task.res != nil && task.err == nil {
 		obj.wrapBody(task)
@@ -157,7 +157,7 @@ func (obj *Connecotr) http2Req(task *reqTask) {
 	}
 }
 
-func (obj *Connecotr) taskMain(task *reqTask, afterTime *time.Timer) (*http.Response, error, bool) {
+func (obj *connecotr) taskMain(task *reqTask, afterTime *time.Timer) (*http.Response, error, bool) {
 	if obj.h2 && obj.h2Closed() {
 		return nil, errors.New("conn is closed"), true
 	}
@@ -212,7 +212,7 @@ func (obj *connPool) notice(task *reqTask) {
 	}
 }
 
-func (obj *connPool) rwMain(conn *Connecotr) {
+func (obj *connPool) rwMain(conn *connecotr) {
 	conn.withCancel(obj.deleteCtx, obj.closeCtx)
 	var afterTime *time.Timer
 	defer func() {
