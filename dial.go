@@ -93,6 +93,66 @@ func NewDail(option DialOption) *DialClient {
 		getAddrType: option.GetAddrType,
 	}
 }
+func (obj *DialClient) DialContext(ctx context.Context, network string, addr string) (net.Conn, error) {
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return nil, tools.WrapError(err, "addrToIp error,SplitHostPort")
+	}
+	ctxData := ctx.Value(keyPrincipalID).(*reqCtxData)
+	var dialer *net.Dialer
+	if _, ipInt := gtls.ParseHost(host); ipInt == 0 { //domain
+		host, ok := obj.loadHost(host)
+		if !ok { //dns parse
+			dialer = obj.getDialer(ctxData, true)
+			var addrType gtls.AddrType
+			if ctxData.addrType != 0 {
+				addrType = ctxData.addrType
+			} else if obj.getAddrType != nil {
+				addrType = obj.getAddrType(host)
+			}
+			ips, err := dialer.Resolver.LookupIPAddr(ctx, host)
+			if err != nil {
+				return nil, err
+			}
+			if host, err = obj.addrToIp(ctx, host, ips, addrType); err != nil {
+				return nil, err
+			}
+			addr = net.JoinHostPort(host, port)
+		}
+	}
+	if dialer == nil {
+		dialer = obj.getDialer(ctxData, false)
+	}
+	return dialer.DialContext(ctx, network, addr)
+}
+func (obj *DialClient) DialContextWithProxy(ctx context.Context, network string, scheme string, addr string, host string, proxyUrl *url.URL, tlsConfig *tls.Config) (net.Conn, error) {
+	if proxyUrl == nil {
+		return obj.DialContext(ctx, network, addr)
+	}
+	if proxyUrl.Port() == "" {
+		if proxyUrl.Scheme == "http" {
+			proxyUrl.Host = net.JoinHostPort(proxyUrl.Hostname(), "80")
+		} else if proxyUrl.Scheme == "https" {
+			proxyUrl.Host = net.JoinHostPort(proxyUrl.Hostname(), "443")
+		}
+	}
+	switch proxyUrl.Scheme {
+	case "http", "https":
+		conn, err := obj.DialContext(ctx, network, net.JoinHostPort(proxyUrl.Hostname(), proxyUrl.Port()))
+		if err != nil {
+			return conn, err
+		} else if proxyUrl.Scheme == "https" {
+			if conn, err = obj.addTls(ctx, conn, proxyUrl.Host, true, tlsConfig); err != nil {
+				return conn, err
+			}
+		}
+		return conn, obj.clientVerifyHttps(ctx, scheme, proxyUrl, addr, host, conn)
+	case "socks5":
+		return obj.socks5Proxy(ctx, network, addr, proxyUrl)
+	default:
+		return nil, errors.New("proxyUrl Scheme error")
+	}
+}
 func (obj *DialClient) loadHost(host string) (string, bool) {
 	msgDataAny, ok := obj.dnsIpData.Load(host)
 	if ok {
@@ -103,7 +163,7 @@ func (obj *DialClient) loadHost(host string) (string, bool) {
 	}
 	return host, false
 }
-func (obj *DialClient) AddrToIp(ctx context.Context, host string, ips []net.IPAddr, addrType gtls.AddrType) (string, error) {
+func (obj *DialClient) addrToIp(ctx context.Context, host string, ips []net.IPAddr, addrType gtls.AddrType) (string, error) {
 	ip, err := obj.lookupIPAddr(ctx, host, ips, addrType)
 	if err != nil {
 		return host, tools.WrapError(err, "addrToIp error,lookupIPAddr")
@@ -289,42 +349,7 @@ func (obj *DialClient) getDialer(ctxData *reqCtxData, parseDns bool) *net.Dialer
 		return obj.dialer
 	}
 }
-func (obj *DialClient) DialContext(ctx context.Context, network string, addr string) (net.Conn, error) {
-	host, port, err := net.SplitHostPort(addr)
-	if err != nil {
-		return nil, tools.WrapError(err, "addrToIp error,SplitHostPort")
-	}
-	ctxData := ctx.Value(keyPrincipalID).(*reqCtxData)
-	var dialer *net.Dialer
-	if _, ipInt := gtls.ParseHost(host); ipInt == 0 { //domain
-		host, ok := obj.loadHost(host)
-		if !ok { //dns parse
-			dialer = obj.getDialer(ctxData, true)
-			var addrType gtls.AddrType
-			if ctxData.addrType != 0 {
-				addrType = ctxData.addrType
-			} else if obj.getAddrType != nil {
-				addrType = obj.getAddrType(host)
-			}
-			ips, err := dialer.Resolver.LookupIPAddr(ctx, host)
-			if err != nil {
-				return nil, err
-			}
-			if host, err = obj.AddrToIp(ctx, host, ips, addrType); err != nil {
-				return nil, err
-			}
-			addr = net.JoinHostPort(host, port)
-		}
-	}
-	if dialer == nil {
-		dialer = obj.getDialer(ctxData, false)
-	}
-	return dialer.DialContext(ctx, network, addr)
-}
-func (obj *DialClient) Dialer() *net.Dialer {
-	return obj.dialer
-}
-func (obj *DialClient) AddTls(ctx context.Context, conn net.Conn, host string, disHttp2 bool, tlsConfig *tls.Config) (*tls.Conn, error) {
+func (obj *DialClient) addTls(ctx context.Context, conn net.Conn, host string, disHttp2 bool, tlsConfig *tls.Config) (*tls.Conn, error) {
 	var tlsConn *tls.Conn
 	tlsConfig.ServerName = gtls.GetServerName(host)
 	if disHttp2 {
@@ -335,7 +360,7 @@ func (obj *DialClient) AddTls(ctx context.Context, conn net.Conn, host string, d
 	tlsConn = tls.Client(conn, tlsConfig)
 	return tlsConn, tlsConn.HandshakeContext(ctx)
 }
-func (obj *DialClient) AddJa3Tls(ctx context.Context, conn net.Conn, host string, disHttp2 bool, ja3Spec ja3.Ja3Spec, tlsConfig *utls.Config) (*utls.UConn, error) {
+func (obj *DialClient) addJa3Tls(ctx context.Context, conn net.Conn, host string, disHttp2 bool, ja3Spec ja3.Ja3Spec, tlsConfig *utls.Config) (*utls.UConn, error) {
 	tlsConfig.ServerName = gtls.GetServerName(host)
 	if disHttp2 {
 		tlsConfig.NextProtos = []string{"http/1.1"}
@@ -344,7 +369,7 @@ func (obj *DialClient) AddJa3Tls(ctx context.Context, conn net.Conn, host string
 	}
 	return ja3.NewClient(ctx, conn, ja3Spec, disHttp2, tlsConfig)
 }
-func (obj *DialClient) Socks5Proxy(ctx context.Context, network string, addr string, proxyUrl *url.URL) (conn net.Conn, err error) {
+func (obj *DialClient) socks5Proxy(ctx context.Context, network string, addr string, proxyUrl *url.URL) (conn net.Conn, err error) {
 	defer func() {
 		if err != nil && conn != nil {
 			conn.Close()
@@ -419,32 +444,4 @@ func (obj *DialClient) clientVerifyHttps(ctx context.Context, scheme string, pro
 		return errors.New(text)
 	}
 	return
-}
-func (obj *DialClient) DialContextWithProxy(ctx context.Context, network string, scheme string, addr string, host string, proxyUrl *url.URL, tlsConfig *tls.Config) (net.Conn, error) {
-	if proxyUrl == nil {
-		return obj.DialContext(ctx, network, addr)
-	}
-	if proxyUrl.Port() == "" {
-		if proxyUrl.Scheme == "http" {
-			proxyUrl.Host = net.JoinHostPort(proxyUrl.Hostname(), "80")
-		} else if proxyUrl.Scheme == "https" {
-			proxyUrl.Host = net.JoinHostPort(proxyUrl.Hostname(), "443")
-		}
-	}
-	switch proxyUrl.Scheme {
-	case "http", "https":
-		conn, err := obj.DialContext(ctx, network, net.JoinHostPort(proxyUrl.Hostname(), proxyUrl.Port()))
-		if err != nil {
-			return conn, err
-		} else if proxyUrl.Scheme == "https" {
-			if conn, err = obj.AddTls(ctx, conn, proxyUrl.Host, true, tlsConfig); err != nil {
-				return conn, err
-			}
-		}
-		return conn, obj.clientVerifyHttps(ctx, scheme, proxyUrl, addr, host, conn)
-	case "socks5":
-		return obj.Socks5Proxy(ctx, network, addr, proxyUrl)
-	default:
-		return nil, errors.New("proxyUrl Scheme error")
-	}
 }

@@ -41,6 +41,7 @@ type ClientOption struct {
 	LocalAddr   *net.TCPAddr
 	Dns         *net.UDPAddr  //dns
 	AddrType    gtls.AddrType //dns parse addr type
+	Jar         *Jar          //custom cookies
 
 	GetProxy    func(ctx context.Context, url *url.URL) (string, error) //proxy callback:support https,http,socks5 proxy
 	GetAddrType func(string) gtls.AddrType
@@ -94,7 +95,7 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	if len(options) > 0 {
 		option = options[0]
 	}
-	transport := newRoundTripper(ctx, RoundTripperOption{
+	transport := newRoundTripper(ctx, roundTripperOption{
 		DialTimeout: option.DialTimeout,
 		KeepAlive:   option.KeepAlive,
 
@@ -140,7 +141,11 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	}
 	//cookiesjar
 	if !option.DisCookie {
-		result.jar = NewJar()
+		if option.Jar != nil {
+			result.jar = option.Jar
+		} else {
+			result.jar = NewJar()
+		}
 		result.client.Jar = result.jar.jar
 	}
 	var err error
@@ -155,22 +160,19 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	result.h2Ja3Spec = option.H2Ja3Spec
 	return result, err
 }
-func (obj *Client) HttpClient() *http.Client {
-	return obj.client
-}
 func (obj *Client) SetProxy(proxyUrl string) (err error) {
 	obj.proxy, err = gtls.VerifyProxy(proxyUrl)
 	return
 }
 func (obj *Client) SetGetProxy(getProxy func(ctx context.Context, url *url.URL) (string, error)) {
-	obj.transport.SetGetProxy(getProxy)
+	obj.transport.setGetProxy(getProxy)
 }
 
 func (obj *Client) CloseIdleConnections() {
-	obj.transport.CloseIdleConnections()
+	obj.transport.closeIdleConnections()
 }
 func (obj *Client) CloseConnections() {
-	obj.transport.CloseConnections()
+	obj.transport.closeConnections()
 }
 
 func (obj *Client) Close() {

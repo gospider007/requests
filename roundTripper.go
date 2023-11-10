@@ -71,10 +71,10 @@ type RoundTripper struct {
 	dialer     *DialClient
 	tlsConfig  *tls.Config
 	utlsConfig *utls.Config
-	getProxy   func(ctx context.Context, url *url.URL) (string, error)
+	proxy      func(ctx context.Context, url *url.URL) (string, error)
 }
 
-type RoundTripperOption struct {
+type roundTripperOption struct {
 	DialTimeout time.Duration
 	KeepAlive   time.Duration
 	LocalAddr   *net.TCPAddr  //network card ip
@@ -84,7 +84,7 @@ type RoundTripperOption struct {
 	GetProxy    func(ctx context.Context, url *url.URL) (string, error)
 }
 
-func newRoundTripper(preCtx context.Context, option RoundTripperOption) *RoundTripper {
+func newRoundTripper(preCtx context.Context, option roundTripperOption) *RoundTripper {
 	if preCtx == nil {
 		preCtx = context.TODO()
 	}
@@ -117,7 +117,7 @@ func newRoundTripper(preCtx context.Context, option RoundTripperOption) *RoundTr
 		cnl:        cnl,
 		connPools:  make(map[connKey]*connPool),
 		dialer:     dialClient,
-		getProxy:   option.GetProxy,
+		proxy:      option.GetProxy,
 	}
 }
 func (obj *RoundTripper) newConnPool(conn *Connecotr) *connPool {
@@ -150,15 +150,15 @@ func (obj *RoundTripper) putConnPool(key connKey, conn *Connecotr) {
 		obj.connPools[key] = obj.newConnPool(conn)
 	}
 }
-func (obj *RoundTripper) TlsConfig() *tls.Config {
+func (obj *RoundTripper) tlsConfigClone() *tls.Config {
 	return obj.tlsConfig.Clone()
 }
-func (obj *RoundTripper) UtlsConfig() *utls.Config {
+func (obj *RoundTripper) utlsConfigClone() *utls.Config {
 	return obj.utlsConfig.Clone()
 }
 func (obj *RoundTripper) dial(ctxData *reqCtxData, key *connKey, req *http.Request) (conn *Connecotr, err error) {
 	if !ctxData.disProxy && ctxData.proxy == nil {
-		if ctxData.proxy, err = obj.GetProxy(req.Context(), req.URL); err != nil {
+		if ctxData.proxy, err = obj.getProxy(req.Context(), req.URL); err != nil {
 			return conn, err
 		}
 	}
@@ -170,7 +170,7 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, key *connKey, req *http.Reque
 	if ctxData.proxy == nil {
 		netConn, err = obj.dialer.DialContext(req.Context(), "tcp", key.addr)
 	} else {
-		netConn, err = obj.dialer.DialContextWithProxy(req.Context(), "tcp", req.URL.Scheme, key.addr, host, ctxData.proxy, obj.TlsConfig())
+		netConn, err = obj.dialer.DialContextWithProxy(req.Context(), "tcp", req.URL.Scheme, key.addr, host, ctxData.proxy, obj.tlsConfigClone())
 	}
 	if err != nil {
 		return conn, err
@@ -178,23 +178,23 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, key *connKey, req *http.Reque
 	conne := new(Connecotr)
 	conne.rn = make(chan int)
 	conne.rc = make(chan []byte)
-	conne.WithCancel(obj.ctx, obj.ctx)
+	conne.withCancel(obj.ctx, obj.ctx)
 	if req.URL.Scheme == "https" {
 		ctx, cnl := context.WithTimeout(req.Context(), ctxData.tlsHandshakeTimeout)
 		defer cnl()
 		if ctxData.ja3Spec.IsSet() {
-			tlsConfig := obj.UtlsConfig()
+			tlsConfig := obj.utlsConfigClone()
 			if ctxData.forceHttp1 {
 				tlsConfig.NextProtos = []string{"http/1.1"}
 			}
-			tlsConn, err := obj.dialer.AddJa3Tls(ctx, netConn, host, ctxData.isWs || ctxData.forceHttp1, ctxData.ja3Spec, tlsConfig)
+			tlsConn, err := obj.dialer.addJa3Tls(ctx, netConn, host, ctxData.isWs || ctxData.forceHttp1, ctxData.ja3Spec, tlsConfig)
 			if err != nil {
 				return conne, tools.WrapError(err, "add ja3 tls error")
 			}
 			conne.h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
 			netConn = tlsConn
 		} else {
-			tlsConn, err := obj.dialer.AddTls(ctx, netConn, host, ctxData.isWs || ctxData.forceHttp1, obj.TlsConfig())
+			tlsConn, err := obj.dialer.addTls(ctx, netConn, host, ctxData.isWs || ctxData.forceHttp1, obj.tlsConfigClone())
 			if err != nil {
 				return conne, tools.WrapError(err, "add tls error")
 			}
@@ -215,14 +215,14 @@ func (obj *RoundTripper) dial(ctxData *reqCtxData, key *connKey, req *http.Reque
 	}
 	return conne, err
 }
-func (obj *RoundTripper) SetGetProxy(getProxy func(ctx context.Context, url *url.URL) (string, error)) {
-	obj.getProxy = getProxy
+func (obj *RoundTripper) setGetProxy(getProxy func(ctx context.Context, url *url.URL) (string, error)) {
+	obj.proxy = getProxy
 }
-func (obj *RoundTripper) GetProxy(ctx context.Context, proxyUrl *url.URL) (*url.URL, error) {
-	if obj.getProxy == nil {
+func (obj *RoundTripper) getProxy(ctx context.Context, proxyUrl *url.URL) (*url.URL, error) {
+	if obj.proxy == nil {
 		return nil, nil
 	}
-	proxy, err := obj.getProxy(ctx, proxyUrl)
+	proxy, err := obj.proxy(ctx, proxyUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -251,7 +251,7 @@ func (obj *RoundTripper) poolRoundTrip(task *reqTask, key connKey) (bool, error)
 	return false, nil
 }
 
-func (obj *RoundTripper) CloseIdleConnections() {
+func (obj *RoundTripper) closeIdleConnections() {
 	obj.connsLock.Lock()
 	defer obj.connsLock.Unlock()
 	for key, pool := range obj.connPools {
@@ -260,7 +260,7 @@ func (obj *RoundTripper) CloseIdleConnections() {
 	}
 }
 
-func (obj *RoundTripper) CloseConnections() {
+func (obj *RoundTripper) closeConnections() {
 	obj.connsLock.Lock()
 	defer obj.connsLock.Unlock()
 	for key, pool := range obj.connPools {

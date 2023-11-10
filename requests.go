@@ -313,7 +313,7 @@ func (obj *Client) request(preCtx context.Context, option *RequestOption) (respo
 			return response, tools.WrapError(errFatal, "request headers 转换错误")
 		}
 	} else {
-		reqs.Header = DefaultHeaders()
+		reqs.Header = defaultHeaders()
 	}
 	//add Referer
 	if reqs.Header.Get("Referer") == "" {

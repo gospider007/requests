@@ -36,7 +36,7 @@ type Connecotr struct {
 	isPool    bool
 }
 
-func (obj *Connecotr) WithCancel(deleteCtx context.Context, closeCtx context.Context) {
+func (obj *Connecotr) withCancel(deleteCtx context.Context, closeCtx context.Context) {
 	obj.deleteCtx, obj.deleteCnl = context.WithCancel(deleteCtx)
 	obj.closeCtx, obj.closeCnl = context.WithCancel(closeCtx)
 }
@@ -124,7 +124,7 @@ func (obj *Connecotr) h2Closed() bool {
 	return state.Closed || state.Closing
 }
 func (obj *Connecotr) wrapBody(task *reqTask) {
-	body := new(ReadWriteCloser)
+	body := new(readWriteCloser)
 	obj.bodyCtx, obj.bodyCnl = context.WithCancel(obj.deleteCtx)
 	body.body = task.res.Body
 	body.conn = obj
@@ -213,7 +213,7 @@ func (obj *connPool) notice(task *reqTask) {
 }
 
 func (obj *connPool) rwMain(conn *Connecotr) {
-	conn.WithCancel(obj.deleteCtx, obj.closeCtx)
+	conn.withCancel(obj.deleteCtx, obj.closeCtx)
 	var afterTime *time.Timer
 	defer func() {
 		if afterTime != nil {

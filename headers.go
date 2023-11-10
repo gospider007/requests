@@ -16,7 +16,7 @@ const (
 )
 
 // get default headers
-func DefaultHeaders() http.Header {
+func defaultHeaders() http.Header {
 	return http.Header{
 		"User-Agent":         []string{UserAgent},
 		"Accept":             []string{"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"},

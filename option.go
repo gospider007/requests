@@ -46,6 +46,7 @@ type RequestOption struct {
 	LocalAddr   *net.TCPAddr
 	Dns         *net.UDPAddr  //dns
 	AddrType    gtls.AddrType //dns parse addr type                                             //tls timeout,default:15
+	Jar         *Jar          //custom cookies
 
 	Stream  bool   //disable auto read
 	Referer string //set headers referer value
@@ -62,12 +63,10 @@ type RequestOption struct {
 	Text any //send text/xml,support: io.Reader, string,[]bytes,json,map
 	Body any //not setting context-type,support io.Reader, string,[]bytes,json,map
 
-	ContentType string //headers Content-Type value
-	DisProxy    bool   //force disable proxy
+	ContentType string           //headers Content-Type value
+	WsOption    websocket.Option //websocket option
+	DisProxy    bool             //force disable proxy
 
-	Jar *Jar //custom cookies
-
-	WsOption  websocket.Option //websocket option
 	converUrl string
 	body      io.Reader
 	once      bool
