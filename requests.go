@@ -54,231 +54,107 @@ type reqCtxData struct {
 }
 
 // sends a GET request and returns the response.
-// It takes the following parameters:
-//   - preCtx: A context object used to control the timeout and cancellation of the request.
-//   - href: The URL to be requested.
-//   - options: A variadic parameter for optional request options.
-//
-// The function returns a tuple of the response object and an error object (if any).
 func Get(ctx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	return defaultClient.Request(ctx, http.MethodGet, href, options...)
 }
 
 // sends a Head request and returns the response.
-// It takes the following parameters:
-//   - preCtx: A context object used to control the timeout and cancellation of the request.
-//   - href: The URL to be requested.
-//   - options: A variadic parameter for optional request options.
-//
-// The function returns a tuple of the response object and an error object (if any).
 func Head(ctx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	return defaultClient.Request(ctx, http.MethodHead, href, options...)
 }
 
 // sends a Post request and returns the response.
-// It takes the following parameters:
-//   - preCtx: A context object used to control the timeout and cancellation of the request.
-//   - href: The URL to be requested.
-//   - options: A variadic parameter for optional request options.
-//
-// The function returns a tuple of the response object and an error object (if any).
 func Post(ctx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	return defaultClient.Request(ctx, http.MethodPost, href, options...)
 }
 
 // sends a Put request and returns the response.
-// It takes the following parameters:
-//   - preCtx: A context object used to control the timeout and cancellation of the request.
-//   - href: The URL to be requested.
-//   - options: A variadic parameter for optional request options.
-//
-// The function returns a tuple of the response object and an error object (if any).
 func Put(ctx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	return defaultClient.Request(ctx, http.MethodPut, href, options...)
 }
 
 // sends a Patch request and returns the response.
-// It takes the following parameters:
-//   - preCtx: A context object used to control the timeout and cancellation of the request.
-//   - href: The URL to be requested.
-//   - options: A variadic parameter for optional request options.
-//
-// The function returns a tuple of the response object and an error object (if any).
 func Patch(ctx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	return defaultClient.Request(ctx, http.MethodPatch, href, options...)
 }
 
 // sends a Delete request and returns the response.
-// It takes the following parameters:
-//   - preCtx: A context object used to control the timeout and cancellation of the request.
-//   - href: The URL to be requested.
-//   - options: A variadic parameter for optional request options.
-//
-// The function returns a tuple of the response object and an error object (if any).
 func Delete(ctx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	return defaultClient.Request(ctx, http.MethodDelete, href, options...)
 }
 
 // sends a Connect request and returns the response.
-// It takes the following parameters:
-//   - preCtx: A context object used to control the timeout and cancellation of the request.
-//   - href: The URL to be requested.
-//   - options: A variadic parameter for optional request options.
-//
-// The function returns a tuple of the response object and an error object (if any).
 func Connect(ctx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	return defaultClient.Request(ctx, http.MethodConnect, href, options...)
 }
 
 // sends a Options request and returns the response.
-// It takes the following parameters:
-//   - preCtx: A context object used to control the timeout and cancellation of the request.
-//   - href: The URL to be requested.
-//   - options: A variadic parameter for optional request options.
-//
-// The function returns a tuple of the response object and an error object (if any).
 func Options(ctx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	return defaultClient.Request(ctx, http.MethodOptions, href, options...)
 }
 
 // sends a Trace request and returns the response.
-// It takes the following parameters:
-//   - preCtx: A context object used to control the timeout and cancellation of the request.
-//   - href: The URL to be requested.
-//   - options: A variadic parameter for optional request options.
-//
-// The function returns a tuple of the response object and an error object (if any).
 func Trace(ctx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
 	return defaultClient.Request(ctx, http.MethodTrace, href, options...)
 }
 
-//Define a function named Request that takes in four parameters:
-//- preCtx: a context.Context object for setting request-related context information
-//- method: a string representing the request method (e.g., GET, POST)
-//- href: a string representing the URL link for the request
-//- options: a variadic parameter of type RequestOptions for setting specific options for the request
-
-// Return a tuple of two values:
-// - resp: a pointer to a Response object containing information about the response of the request
-// - err: an error encountered during the request, which is nil if no error occurred
-func Request(preCtx context.Context, method string, href string, options ...RequestOption) (resp *Response, err error) {
-	return defaultClient.Request(preCtx, method, href, options...)
+// Define a function named Request that takes in four parameters:
+func Request(ctx context.Context, method string, href string, options ...RequestOption) (resp *Response, err error) {
+	return defaultClient.Request(ctx, method, href, options...)
 }
 
 // sends a Get request and returns the response.
-// It takes the following parameters:
-//   - preCtx: A context object used to control the timeout and cancellation of the request.
-//   - href: The URL to be requested.
-//   - options: A variadic parameter for optional request options.
-//
-// The function returns a tuple of the response object and an error object (if any).
-func (obj *Client) Get(preCtx context.Context, href string, options ...RequestOption) (*Response, error) {
-	return obj.Request(preCtx, http.MethodGet, href, options...)
+func (obj *Client) Get(ctx context.Context, href string, options ...RequestOption) (*Response, error) {
+	return obj.Request(ctx, http.MethodGet, href, options...)
 }
 
 // sends a Head request and returns the response.
-// It takes the following parameters:
-//   - preCtx: A context object used to control the timeout and cancellation of the request.
-//   - href: The URL to be requested.
-//   - options: A variadic parameter for optional request options.
-//
-// The function returns a tuple of the response object and an error object (if any).
-func (obj *Client) Head(preCtx context.Context, href string, options ...RequestOption) (*Response, error) {
-	return obj.Request(preCtx, http.MethodHead, href, options...)
+func (obj *Client) Head(ctx context.Context, href string, options ...RequestOption) (*Response, error) {
+	return obj.Request(ctx, http.MethodHead, href, options...)
 }
 
 // sends a Post request and returns the response.
-// It takes the following parameters:
-//   - preCtx: A context object used to control the timeout and cancellation of the request.
-//   - href: The URL to be requested.
-//   - options: A variadic parameter for optional request options.
-//
-// The function returns a tuple of the response object and an error object (if any).
-func (obj *Client) Post(preCtx context.Context, href string, options ...RequestOption) (*Response, error) {
-	return obj.Request(preCtx, http.MethodPost, href, options...)
+func (obj *Client) Post(ctx context.Context, href string, options ...RequestOption) (*Response, error) {
+	return obj.Request(ctx, http.MethodPost, href, options...)
 }
 
 // sends a Put request and returns the response.
-// It takes the following parameters:
-//   - preCtx: A context object used to control the timeout and cancellation of the request.
-//   - href: The URL to be requested.
-//   - options: A variadic parameter for optional request options.
-//
-// The function returns a tuple of the response object and an error object (if any).
-func (obj *Client) Put(preCtx context.Context, href string, options ...RequestOption) (*Response, error) {
-	return obj.Request(preCtx, http.MethodPut, href, options...)
+func (obj *Client) Put(ctx context.Context, href string, options ...RequestOption) (*Response, error) {
+	return obj.Request(ctx, http.MethodPut, href, options...)
 }
 
 // sends a Patch request and returns the response.
-// It takes the following parameters:
-//   - preCtx: A context object used to control the timeout and cancellation of the request.
-//   - href: The URL to be requested.
-//   - options: A variadic parameter for optional request options.
-//
-// The function returns a tuple of the response object and an error object (if any).
-func (obj *Client) Patch(preCtx context.Context, href string, options ...RequestOption) (*Response, error) {
-	return obj.Request(preCtx, http.MethodPatch, href, options...)
+func (obj *Client) Patch(ctx context.Context, href string, options ...RequestOption) (*Response, error) {
+	return obj.Request(ctx, http.MethodPatch, href, options...)
 }
 
 // sends a Delete request and returns the response.
-// It takes the following parameters:
-//   - preCtx: A context object used to control the timeout and cancellation of the request.
-//   - href: The URL to be requested.
-//   - options: A variadic parameter for optional request options.
-//
-// The function returns a tuple of the response object and an error object (if any).
-func (obj *Client) Delete(preCtx context.Context, href string, options ...RequestOption) (*Response, error) {
-	return obj.Request(preCtx, http.MethodDelete, href, options...)
+func (obj *Client) Delete(ctx context.Context, href string, options ...RequestOption) (*Response, error) {
+	return obj.Request(ctx, http.MethodDelete, href, options...)
 }
 
 // sends a Connect request and returns the response.
-// It takes the following parameters:
-//   - preCtx: A context object used to control the timeout and cancellation of the request.
-//   - href: The URL to be requested.
-//   - options: A variadic parameter for optional request options.
-//
-// The function returns a tuple of the response object and an error object (if any).
-func (obj *Client) Connect(preCtx context.Context, href string, options ...RequestOption) (*Response, error) {
-	return obj.Request(preCtx, http.MethodConnect, href, options...)
+func (obj *Client) Connect(ctx context.Context, href string, options ...RequestOption) (*Response, error) {
+	return obj.Request(ctx, http.MethodConnect, href, options...)
 }
 
 // sends a Options request and returns the response.
-// It takes the following parameters:
-//   - preCtx: A context object used to control the timeout and cancellation of the request.
-//   - href: The URL to be requested.
-//   - options: A variadic parameter for optional request options.
-//
-// The function returns a tuple of the response object and an error object (if any).
-func (obj *Client) Options(preCtx context.Context, href string, options ...RequestOption) (*Response, error) {
-	return obj.Request(preCtx, http.MethodOptions, href, options...)
+func (obj *Client) Options(ctx context.Context, href string, options ...RequestOption) (*Response, error) {
+	return obj.Request(ctx, http.MethodOptions, href, options...)
 }
 
 // sends a Trace request and returns the response.
-// It takes the following parameters:
-//   - preCtx: A context object used to control the timeout and cancellation of the request.
-//   - href: The URL to be requested.
-//   - options: A variadic parameter for optional request options.
-//
-// The function returns a tuple of the response object and an error object (if any).
-func (obj *Client) Trace(preCtx context.Context, href string, options ...RequestOption) (*Response, error) {
-	return obj.Request(preCtx, http.MethodTrace, href, options...)
+func (obj *Client) Trace(ctx context.Context, href string, options ...RequestOption) (*Response, error) {
+	return obj.Request(ctx, http.MethodTrace, href, options...)
 }
 
-//Define a function named Request that takes in four parameters:
-//- preCtx: a context.Context object for setting request-related context information
-//- method: a string representing the request method (e.g., GET, POST)
-//- href: a string representing the URL link for the request
-//- options: a variadic parameter of type RequestOptions for setting specific options for the request
-
-// Return a tuple of two values:
-// - resp: a pointer to a Response object containing information about the response of the request
-// - err: an error encountered during the request, which is nil if no error occurred
-func (obj *Client) Request(preCtx context.Context, method string, href string, options ...RequestOption) (resp *Response, err error) {
+// Define a function named Request that takes in four parameters:
+func (obj *Client) Request(ctx context.Context, method string, href string, options ...RequestOption) (resp *Response, err error) {
 	if obj == nil {
 		return nil, errors.New("client is nil")
 	}
-	if preCtx == nil {
-		preCtx = obj.ctx
+	if ctx == nil {
+		ctx = obj.ctx
 	}
 	var rawOption RequestOption
 	if len(options) > 0 {
@@ -290,8 +166,8 @@ func (obj *Client) Request(preCtx context.Context, method string, href string, o
 		case <-obj.ctx.Done():
 			obj.Close()
 			return nil, tools.WrapError(obj.ctx.Err(), "client ctx 错误")
-		case <-preCtx.Done():
-			return nil, tools.WrapError(preCtx.Err(), "request ctx 错误")
+		case <-ctx.Done():
+			return nil, tools.WrapError(ctx.Err(), "request ctx 错误")
 		default:
 			option := optionBak
 			if option.Method == "" {
@@ -303,7 +179,7 @@ func (obj *Client) Request(preCtx context.Context, method string, href string, o
 					return
 				}
 			}
-			resp, err = obj.request(preCtx, &option)
+			resp, err = obj.request(ctx, &option)
 			if err == nil || errors.Is(err, errFatal) || option.once {
 				return
 			}
@@ -314,7 +190,7 @@ func (obj *Client) Request(preCtx context.Context, method string, href string, o
 	}
 	return resp, err
 }
-func (obj *Client) request(preCtx context.Context, option *RequestOption) (response *Response, err error) {
+func (obj *Client) request(ctx context.Context, option *RequestOption) (response *Response, err error) {
 	response = new(Response)
 	defer func() {
 		if err == nil && !response.oneceAlive() {
@@ -322,19 +198,19 @@ func (obj *Client) request(preCtx context.Context, option *RequestOption) (respo
 			defer response.Close()
 		}
 		if err == nil && option.ResultCallBack != nil {
-			err = option.ResultCallBack(preCtx, obj, response)
+			err = option.ResultCallBack(ctx, obj, response)
 		}
 		if err != nil {
 			response.Close()
 			if option.ErrCallBack != nil {
-				if err2 := option.ErrCallBack(preCtx, obj, err); err2 != nil {
+				if err2 := option.ErrCallBack(ctx, obj, err); err2 != nil {
 					err = tools.WrapError(errFatal, err2)
 				}
 			}
 		}
 	}()
 	if option.OptionCallBack != nil {
-		if err = option.OptionCallBack(preCtx, obj, option); err != nil {
+		if err = option.OptionCallBack(ctx, obj, option); err != nil {
 			return
 		}
 	}
@@ -403,9 +279,9 @@ func (obj *Client) request(preCtx context.Context, option *RequestOption) (respo
 	}
 	//init ctx,cnl
 	if option.Timeout > 0 { //超时
-		response.ctx, response.cnl = context.WithTimeout(context.WithValue(preCtx, keyPrincipalID, ctxData), option.Timeout)
+		response.ctx, response.cnl = context.WithTimeout(context.WithValue(ctx, keyPrincipalID, ctxData), option.Timeout)
 	} else {
-		response.ctx, response.cnl = context.WithCancel(context.WithValue(preCtx, keyPrincipalID, ctxData))
+		response.ctx, response.cnl = context.WithCancel(context.WithValue(ctx, keyPrincipalID, ctxData))
 	}
 	//init url
 	href, err := option.initUrl()
