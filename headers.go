@@ -27,17 +27,16 @@ func defaultHeaders() http.Header {
 		"Sec-Ch-Ua-Platform": []string{`"Windows"`},
 	}
 }
-func (obj *RequestOption) initHeaders() error {
+func (obj *RequestOption) initHeaders() (http.Header, error) {
 	if obj.Headers == nil {
-		return nil
+		return nil, nil
 	}
 	switch headers := obj.Headers.(type) {
 	case http.Header:
-		obj.Headers = headers.Clone()
-		return nil
+		return headers.Clone(), nil
 	case *gson.Client:
 		if !headers.IsObject() {
-			return errors.New("new headers error")
+			return nil, errors.New("new headers error")
 		}
 		head := http.Header{}
 		for kk, vv := range headers.Map() {
@@ -49,12 +48,11 @@ func (obj *RequestOption) initHeaders() error {
 				head.Add(kk, vv.String())
 			}
 		}
-		obj.Headers = head
-		return nil
+		return head, nil
 	default:
 		jsonData, err := gson.Decode(headers)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		obj.Headers = jsonData
 		return obj.initHeaders()

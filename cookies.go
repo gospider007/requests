@@ -116,10 +116,9 @@ func any2Cookies(val any) (Cookies, error) {
 		return cookies, nil
 	}
 }
-func (obj *RequestOption) initCookies() (err error) {
+func (obj *RequestOption) initCookies() (Cookies, error) {
 	if obj.Cookies == nil {
-		return nil
+		return nil, nil
 	}
-	obj.Cookies, err = ReadCookies(obj.Cookies)
-	return err
+	return ReadCookies(obj.Cookies)
 }

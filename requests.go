@@ -224,17 +224,13 @@ func (obj *Client) request(preCtx context.Context, option *RequestOption) (respo
 			return
 		}
 	}
-	if err = option.optionInit(); err != nil {
-		err = tools.WrapError(err, "option init error")
-		return
-	}
 	response.bar = option.Bar
 	response.disUnzip = option.DisUnZip
 	response.disDecode = option.DisDecode
 	response.stream = option.Stream
 
 	method := strings.ToUpper(option.Method)
-	href := option.converUrl
+
 	var reqs *http.Request
 	//init ctxData
 	ctxData := new(reqCtxData)
@@ -297,21 +293,34 @@ func (obj *Client) request(preCtx context.Context, option *RequestOption) (respo
 	} else {
 		response.ctx, response.cnl = context.WithCancel(context.WithValue(preCtx, keyPrincipalID, ctxData))
 	}
+	//init url
+	href, err := option.initUrl()
+	if err != nil {
+		err = tools.WrapError(err, "url init error")
+		return
+	}
+	//init body
+	body, err := option.initBody()
+	if err != nil {
+		return response, tools.WrapError(err, errors.New("tempRequest init body error"), err)
+	}
 	//create request
-	if option.body != nil {
-		reqs, err = http.NewRequestWithContext(response.ctx, method, href, option.body)
+	if body != nil {
+		reqs, err = http.NewRequestWithContext(response.ctx, method, href, body)
 	} else {
 		reqs, err = http.NewRequestWithContext(response.ctx, method, href, nil)
 	}
 	if err != nil {
 		return response, tools.WrapError(errFatal, errors.New("tempRequest 构造request失败"), err)
 	}
-	//add headers
-	var headOk bool
-	if option.Headers != nil {
-		if reqs.Header, headOk = option.Headers.(http.Header); !headOk {
-			return response, tools.WrapError(errFatal, "request headers 转换错误")
-		}
+
+	//init headers
+	headers, err := option.initHeaders()
+	if err != nil {
+		return response, tools.WrapError(err, errors.New("tempRequest init headers error"), err)
+	}
+	if headers != nil {
+		reqs.Header = headers
 	} else {
 		reqs.Header = defaultHeaders()
 	}
@@ -360,16 +369,17 @@ func (obj *Client) request(preCtx context.Context, option *RequestOption) (respo
 		reqs.Host = reqs.URL.Host
 	}
 
-	//add cookies
-	if option.Cookies != nil {
-		cooks, cookOk := option.Cookies.(Cookies)
-		if !cookOk {
-			return response, tools.WrapError(errFatal, "request cookies transport error")
-		}
-		for _, vv := range cooks {
+	//init cookies
+	cookies, err := option.initCookies()
+	if err != nil {
+		return response, tools.WrapError(err, errors.New("tempRequest init cookies error"), err)
+	}
+	if cookies != nil {
+		for _, vv := range cookies {
 			reqs.AddCookie(vv)
 		}
 	}
+	//send req
 	if response.response, err = obj.getClient(option).Do(reqs); err != nil {
 		err = tools.WrapError(err, "roundTripper error")
 		return

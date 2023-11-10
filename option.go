@@ -67,9 +67,9 @@ type RequestOption struct {
 	WsOption    websocket.Option //websocket option
 	DisProxy    bool             //force disable proxy
 
-	converUrl string
-	body      io.Reader
-	once      bool
+	// converUrl string
+	// body      io.Reader
+	once bool
 }
 type File struct {
 	Key string
@@ -102,87 +102,72 @@ func (obj *RequestOption) fileWrite(writer *multipart.Writer) (err error) {
 	}
 	return err
 }
-func (obj *RequestOption) initBody() (err error) {
-	if obj.body != nil {
-		return nil
-	} else if obj.Body != nil {
-		if err = obj.newBody(obj.Body, rawType, nil); err != nil {
-			return err
-		}
+func (obj *RequestOption) initBody() (body io.Reader, err error) {
+	if obj.Body != nil {
+		return obj.newBody(obj.Body, rawType, nil)
 	} else if obj.Form != nil {
 		dataMap := map[string][]string{}
-		if err = obj.newBody(obj.Form, formType, dataMap); err != nil {
-			return err
+		if body, err = obj.newBody(obj.Form, formType, dataMap); err != nil {
+			return
 		}
 		tempBody := bytes.NewBuffer(nil)
 		writer := multipart.NewWriter(tempBody)
 		for key, vals := range dataMap {
 			for _, val := range vals {
 				if err = writer.WriteField(key, val); err != nil {
-					return err
+					return
 				}
 			}
 		}
-		if err = obj.fileWrite(writer); err != nil {
-			return err
-		}
-		obj.body = tempBody
+		return tempBody, obj.fileWrite(writer)
 	} else if obj.Files != nil {
 		tempBody := bytes.NewBuffer(nil)
 		writer := multipart.NewWriter(tempBody)
-		if err = obj.fileWrite(writer); err != nil {
-			return err
-		}
-		obj.body = tempBody
+		return tempBody, obj.fileWrite(writer)
 	} else if obj.Data != nil {
-		if err = obj.newBody(obj.Data, dataType, nil); err != nil {
-			return err
+		if body, err = obj.newBody(obj.Data, dataType, nil); err != nil {
+			return
 		}
 		if obj.ContentType == "" {
 			obj.ContentType = "application/x-www-form-urlencoded"
 		}
 	} else if obj.Json != nil {
-		if err = obj.newBody(obj.Json, jsonType, nil); err != nil {
-			return err
+		if body, err = obj.newBody(obj.Json, jsonType, nil); err != nil {
+			return
 		}
 		if obj.ContentType == "" {
 			obj.ContentType = "application/json"
 		}
 	} else if obj.Text != nil {
-		if err = obj.newBody(obj.Text, textType, nil); err != nil {
-			return err
+		if body, err = obj.newBody(obj.Text, textType, nil); err != nil {
+			return
 		}
 		if obj.ContentType == "" {
 			obj.ContentType = "text/plain"
 		}
 	}
-	return nil
+	return
 }
-func (obj *RequestOption) optionInit() error {
-	obj.converUrl = obj.Url.String()
-	var err error
-	if err = obj.initBody(); err != nil {
-		return err
+func (obj *RequestOption) initUrl() (string, error) {
+	if obj.Params == nil {
+		return obj.Url.String(), nil
 	}
-	if obj.Params != nil {
-		dataMap := map[string][]string{}
-		if err = obj.newBody(obj.Params, paramsType, dataMap); err != nil {
-			return err
+	dataMap := map[string][]string{}
+	if _, err := obj.newBody(obj.Params, paramsType, dataMap); err != nil {
+		return "", err
+	}
+	if len(dataMap) == 0 {
+		return obj.Url.String(), nil
+	}
+	pu := cloneUrl(obj.Url)
+	puValues := pu.Query()
+	for kk, vvs := range dataMap {
+		for _, vv := range vvs {
+			puValues.Add(kk, vv)
 		}
-		pu := cloneUrl(obj.Url)
-		puValues := pu.Query()
-		for kk, vvs := range dataMap {
-			for _, vv := range vvs {
-				puValues.Add(kk, vv)
-			}
-		}
-		pu.RawQuery = puValues.Encode()
-		obj.converUrl = pu.String()
 	}
-	if err = obj.initHeaders(); err != nil {
-		return err
-	}
-	return obj.initCookies()
+	pu.RawQuery = puValues.Encode()
+	return pu.String(), nil
 }
 func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	if option.TryNum < 0 {

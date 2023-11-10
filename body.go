@@ -22,21 +22,19 @@ const (
 	paramsType
 )
 
-func (obj *RequestOption) newBody(val any, valType bodyType, dataMap map[string][]string) error {
+func (obj *RequestOption) newBody(val any, valType bodyType, dataMap map[string][]string) (io.Reader, error) {
 	if reader, ok := val.(io.Reader); ok {
 		obj.once = true
-		obj.body = reader
-		return nil
+		return reader, nil
 	}
 	switch value := val.(type) {
 	case *gson.Client:
 		if !value.IsObject() {
-			return errors.New("body-type error")
+			return nil, errors.New("body-type error")
 		}
 		switch valType {
 		case jsonType, textType, rawType:
-			obj.body = bytes.NewReader(value.Bytes())
-			return nil
+			return bytes.NewReader(value.Bytes()), nil
 		case dataType:
 			tempVal := url.Values{}
 			for kk, vv := range value.Map() {
@@ -48,8 +46,7 @@ func (obj *RequestOption) newBody(val any, valType bodyType, dataMap map[string]
 					tempVal.Add(kk, vv.String())
 				}
 			}
-			obj.body = bytes.NewReader(tools.StringToBytes(tempVal.Encode()))
-			return nil
+			return bytes.NewReader(tools.StringToBytes(tempVal.Encode())), nil
 		case formType, paramsType:
 			for kk, vv := range value.Map() {
 				kkvv := []string{}
@@ -62,32 +59,30 @@ func (obj *RequestOption) newBody(val any, valType bodyType, dataMap map[string]
 				}
 				dataMap[kk] = kkvv
 			}
-			return nil
+			return nil, nil
 		default:
-			return fmt.Errorf("unknow content-type：%d", valType)
+			return nil, fmt.Errorf("unknow content-type：%d", valType)
 		}
 	case string:
 		switch valType {
 		case jsonType, textType, dataType, rawType:
-			obj.body = bytes.NewReader(tools.StringToBytes(value))
-			return nil
+			return bytes.NewReader(tools.StringToBytes(value)), nil
 		case formType, paramsType:
 		default:
-			return fmt.Errorf("unknow content-type：%d", valType)
+			return nil, fmt.Errorf("unknow content-type：%d", valType)
 		}
 	case []byte:
 		switch valType {
 		case jsonType, textType, dataType, rawType:
-			obj.body = bytes.NewReader(value)
-			return nil
+			return bytes.NewReader(value), nil
 		case formType, paramsType:
 		default:
-			return fmt.Errorf("unknow content-type：%d", valType)
+			return nil, fmt.Errorf("unknow content-type：%d", valType)
 		}
 	}
 	result, err := gson.Decode(val)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	return obj.newBody(result, valType, dataMap)
 }
