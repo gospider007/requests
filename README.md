@@ -18,11 +18,12 @@ Requests is a fully featured HTTP client library for Golang. Network requests ca
 ---
 ## Features
   * GET, POST, PUT, DELETE, HEAD, PATCH, OPTIONS, etc.
-  * Simple for settings and request
-  * [Request](https://github.com/gospider007/requests#Request) Body can be `string`, `[]byte`, `struct`, `map`, `slice` and `io.Reader` too
+  * [Simple for settings and request](https://github.com/gospider007/requests#quickly-send-requests)
+  * [Request](https://pkg.go.dev/github.com/gospider007/requests#RequestOption) Body can be `string`, `[]byte`, `struct`, `map`, `slice` and `io.Reader` too
     * Auto detects `Content-Type`
     * Buffer less processing for `io.Reader`
-  * [Response](https://github.com/gospider007/requests#Response) object gives you more possibility
+  * Response object gives you more possibility
+	* [Return whether to reuse connections](https://github.com/gospider007/requests/blob/master/test/isNewConn_test.go)
   * Automatic marshal and unmarshal for  content
   * Easy to upload one or more file(s) via `multipart/form-data`
     * Auto detects file content type
@@ -35,21 +36,23 @@ Requests is a fully featured HTTP client library for Golang. Network requests ca
     * goroutine concurrent safe
     * Gzip - Go does it automatically also requests has fallback handling too
     * Works fine with `HTTP/2` and `HTTP/1.1`
-  * DNS caching
-  * Fingerprint
+  * [session](https://github.com/gospider007/requests/blob/master/test/session_test.go)
+  * [IPv4, IPv6 Address Control Parsing](https://github.com/gospider007/requests/blob/master/test/addType_test.go)
+  * [DNS Settings](https://github.com/gospider007/requests/blob/master/test/dns_test.go)
+  * [Fingerprint](https://github.com/gospider007/requests/blob/master/test/ja3_test.go)
     * JA3
     * HTTP2
     * JA4
     * OrderHeaders
     * Request header capitalization
-  * Proxy
+  * [Proxy](https://github.com/gospider007/requests/blob/master/test/proxy_test.go)
     * HTTP
     * HTTPS
     * SOCKS5
   * Protocol
     * HTTP 
     * HTTPS 
-    * WebSocket
+    * [WebSocket](https://github.com/gospider007/requests/blob/master/test/websocket_test.go)
     * SSE  
   * Well tested client library
   
@@ -80,15 +83,7 @@ import (
 
 func main() {
 	href := "http://httpbin.org/anything"
-	resp, err := requests.Post(nil, href, requests.RequestOption{
-		Ja3:     true,                           //enable ja3 fingerprint
-		Cookies: "a=1&b=2",                      //set cookies
-		// Proxy:   "http://127.0.0.1:8888",        //set proxy
-		Params:  map[string]any{"query": "cat"}, //set query params
-		Headers: map[string]any{"token": 12345}, //set headers
-		Json:    map[string]any{"age": 60},      //send json data
-		Timeout: time.Second * 10,               //set timeout
-	})
+	resp, err := requests.Get(nil, "http://httpbin.org/anything")
 	if err != nil {
 		log.Panic(err)
 	}
@@ -97,206 +92,6 @@ func main() {
     log.Print(resp.Json())    // Get JSON and parse with gjson
     log.Print(resp.Html())    // Get content and parse as DOM
     log.Print(resp.Cookies()) // Get cookies
-}
-```
-### use session
-```go
-package main
-
-import (
-	"log"
-
-	"github.com/gospider007/requests"
-)
-
-func main() {
-	href := "http://httpbin.org/anything"
-	session, err := requests.NewClient(nil) //use session
-	if err != nil {
-		log.Panic(err)
-	}
-	resp, err := session.Get(nil, href)
-	if err != nil {
-		log.Panic(err)
-	}
-	log.Print(resp.StatusCode()) //return status code
-}
-```
-### setting order headers with http1
-```go
-package main
-
-import (
-	"log"
-
-	"github.com/gospider007/requests"
-)
-
-func main() {
-	resp, err := requests.Get(nil, "http://httpbin.org/anything", requests.RequestOption{
-		OrderHeaders: []string{"accept-encoding"}},
-	)
-	if err != nil {
-		log.Panic(err)
-	}
-	log.Print(resp.Text())
-}
-```
-
-### send websocket
-```go
-package main
-
-import (
-	"log"
-
-	"github.com/gospider007/requests"
-	"github.com/gospider007/websocket"
-)
-
-func main() {
-	response, err := requests.Get(nil, "ws://82.157.123.54:9010/ajaxchattest", requests.RequestOption{Headers: map[string]string{
-		"Origin": "http://coolaf.com",
-	}}) // Send WebSocket request
-	if err != nil {
-		log.Panic(err)
-	}
-	defer response.Close()
-	wsCli := response.WebSocket()
-	if err = wsCli.Send(nil, websocket.MessageText, "test"); err != nil { // Send text message
-		log.Panic(err)
-	}
-	msgType, con, err := wsCli.Recv(nil) // Receive message
-	if err != nil {
-		log.Panic(err)
-	}
-	log.Print(msgType)     // Message type
-	log.Print(string(con)) // Message content
-}
-```
-### IPv4, IPv6 Address Control Parsing
-```go
-package main
-
-import (
-	"log"
-
-	"github.com/gospider007/requests"
-)
-
-func main() {
-	session, _ := requests.NewClient(nil, requests.ClientOption{
-		AddrType: requests.Ipv4, // Prioritize parsing IPv4 addresses
-		// AddrType: requests.Ipv6, // Prioritize parsing IPv6 addresses
-	})
-	resp, err := session.Get(nil, "https://test.ipw.cn")
-	if err != nil {
-		log.Panic(err)
-	}
-	log.Print(resp.Text())
-	log.Print(resp.StatusCode())
-}
-```
-### Generate Ja3 Fingerprint from String
-```go
-package main
-
-import (
-	"log"
-
-	"github.com/gospider007/ja3"
-	"github.com/gospider007/requests"
-)
-
-func main() {
-	ja3Str := "772,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513,29-23-24,0"
-	Ja3Spec, _ := ja3.CreateSpecWithStr(ja3Str) // Generate fingerprint from string
-	resp, err := requests.Get(nil, "https://tools.scrapfly.io/api/fp/ja3?extended=1", requests.RequestOption{Ja3Spec: Ja3Spec})
-	if err != nil {
-		log.Panic(err)
-	}
-	jsonData, _ := resp.Json()
-	log.Print(jsonData.Get("ja3").String())
-	log.Print(jsonData.Get("ja3").String() == ja3Str)
-}
-```
-### Generate Ja3 Fingerprint from ID
-```go
-package main
-
-import (
-	"log"
-
-	"github.com/gospider007/ja3"
-	"github.com/gospider007/requests"
-)
-
-func main() {
-	Ja3Spec, _ := ja3.CreateSpecWithId(ja3.HelloChrome_Auto) // Generate fingerprint from ID
-	resp, err := requests.Get(nil, "https://tools.scrapfly.io/api/fp/ja3?extended=1", requests.RequestOption{Ja3Spec: Ja3Spec})
-	if err != nil {
-		log.Panic(err)
-	}
-	jsonData, _ := resp.Json()
-	log.Print(jsonData.Get("ja3").String())
-}
-```
-### Generate H2 Fingerprint from String
-```go
-package main
-
-import (
-	"log"
-
-	"github.com/gospider007/ja3"
-	"github.com/gospider007/requests"
-)
-
-func main() {
-	h2ja3Str := "1:65536,2:0,4:6291456,6:262144|15663105|0|m,a,s,p"
-	h2ja3Spec, _ := ja3.CreateH2SpecWithStr(h2ja3Str) // Generate fingerprint from string
-	resp, err := requests.Get(nil, "https://tools.scrapfly.io/api/fp/akamai", requests.RequestOption{H2Ja3Spec: h2ja3Spec})
-	if err != nil {
-		log.Panic(err)
-	}
-	jsonData, _ := resp.Json()
-	log.Print(jsonData.Get("akamai_fp").String())
-	log.Print(jsonData.Get("akamai_fp").String() == h2ja3Str)
-}
-```
-### Modify H2 Fingerprint
-```go
-package main
-
-import (
-	"log"
-
-	"github.com/gospider007/ja3"
-	"github.com/gospider007/requests"
-)
-
-func main() {
-	h2ja3Spec := ja3.H2Ja3Spec{
-		InitialSetting: []ja3.Setting{
-			{Id: 1, Val: 65555},
-			{Id: 2, Val: 1},
-			{Id: 3, Val: 2000},
-			{Id: 4, Val: 6291457},
-			{Id: 6, Val: 262145},
-		},
-		ConnFlow: 15663106,
-		OrderHeaders: []string{
-			":method",
-			":path",
-			":scheme",
-			":authority",
-		},
-	}
-	resp, err := requests.Get(nil, "https://tools.scrapfly.io/api/fp/anything", requests.RequestOption{H2Ja3Spec: h2ja3Spec})
-	if err != nil {
-		log.Panic(err)
-	}
-	log.Print(resp.Text())
 }
 ```
 

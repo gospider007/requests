@@ -8,9 +8,8 @@ import (
 )
 
 func TestMain(t *testing.T) {
-	resp, err := requests.Get(nil, "https://myip.top", requests.RequestOption{
-		Dns: &net.UDPAddr{
-			// IP: net.ParseIP("223.6.6.6"),
+	resp, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{
+		Dns: &net.UDPAddr{ //set dns server
 			IP:   net.ParseIP("223.5.5.5"),
 			Port: 53,
 		},
