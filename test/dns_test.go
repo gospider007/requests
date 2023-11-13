@@ -7,7 +7,7 @@ import (
 	"github.com/gospider007/requests"
 )
 
-func TestMain(t *testing.T) {
+func TestDns(t *testing.T) {
 	resp, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{
 		Dns: &net.UDPAddr{ //set dns server
 			IP:   net.ParseIP("223.5.5.5"),
@@ -17,5 +17,7 @@ func TestMain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log(resp.Text())
+	if resp.StatusCode() != 200 {
+		t.Fatal("http status code is not 200")
+	}
 }

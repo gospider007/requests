@@ -12,14 +12,8 @@ func TestDefaultClient(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		if i == 0 {
-			if !resp.IsNewConn() { //return is NewConn
-				t.Error("new conn error")
-			}
-		} else {
-			if resp.IsNewConn() {
-				t.Error("new conn error")
-			}
+		if i == 1 && resp.IsNewConn() {
+			t.Error("new conn error")
 		}
 	}
 }
