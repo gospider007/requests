@@ -36,7 +36,7 @@ Requests is a fully featured HTTP client library for Golang. Network requests ca
     * goroutine concurrent safe
     * Gzip - Go does it automatically also requests has fallback handling too
     * Works fine with `HTTP/2` and `HTTP/1.1`
-  * [session](https://github.com/gospider007/requests/blob/master/test/session_test.go)
+  * [Session](https://github.com/gospider007/requests/blob/master/test/session_test.go)
   * [IPv4, IPv6 Address Control Parsing](https://github.com/gospider007/requests/blob/master/test/addType_test.go)
   * [DNS Settings](https://github.com/gospider007/requests/blob/master/test/dns_test.go)
   * [Fingerprint](https://github.com/gospider007/requests/blob/master/test/ja3_test.go)
@@ -69,7 +69,6 @@ go get github.com/gospider007/requests
 ```go
 import "github.com/gospider007/requests"
 ```
-## Quick Start
 ### Quickly send requests
 ```go
 package main
@@ -87,7 +86,7 @@ func main() {
 	if err != nil {
 		log.Panic(err)
 	}
-	log.Print(resp.Text())    // Get content and parse as string
+log.Print(resp.Text())    // Get content and parse as string
     log.Print(resp.Content()) // Get content as bytes
     log.Print(resp.Json())    // Get JSON and parse with gjson
     log.Print(resp.Html())    // Get content and parse as DOM
