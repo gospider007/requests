@@ -251,7 +251,7 @@ func (obj *RoundTripper) poolRoundTrip(task *reqTask, key connKey) (bool, error)
 	return false, nil
 }
 
-func (obj *RoundTripper) closeIdleConnections() {
+func (obj *RoundTripper) closeConns() {
 	obj.connsLock.Lock()
 	defer obj.connsLock.Unlock()
 	for key, pool := range obj.connPools {
@@ -260,7 +260,7 @@ func (obj *RoundTripper) closeIdleConnections() {
 	}
 }
 
-func (obj *RoundTripper) closeConnections() {
+func (obj *RoundTripper) forceCloseConns() {
 	obj.connsLock.Lock()
 	defer obj.connsLock.Unlock()
 	for key, pool := range obj.connPools {

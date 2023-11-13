@@ -267,7 +267,7 @@ func (obj *Response) ReadBody() error {
 		err = tools.CopyWitchContext(obj.response.Request.Context(), bBody, obj.response.Body, false)
 	}
 	if err != nil {
-		obj.Delete()
+		obj.CloseConn()
 		return errors.New("response read content error: " + err.Error())
 	}
 	if !obj.disUnzip {
@@ -288,13 +288,13 @@ func (obj *Response) ReadBody() error {
 }
 
 // safe close conn
-func (obj *Response) Delete() {
-	obj.response.Body.(interface{ Delete() }).Delete()
+func (obj *Response) CloseConn() {
+	obj.response.Body.(interface{ CloseConn() }).CloseConn()
 }
 
 // force close conn
-func (obj *Response) ForceDelete() {
-	obj.response.Body.(interface{ ForceDelete() }).ForceDelete()
+func (obj *Response) ForceCloseConn() {
+	obj.response.Body.(interface{ ForceCloseConn() }).ForceCloseConn()
 }
 
 // conn proxy
@@ -323,7 +323,7 @@ func (obj *Response) H2Ja3() string {
 }
 
 // close body
-func (obj *Response) Close() error {
+func (obj *Response) CloseBody() error {
 	if obj.cnl != nil {
 		defer obj.cnl()
 	}
@@ -332,7 +332,7 @@ func (obj *Response) Close() error {
 	}
 	if obj.response != nil && obj.response.Body != nil {
 		if err := tools.CopyWitchContext(obj.ctx, io.Discard, obj.response.Body, false); err != nil {
-			obj.Delete()
+			obj.CloseConn()
 		} else {
 			return obj.response.Body.Close()
 		}

@@ -195,15 +195,15 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	defer func() {
 		if err == nil && !response.oneceAlive() {
 			err = response.ReadBody()
-			defer response.Close()
+			defer response.CloseBody()
 		}
 		if err == nil && option.ResultCallBack != nil {
 			err = option.ResultCallBack(ctx, obj, response)
 		}
 		if err != nil {
-			response.Close()
+			response.CloseBody()
 			if option.ErrCallBack != nil {
-				if err2 := option.ErrCallBack(ctx, obj, err); err2 != nil {
+				if err2 := option.ErrCallBack(ctx, obj, response, err); err2 != nil {
 					err = tools.WrapError(errFatal, err2)
 				}
 			}

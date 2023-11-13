@@ -19,7 +19,7 @@ func (obj *readWriteCloser) Read(p []byte) (n int, err error) {
 func (obj *readWriteCloser) Close() (err error) {
 	err = obj.body.Close()
 	if !obj.InPool() {
-		obj.ForceDelete()
+		obj.ForceCloseConn()
 	} else {
 		obj.conn.bodyCnl()
 	}
@@ -39,11 +39,11 @@ func (obj *readWriteCloser) H2Ja3() string {
 }
 
 // safe close conn
-func (obj *readWriteCloser) Delete() {
+func (obj *readWriteCloser) CloseConn() {
 	obj.conn.closeCnl()
 }
 
 // force close conn
-func (obj *readWriteCloser) ForceDelete() {
+func (obj *readWriteCloser) ForceCloseConn() {
 	obj.conn.Close()
 }

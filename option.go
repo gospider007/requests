@@ -33,7 +33,7 @@ type RequestOption struct {
 	Timeout               time.Duration                                                                   //request timeout
 	OptionCallBack        func(ctx context.Context, client *Client, option *RequestOption) error          //option callback,if error is returnd, break request
 	ResultCallBack        func(ctx context.Context, client *Client, response *Response) error             //result callback,if error is returnd,next errCallback
-	ErrCallBack           func(ctx context.Context, client *Client, err error) error                      //error callback,if error is returnd,break request
+	ErrCallBack           func(ctx context.Context, client *Client, response *Response, err error) error  //error callback,if error is returnd,break request
 	RequestCallBack       func(ctx context.Context, request *http.Request, response *http.Response) error //request and response callback,if error is returnd,reponse is error
 	TryNum                int                                                                             //try num
 	MaxRedirectNum        int                                                                             //redirect num ,<0 no redirect,==0 no limit

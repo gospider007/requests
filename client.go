@@ -28,7 +28,7 @@ type ClientOption struct {
 	Timeout               time.Duration                                                                   //request timeout
 	OptionCallBack        func(ctx context.Context, client *Client, option *RequestOption) error          //option callback,if error is returnd, break request
 	ResultCallBack        func(ctx context.Context, client *Client, response *Response) error             //result callback,if error is returnd,next errCallback
-	ErrCallBack           func(ctx context.Context, client *Client, err error) error                      //error callback,if error is returnd,break request
+	ErrCallBack           func(ctx context.Context, client *Client, response *Response, err error) error  //error callback,if error is returnd,break request
 	RequestCallBack       func(ctx context.Context, request *http.Request, response *http.Response) error //request and response callback,if error is returnd,reponse is error
 	TryNum                int                                                                             //try num
 	MaxRedirectNum        int                                                                             //redirect num ,<0 no redirect,==0 no limit
@@ -65,7 +65,7 @@ type Client struct {
 
 	optionCallBack func(context.Context, *Client, *RequestOption) error
 	resultCallBack func(ctx context.Context, client *Client, response *Response) error
-	errCallBack    func(context.Context, *Client, error) error
+	errCallBack    func(context.Context, *Client, *Response, error) error
 
 	timeout               time.Duration
 	responseHeaderTimeout time.Duration
@@ -179,18 +179,18 @@ func (obj *Client) SetGetProxy(getProxy func(ctx context.Context, url *url.URL) 
 }
 
 // Close idle connections. If the connection is in use, wait until it ends before closing
-func (obj *Client) CloseIdleConnections() {
-	obj.transport.closeIdleConnections()
+func (obj *Client) CloseConns() {
+	obj.transport.closeConns()
 }
 
 // Close the connection, even if it is in use, it will be closed
-func (obj *Client) CloseConnections() {
-	obj.transport.closeConnections()
+func (obj *Client) ForceCloseConns() {
+	obj.transport.forceCloseConns()
 }
 
 // Close the client and cannot be used again after shutdown
 func (obj *Client) Close() {
-	obj.CloseConnections()
+	obj.ForceCloseConns()
 	obj.cnl()
 }
 
