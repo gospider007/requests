@@ -249,6 +249,7 @@ func (obj *Response) Read(con []byte) (i int, err error) {
 	}
 }
 
+// return true if response is stream
 func (obj *Response) IsStream() bool {
 	return obj.webSocket != nil || obj.sseClient != nil || obj.stream
 }
