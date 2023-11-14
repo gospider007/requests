@@ -63,6 +63,8 @@ github.com/gospider007/websocket v0.0.0-20231102021107-d34612e770bd h1:6kmXEifLg
 github.com/gospider007/websocket v0.0.0-20231102021107-d34612e770bd/go.mod h1:OSPnflgh+c8tIqpkUCpX21uBiJIGikhURuEctoRZM/E=
 github.com/gospider007/websocket v0.0.0-20231104023155-0d1a787293d3 h1:cjfmIiX1+ZcEfMy5hikIX37mzX/mnAuJ5T0EUb0wy0I=
 github.com/gospider007/websocket v0.0.0-20231104023155-0d1a787293d3/go.mod h1:OSPnflgh+c8tIqpkUCpX21uBiJIGikhURuEctoRZM/E=
+github.com/gospider007/websocket v0.0.0-20231114021646-5bfda75c28a6 h1:NBNR8ido7velygbUQo1gApOAN3WyLTc8KCYzaliPfTs=
+github.com/gospider007/websocket v0.0.0-20231114021646-5bfda75c28a6/go.mod h1:a716MYobAt21tc8vP7qK+Hr2NgHKxhyQ4QtX1gql/hg=
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=
 github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
 github.com/klauspost/compress v1.13.6/go.mod h1:/3/Vjq9QcHkK5uEr5lBEmyoZ1iFhe47etQ6QUkpK6sk=
@@ -138,6 +140,8 @@ golang.org/x/exp v0.0.0-20231006140011-7918f672742d h1:jtJma62tbqLibJ5sFQz8bKtEM
 golang.org/x/exp v0.0.0-20231006140011-7918f672742d/go.mod h1:ldy0pHrwJyGW56pPQzzkH36rKxoZW1tw7ZJpeKx+hdo=
 golang.org/x/exp v0.0.0-20231108232855-2478ac86f678 h1:mchzmB1XO2pMaKFRqk/+MV3mgGG96aqaPXaMifQU47w=
 golang.org/x/exp v0.0.0-20231108232855-2478ac86f678/go.mod h1:zk2irFbV9DP96SEBUUAy67IdHUaZuSnrz1n472HUCLE=
+golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa h1:FRnLl4eNAQl8hwxVVC17teOw8kdjVDVAiFMtgUdTSRQ=
+golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa/go.mod h1:zk2irFbV9DP96SEBUUAy67IdHUaZuSnrz1n472HUCLE=
 golang.org/x/image v0.13.0 h1:3cge/F/QTkNLauhf2QoE9zp+7sr+ZcL4HnoZmdwg9sg=
 golang.org/x/image v0.13.0/go.mod h1:6mmbMOeV28HuMTgA6OSRkdXKYw/t5W9Uwn2Yv1r3Yxk=
 golang.org/x/image v0.14.0 h1:tNgSxAFe3jC4uYqvZdTr84SZoM1KfwdC9SKIFrLjFn4=

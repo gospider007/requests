@@ -34,6 +34,7 @@ type Response struct {
 	filePath  string
 	bar       bool
 	isNewConn bool
+	isClosed  bool
 }
 
 type SseClient struct {
@@ -288,16 +289,6 @@ func (obj *Response) ReadBody() error {
 	return nil
 }
 
-// safe close conn
-func (obj *Response) CloseConn() {
-	obj.response.Body.(interface{ CloseConn() }).CloseConn()
-}
-
-// force close conn
-func (obj *Response) ForceCloseConn() {
-	obj.response.Body.(interface{ ForceCloseConn() }).ForceCloseConn()
-}
-
 // conn proxy
 func (obj *Response) Proxy() string {
 	return obj.response.Body.(interface{ Proxy() string }).Proxy()
@@ -325,18 +316,43 @@ func (obj *Response) H2Ja3() string {
 
 // close body
 func (obj *Response) CloseBody() error {
-	if obj.cnl != nil {
-		defer obj.cnl()
+	if obj.isClosed {
+		return nil
 	}
+	defer func() {
+		if obj.cnl != nil {
+			obj.cnl()
+		}
+		obj.isClosed = true
+	}()
 	if obj.webSocket != nil {
 		obj.webSocket.Close()
 	}
 	if obj.response != nil && obj.response.Body != nil {
 		if err := tools.CopyWitchContext(obj.ctx, io.Discard, obj.response.Body, false); err != nil {
 			obj.CloseConn()
+			return err
 		} else {
 			return obj.response.Body.Close()
 		}
 	}
 	return nil
+}
+
+// safe close conn
+func (obj *Response) CloseConn() {
+	if obj.isClosed {
+		return
+	}
+	obj.response.Body.(interface{ CloseConn() }).CloseConn()
+	obj.isClosed = true
+}
+
+// force close conn
+func (obj *Response) ForceCloseConn() {
+	if obj.isClosed {
+		return
+	}
+	obj.response.Body.(interface{ ForceCloseConn() }).ForceCloseConn()
+	obj.isClosed = true
 }
