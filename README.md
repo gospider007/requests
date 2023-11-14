@@ -22,8 +22,9 @@ Requests is a fully featured HTTP client library for Golang. Network requests ca
   * [Request](https://pkg.go.dev/github.com/gospider007/requests#RequestOption) Body can be `string`, `[]byte`, `struct`, `map`, `slice` and `io.Reader` too
     * Auto detects `Content-Type`
     * Buffer less processing for `io.Reader`
+    * [Flow request](https://github.com/gospider007/requests/blob/master/test/stream_test.go)
   * Response object gives you more possibility
-	* [Return whether to reuse connections](https://github.com/gospider007/requests/blob/master/test/isNewConn_test.go)
+    * [Return whether to reuse connections](https://github.com/gospider007/requests/blob/master/test/isNewConn_test.go)
   * Automatic marshal and unmarshal for  content
   * Easy to upload one or more file(s) via `multipart/form-data`
     * Auto detects file content type
@@ -81,15 +82,14 @@ import (
 )
 
 func main() {
-	href := "http://httpbin.org/anything"
-	resp, err := requests.Get(nil, "http://httpbin.org/anything")
-	if err != nil {
-		log.Panic(err)
-	}
+    resp, err := requests.Get(nil, "http://httpbin.org/anything")
+    if err != nil {
+      log.Panic(err)
+    }
     log.Print(resp.Text())    // Get content and parse as string
     log.Print(resp.Content()) // Get content as bytes
-    log.Print(resp.Json())    // Get JSON and parse with gjson
-    log.Print(resp.Html())    // Get content and parse as DOM
+    log.Print(resp.Json())    // Get content and parse as gjson JSON
+    log.Print(resp.Html())    // Get content and parse as goquery DOM
     log.Print(resp.Cookies()) // Get cookies
 }
 ```
