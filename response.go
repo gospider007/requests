@@ -22,8 +22,7 @@ import (
 type Response struct {
 	response  *http.Response
 	webSocket *websocket.Conn
-	sseClient *SseClient
-
+	sse       *Sse
 	ctx       context.Context
 	cnl       context.CancelFunc
 	content   []byte
@@ -37,8 +36,9 @@ type Response struct {
 	isClosed  bool
 }
 
-type SseClient struct {
-	reader *bufio.Reader
+type Sse struct {
+	reader    *bufio.Reader
+	closeFunc func()
 }
 type Event struct {
 	Data    string //data
@@ -48,12 +48,12 @@ type Event struct {
 	Comment string //comment info
 }
 
-func newSseClient(rd io.Reader) *SseClient {
-	return &SseClient{reader: bufio.NewReader(rd)}
+func newSse(rd io.Reader, closeFunc func()) *Sse {
+	return &Sse{closeFunc: closeFunc, reader: bufio.NewReader(rd)}
 }
 
 // recv sse envent data
-func (obj *SseClient) Recv() (Event, error) {
+func (obj *Sse) Recv() (Event, error) {
 	var event Event
 	for {
 		readStr, err := obj.reader.ReadString('\n')
@@ -78,14 +78,19 @@ func (obj *SseClient) Recv() (Event, error) {
 	}
 }
 
+// close sse
+func (obj *Sse) Close() {
+	obj.closeFunc()
+}
+
 // return websocket client
 func (obj *Response) WebSocket() *websocket.Conn {
 	return obj.webSocket
 }
 
 // return sse client
-func (obj *Response) SseClient() *SseClient {
-	return obj.sseClient
+func (obj *Response) Sse() *Sse {
+	return obj.sse
 }
 
 // return URL redirected address
@@ -257,12 +262,12 @@ func (obj *Response) Read(con []byte) (i int, err error) {
 
 // return true if response is stream
 func (obj *Response) IsStream() bool {
-	return obj.webSocket != nil || obj.sseClient != nil || obj.stream
+	return obj.webSocket != nil || obj.sse != nil || obj.stream
 }
 
 // read body
 func (obj *Response) ReadBody() error {
-	if obj.webSocket != nil || obj.sseClient != nil {
+	if obj.webSocket != nil || obj.sse != nil {
 		return errors.New("ws or sse can not read")
 	}
 	var bBody *bytes.Buffer
@@ -333,7 +338,18 @@ func (obj *Response) CloseBody() error {
 	if obj.webSocket != nil {
 		obj.webSocket.Close()
 	}
+	if obj.sse != nil {
+		obj.sse.Close()
+	}
+	if obj.IsStream() {
+		obj.CloseConn()
+		return nil
+	}
 	if obj.response != nil && obj.response.Body != nil {
+		if obj.IsStream() {
+			obj.CloseConn()
+			return nil
+		}
 		if err := tools.CopyWitchContext(obj.ctx, io.Discard, obj.response.Body, false); err != nil {
 			obj.CloseConn()
 			return err

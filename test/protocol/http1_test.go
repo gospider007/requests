@@ -9,6 +9,7 @@ import (
 func TestHttp1(t *testing.T) {
 	resp, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{
 		ForceHttp1: true,
+		DisAlive:   true,
 	})
 	if err != nil {
 		t.Error(err)

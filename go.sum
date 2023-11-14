@@ -67,6 +67,8 @@ github.com/gospider007/websocket v0.0.0-20231104023155-0d1a787293d3 h1:cjfmIiX1+
 github.com/gospider007/websocket v0.0.0-20231104023155-0d1a787293d3/go.mod h1:OSPnflgh+c8tIqpkUCpX21uBiJIGikhURuEctoRZM/E=
 github.com/gospider007/websocket v0.0.0-20231114021646-5bfda75c28a6 h1:NBNR8ido7velygbUQo1gApOAN3WyLTc8KCYzaliPfTs=
 github.com/gospider007/websocket v0.0.0-20231114021646-5bfda75c28a6/go.mod h1:a716MYobAt21tc8vP7qK+Hr2NgHKxhyQ4QtX1gql/hg=
+github.com/gospider007/websocket v0.0.0-20231114095858-b8bc9b2033d3 h1:HpiNfOZ9Tjo4hhP1+jmlgqykngykles3ypXa2BUuxRc=
+github.com/gospider007/websocket v0.0.0-20231114095858-b8bc9b2033d3/go.mod h1:jINjCM6qIRiqn2Di1bat4Ie5gY66ae7LYT8YK4fAejY=
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=
 github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
 github.com/klauspost/compress v1.13.6/go.mod h1:/3/Vjq9QcHkK5uEr5lBEmyoZ1iFhe47etQ6QUkpK6sk=

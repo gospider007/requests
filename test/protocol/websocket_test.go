@@ -16,6 +16,7 @@ func TestWebSocket(t *testing.T) {
 	}
 	defer response.CloseBody()
 	wsCli := response.WebSocket()
+	defer wsCli.Close()
 	if err = wsCli.Send(nil, websocket.MessageText, "test"); err != nil { // Send text message
 		t.Error(err)
 	}
