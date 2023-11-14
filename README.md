@@ -19,44 +19,30 @@ Requests is a fully featured HTTP client library for Golang. Network requests ca
 ## Features
   * GET, POST, PUT, DELETE, HEAD, PATCH, OPTIONS, etc.
   * [Simple for settings and request](https://github.com/gospider007/requests#quickly-send-requests)
-  * [Request](https://pkg.go.dev/github.com/gospider007/requests#RequestOption) Body can be `string`, `[]byte`, `struct`, `map`, `slice` and `io.Reader` too
-    * Auto detects `Content-Type`
-    * Buffer less processing for `io.Reader`
-    * [Flow request](https://github.com/gospider007/requests/blob/master/test/stream_test.go)
-  * Response object gives you more possibility
-    * [Return whether to reuse connections](https://github.com/gospider007/requests/blob/master/test/isNewConn_test.go)
-  * Automatic marshal and unmarshal for  content
-  * Easy to upload one or more file(s) via `multipart/form-data`
-    * Auto detects file content type
-  * Request URL Path Params (aka URI Params)
-  * Backoff Retry Mechanism with retry condition function
-  * Optionally allows GET request with payload
-  * Request design
-    * Have client level settings & options and also override at Request level if you want to
-    * Request and Response middleware
-    * goroutine concurrent safe
-    * Gzip - Go does it automatically also requests has fallback handling too
-    * Works fine with `HTTP/2` and `HTTP/1.1`
+  * [Request](https://github.com/gospider007/requests/tree/master/test/request)
+    * [Json request](https://github.com/gospider007/requests/blob/master/test/request/json_test.go) with `application/json`
+    * [Data request](https://github.com/gospider007/requests/blob/master/test/request/data_test.go) with `application/x-www-form-urlencoded`
+    * [Form request](https://github.com/gospider007/requests/blob/master/test/request/form_test.go) with `multipart/form-data`
+    * [File request](https://github.com/gospider007/requests/blob/master/test/request/file_test.go) with `multipart/form-data`
+    * [Flow request](https://github.com/gospider007/requests/blob/master/test/request/stream_test.go)
+    * [Request URL Path Params](https://github.com/gospider007/requests/blob/master/test/request/params_test.go)
+  * [Response](https://github.com/gospider007/requests/tree/master/test/response)
+    * [Return whether to reuse connections](https://github.com/gospider007/requests/blob/master/test/response/isNewConn_test.go)
+  * [Middleware](https://github.com/gospider007/requests/tree/master/test/middleware)
+    * [Option Callback Method](https://github.com/gospider007/requests/blob/master/test/middleware/optionltCallBack_test.go)
+    * [Result Callback Method](https://github.com/gospider007/requests/blob/master/test/middleware/resultCallBack_test.go)
+    * [Error Callback Method](https://github.com/gospider007/requests/blob/master/test/middleware/errCallBack_test.go)
+    * [Retry](https://github.com/gospider007/requests/blob/master/test/middleware/try_test.go)
+  * [Protocol](https://github.com/gospider007/requests/tree/master/test/protocol)
+    * [HTTP1](https://github.com/gospider007/requests/blob/master/test/protocol/http1_test.go)
+    * [HTTP2](https://github.com/gospider007/requests/blob/master/test/protocol/http2_test.go)
+    * [WebSocket](https://github.com/gospider007/requests/blob/master/test/protocol/websocket_test.go)
   * [Session](https://github.com/gospider007/requests/blob/master/test/session_test.go)
   * [IPv4, IPv6 Address Control Parsing](https://github.com/gospider007/requests/blob/master/test/addType_test.go)
   * [DNS Settings](https://github.com/gospider007/requests/blob/master/test/dns_test.go)
   * [Fingerprint](https://github.com/gospider007/requests/blob/master/test/ja3_test.go)
-    * JA3
-    * HTTP2
-    * JA4
-    * OrderHeaders
-    * Request header capitalization
   * [Proxy](https://github.com/gospider007/requests/blob/master/test/proxy_test.go)
-    * HTTP
-    * HTTPS
-    * SOCKS5
-  * Protocol
-    * HTTP 
-    * HTTPS 
-    * [WebSocket](https://github.com/gospider007/requests/blob/master/test/websocket_test.go)
-    * SSE  
-  * Well tested client library
-  
+  * [Well tested client library](https://github.com/gospider007/requests/tree/master/test)
 ## Supported Go Versions
 Recommended to use `go1.21.3` and above.
 Initially Requests started supporting `go modules`

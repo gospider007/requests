@@ -93,6 +93,11 @@ func (obj *Response) Location() (*url.URL, error) {
 	return obj.response.Location()
 }
 
+// return response Proto
+func (obj *Response) Proto() string {
+	return obj.response.Proto
+}
+
 // return response cookies
 func (obj *Response) Cookies() Cookies {
 	if obj.filePath != "" {

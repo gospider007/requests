@@ -37,6 +37,8 @@ github.com/gospider007/gson v0.0.0-20231108025125-ff62d4066dc4 h1:5s6Ird9YHFd858
 github.com/gospider007/gson v0.0.0-20231108025125-ff62d4066dc4/go.mod h1:CGrR2aJGWEd96xr9TVCSOePEFWX1F3sBVaf4ZBvCbMI=
 github.com/gospider007/gson v0.0.0-20231110081735-fa6816715498 h1:NDZlnVcLScXmCeS4a7kugrNUWzioVBDX/kdcGURxcj8=
 github.com/gospider007/gson v0.0.0-20231110081735-fa6816715498/go.mod h1:r8uL+sPUwP8+6n8GZFa2iz2bJe0qNS6EKwkqmiZhHqI=
+github.com/gospider007/gson v0.0.0-20231114084834-650b26cdd864 h1:san+x97YVi5o580y/0e64mrs2b7JkG7dGlsS4+bjw44=
+github.com/gospider007/gson v0.0.0-20231114084834-650b26cdd864/go.mod h1:r8uL+sPUwP8+6n8GZFa2iz2bJe0qNS6EKwkqmiZhHqI=
 github.com/gospider007/gtls v0.0.0-20231024092712-01193b9f0404 h1:Qp/o+l3KgWmviEsy0OXlFSjA0lbB8YtlcIOxN1xXyoI=
 github.com/gospider007/gtls v0.0.0-20231024092712-01193b9f0404/go.mod h1:fLcidMDKVv8b9NvLy0P/ZclltTaXJvTHANWiPCgDbSI=
 github.com/gospider007/gtls v0.0.0-20231108025158-443489ca9953 h1:CN2nz4q88S3BhNR1QSmXubOgMGnxzWwdDL2OIASwYBs=

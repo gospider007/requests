@@ -65,17 +65,17 @@ func (obj *RequestOption) newBody(val any, valType bodyType, dataMap map[string]
 		}
 	case string:
 		switch valType {
-		case jsonType, textType, dataType, rawType:
+		case jsonType, textType, rawType:
 			return bytes.NewReader(tools.StringToBytes(value)), nil
-		case formType, paramsType:
+		case formType, paramsType, dataType:
 		default:
 			return nil, fmt.Errorf("unknow content-type：%d", valType)
 		}
 	case []byte:
 		switch valType {
-		case jsonType, textType, dataType, rawType:
+		case jsonType, textType, rawType:
 			return bytes.NewReader(value), nil
-		case formType, paramsType:
+		case formType, paramsType, dataType:
 		default:
 			return nil, fmt.Errorf("unknow content-type：%d", valType)
 		}
