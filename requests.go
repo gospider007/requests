@@ -193,7 +193,7 @@ func (obj *Client) Request(ctx context.Context, method string, href string, opti
 func (obj *Client) request(ctx context.Context, option *RequestOption) (response *Response, err error) {
 	response = new(Response)
 	defer func() {
-		if err == nil && !response.oneceAlive() {
+		if err == nil && !response.IsStream() {
 			err = response.ReadBody()
 			defer response.CloseBody()
 		}

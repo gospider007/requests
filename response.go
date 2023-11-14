@@ -249,7 +249,7 @@ func (obj *Response) Read(con []byte) (i int, err error) {
 	}
 }
 
-func (obj *Response) oneceAlive() bool {
+func (obj *Response) IsStream() bool {
 	return obj.webSocket != nil || obj.sseClient != nil || obj.stream
 }
 
