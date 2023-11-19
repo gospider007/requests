@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"time"
 
@@ -22,9 +23,9 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-type keyPrincipal string
+type contextKey string
 
-const keyPrincipalID keyPrincipal = "gospiderContextData"
+const gospiderContextKey contextKey = "GospiderContextKey"
 
 var errFatal = errors.New("Fatal error")
 
@@ -51,6 +52,85 @@ type reqCtxData struct {
 	dns         *net.UDPAddr
 
 	isNewConn bool
+	debug     bool
+	requestId string
+}
+
+func NewReqCtxData(ctx context.Context, option *RequestOption) (*reqCtxData, error) {
+	//init ctxData
+	ctxData := new(reqCtxData)
+	ctxData.ja3Spec = option.Ja3Spec
+	ctxData.h2Ja3Spec = option.H2Ja3Spec
+	ctxData.forceHttp1 = option.ForceHttp1
+	ctxData.disAlive = option.DisAlive
+	ctxData.maxRedirectNum = option.MaxRedirectNum
+	ctxData.requestCallBack = option.RequestCallBack
+	ctxData.responseHeaderTimeout = option.ResponseHeaderTimeout
+	ctxData.addrType = option.AddrType
+
+	ctxData.dialTimeout = option.DialTimeout
+	ctxData.keepAlive = option.KeepAlive
+	ctxData.localAddr = option.LocalAddr
+	ctxData.dns = option.Dns
+	ctxData.debug = option.Debug
+	if option.Debug {
+		ctxData.requestId = tools.NaoId()
+	}
+	//init scheme
+	if option.Url != nil {
+		switch option.Url.Scheme {
+		case "ws":
+			ctxData.isWs = true
+			option.Url.Scheme = "http"
+		case "wss":
+			ctxData.isWs = true
+			option.Url.Scheme = "https"
+		}
+	}
+
+	//init tls timeout
+	if option.TlsHandshakeTimeout == 0 {
+		ctxData.tlsHandshakeTimeout = time.Second * 15
+	} else {
+		ctxData.tlsHandshakeTimeout = option.TlsHandshakeTimeout
+	}
+	//init orderHeaders,this must after init headers
+	if option.OrderHeaders == nil {
+		if option.Ja3Spec.IsSet() {
+			ctxData.orderHeaders = ja3.DefaultH1OrderHeaders()
+		}
+	} else {
+		orderHeaders := []string{}
+		for _, key := range option.OrderHeaders {
+			key = textproto.CanonicalMIMEHeaderKey(key)
+			if !slices.Contains(orderHeaders, key) {
+				orderHeaders = append(orderHeaders, key)
+			}
+		}
+		for _, key := range ja3.DefaultH1OrderHeaders() {
+			if !slices.Contains(orderHeaders, key) {
+				orderHeaders = append(orderHeaders, key)
+			}
+		}
+		ctxData.orderHeaders = orderHeaders
+	}
+	//init proxy
+	ctxData.disProxy = option.DisProxy
+
+	if option.Proxy != "" {
+		tempProxy, err := gtls.VerifyProxy(option.Proxy)
+		if err != nil {
+			return nil, tools.WrapError(errFatal, errors.New("tempRequest init proxy error"), err)
+		}
+		ctxData.proxy = tempProxy
+	}
+	return ctxData, nil
+}
+func CreateReqCtx(ctx context.Context, ctxData *reqCtxData) context.Context {
+	return context.WithValue(ctx, gospiderContextKey, ctxData)
+}
+func GetReqCtxData(ctx context.Context) *reqCtxData {
+	return ctx.Value(gospiderContextKey).(*reqCtxData)
 }
 
 // sends a GET request and returns the response.
@@ -214,6 +294,14 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 			return
 		}
 	}
+	//init headers and orderheaders,befor init ctxData
+	headers, err := option.initHeaders()
+	if err != nil {
+		return response, tools.WrapError(err, errors.New("tempRequest init headers error"), err)
+	}
+	if headers == nil {
+		headers = defaultHeaders()
+	}
 	response.bar = option.Bar
 	response.disUnzip = option.DisUnZip
 	response.disDecode = option.DisDecode
@@ -223,68 +311,18 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 
 	var reqs *http.Request
 	//init ctxData
-	ctxData := new(reqCtxData)
-	ctxData.ja3Spec = option.Ja3Spec
-	ctxData.h2Ja3Spec = option.H2Ja3Spec
-	ctxData.forceHttp1 = option.ForceHttp1
-	ctxData.disAlive = option.DisAlive
-	ctxData.maxRedirectNum = option.MaxRedirectNum
-	ctxData.requestCallBack = option.RequestCallBack
-	ctxData.responseHeaderTimeout = option.ResponseHeaderTimeout
-	ctxData.addrType = option.AddrType
-
-	ctxData.dialTimeout = option.DialTimeout
-	ctxData.keepAlive = option.KeepAlive
-	ctxData.localAddr = option.LocalAddr
-	ctxData.dns = option.Dns
-
-	//init tls timeout
-	if option.TlsHandshakeTimeout == 0 {
-		ctxData.tlsHandshakeTimeout = time.Second * 15
-	} else {
-		ctxData.tlsHandshakeTimeout = option.TlsHandshakeTimeout
-	}
-	//init orderHeaders
-	if option.OrderHeaders == nil {
-		if option.Ja3Spec.IsSet() {
-			ctxData.orderHeaders = ja3.DefaultH1OrderHeaders()
-		}
-	} else {
-		orderHeaders := []string{}
-		for _, key := range option.OrderHeaders {
-			key = textproto.CanonicalMIMEHeaderKey(key)
-			if !slices.Contains(orderHeaders, key) {
-				orderHeaders = append(orderHeaders, key)
-			}
-		}
-		for _, key := range ja3.DefaultH1OrderHeaders() {
-			if !slices.Contains(orderHeaders, key) {
-				orderHeaders = append(orderHeaders, key)
-			}
-		}
-		ctxData.orderHeaders = orderHeaders
-	}
-	//init proxy
-	ctxData.disProxy = option.DisProxy
-	if !ctxData.disProxy {
-		if option.Proxy != "" {
-			tempProxy, err := gtls.VerifyProxy(option.Proxy)
-			if err != nil {
-				return response, tools.WrapError(errFatal, errors.New("tempRequest init proxy error"), err)
-			}
-			ctxData.proxy = tempProxy
-		} else if obj.proxy != nil {
-			ctxData.proxy = obj.proxy
-		}
+	ctxData, err := NewReqCtxData(ctx, option)
+	if err != nil {
+		return response, tools.WrapError(err, " reqCtxData init error")
 	}
 	//init ctx,cnl
 	if option.Timeout > 0 { //超时
-		response.ctx, response.cnl = context.WithTimeout(context.WithValue(ctx, keyPrincipalID, ctxData), option.Timeout)
+		response.ctx, response.cnl = context.WithTimeout(CreateReqCtx(ctx, ctxData), option.Timeout)
 	} else {
-		response.ctx, response.cnl = context.WithCancel(context.WithValue(ctx, keyPrincipalID, ctxData))
+		response.ctx, response.cnl = context.WithCancel(CreateReqCtx(ctx, ctxData))
 	}
 	//init url
-	href, err := option.initUrl()
+	href, err := option.initParams()
 	if err != nil {
 		err = tools.WrapError(err, "url init error")
 		return
@@ -293,6 +331,9 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	body, err := option.initBody()
 	if err != nil {
 		return response, tools.WrapError(err, errors.New("tempRequest init body error"), err)
+	}
+	if ctxData.debug {
+		log.Printf("requestId:%s: %s", ctxData.requestId, "create request")
 	}
 	//create request
 	if body != nil {
@@ -305,15 +346,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	}
 
 	//init headers
-	headers, err := option.initHeaders()
-	if err != nil {
-		return response, tools.WrapError(err, errors.New("tempRequest init headers error"), err)
-	}
-	if headers != nil {
-		reqs.Header = headers
-	} else {
-		reqs.Header = defaultHeaders()
-	}
+	reqs.Header = headers
 	//add Referer
 	if reqs.Header.Get("Referer") == "" {
 		if option.Referer != "" {
@@ -328,16 +361,14 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		reqs.Header.Set("Content-Type", option.ContentType)
 	}
 
-	//parse Scheme
+	//init ws
+	if ctxData.isWs {
+		if ctxData.debug {
+			log.Printf("requestId:%s: %s", ctxData.requestId, "init websocket headers")
+		}
+		websocket.SetClientHeadersOption(reqs.Header, option.WsOption)
+	}
 	switch reqs.URL.Scheme {
-	case "ws":
-		ctxData.isWs = true
-		reqs.URL.Scheme = "http"
-		websocket.SetClientHeadersOption(reqs.Header, option.WsOption)
-	case "wss":
-		ctxData.isWs = true
-		reqs.URL.Scheme = "https"
-		websocket.SetClientHeadersOption(reqs.Header, option.WsOption)
 	case "file":
 		response.filePath = re.Sub(`^/+`, "", reqs.URL.Path)
 		response.content, err = os.ReadFile(response.filePath)
@@ -369,8 +400,14 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 			reqs.AddCookie(vv)
 		}
 	}
+	if ctxData.debug {
+		log.Printf("requestId:%s: %s", ctxData.requestId, "send request start")
+	}
 	//send req
 	response.response, err = obj.getClient(option).Do(reqs)
+	if ctxData.debug {
+		log.Printf("requestId:%s: %s", ctxData.requestId, "send request end")
+	}
 	response.isNewConn = ctxData.isNewConn
 	if err != nil {
 		err = tools.WrapError(err, "roundTripper error")

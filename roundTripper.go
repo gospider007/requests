@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"crypto/tls"
+	"log"
 	"net"
 	"net/url"
 	"sync"
@@ -26,6 +27,8 @@ type reqTask struct {
 	err                   error
 	orderHeaders          []string
 	responseHeaderTimeout time.Duration
+	debug                 bool
+	requestId             string
 }
 
 func newReqTask(req *http.Request, ctxData *reqCtxData) *reqTask {
@@ -34,6 +37,8 @@ func newReqTask(req *http.Request, ctxData *reqCtxData) *reqTask {
 	}
 	return &reqTask{
 		req:                   req,
+		debug:                 ctxData.debug,
+		requestId:             ctxData.requestId,
 		emptyPool:             make(chan struct{}),
 		orderHeaders:          ctxData.orderHeaders,
 		responseHeaderTimeout: ctxData.responseHeaderTimeout,
@@ -120,8 +125,9 @@ func newRoundTripper(preCtx context.Context, option roundTripperOption) *RoundTr
 		proxy:      option.GetProxy,
 	}
 }
-func (obj *RoundTripper) newConnPool(conn *connecotr) *connPool {
+func (obj *RoundTripper) newConnPool(conn *connecotr, key connKey) *connPool {
 	pool := new(connPool)
+	pool.key = key
 	pool.deleteCtx, pool.deleteCnl = context.WithCancel(obj.ctx)
 	pool.closeCtx, pool.closeCnl = context.WithCancel(pool.deleteCtx)
 	pool.tasks = make(chan *reqTask)
@@ -135,6 +141,11 @@ func (obj *RoundTripper) getConnPool(key connKey) *connPool {
 	defer obj.connsLock.Unlock()
 	return obj.connPools[key]
 }
+func (obj *RoundTripper) delConnPool(key connKey) {
+	obj.connsLock.Lock()
+	defer obj.connsLock.Unlock()
+	delete(obj.connPools, key)
+}
 func (obj *RoundTripper) putConnPool(key connKey, conn *connecotr) {
 	obj.connsLock.Lock()
 	defer obj.connsLock.Unlock()
@@ -144,10 +155,15 @@ func (obj *RoundTripper) putConnPool(key connKey, conn *connecotr) {
 	}
 	pool, ok := obj.connPools[key]
 	if ok {
-		pool.total.Add(1)
-		go pool.rwMain(conn)
+		select {
+		case <-pool.closeCtx.Done():
+			obj.connPools[key] = obj.newConnPool(conn, key)
+		default:
+			pool.total.Add(1)
+			go pool.rwMain(conn)
+		}
 	} else {
-		obj.connPools[key] = obj.newConnPool(conn)
+		obj.connPools[key] = obj.newConnPool(conn, key)
 	}
 }
 func (obj *RoundTripper) tlsConfigClone() *tls.Config {
@@ -237,6 +253,8 @@ func (obj *RoundTripper) poolRoundTrip(task *reqTask, key connKey) (bool, error)
 	select {
 	case <-obj.ctx.Done():
 		return false, tools.WrapError(obj.ctx.Err(), "roundTripper close ctx error: ")
+	case <-pool.closeCtx.Done():
+		return false, nil
 	case pool.tasks <- task:
 		select {
 		case <-task.emptyPool:
@@ -269,7 +287,7 @@ func (obj *RoundTripper) forceCloseConns() {
 	}
 }
 func (obj *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	ctxData := req.Context().Value(keyPrincipalID).(*reqCtxData)
+	ctxData := GetReqCtxData(req.Context())
 	if ctxData.requestCallBack != nil {
 		if err := ctxData.requestCallBack(req.Context(), req, nil); err != nil {
 			return nil, err
@@ -293,6 +311,9 @@ func (obj *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 		}
 	}
 	ctxData.isNewConn = true
+	if ctxData.debug {
+		log.Printf("requestId:%s: %s", ctxData.requestId, "new Conn")
+	}
 newConn:
 	ckey := key
 	conn, err := obj.dial(ctxData, &ckey, req)
@@ -307,6 +328,9 @@ newConn:
 	}
 	conn.key = ckey
 	if task.inPool() && !ctxData.disAlive {
+		if ctxData.debug {
+			log.Printf("requestId:%s: %s", ctxData.requestId, "conn put conn pool")
+		}
 		obj.putConnPool(key, conn)
 	}
 	if ctxData.requestCallBack != nil {

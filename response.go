@@ -362,18 +362,12 @@ func (obj *Response) CloseBody() error {
 
 // safe close conn
 func (obj *Response) CloseConn() {
-	if obj.isClosed {
-		return
-	}
 	obj.response.Body.(interface{ CloseConn() }).CloseConn()
 	obj.isClosed = true
 }
 
 // force close conn
 func (obj *Response) ForceCloseConn() {
-	if obj.isClosed {
-		return
-	}
 	obj.response.Body.(interface{ ForceCloseConn() }).ForceCloseConn()
 	obj.isClosed = true
 }

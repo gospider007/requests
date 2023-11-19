@@ -21,8 +21,9 @@ func TestSendParamsWithMap(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// log.Print(jsonData)
 	if jsonData.Get("args.name").String() != "test" {
-		t.Fatal("json data error")
+		t.Fatal("params args error")
 	}
 }
 func TestSendParamsWithString(t *testing.T) {

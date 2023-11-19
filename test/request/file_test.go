@@ -8,16 +8,14 @@ import (
 )
 
 func TestSendFile(t *testing.T) {
-	fileData := []requests.File{
-		{
-			Key:         "file",
-			Val:         []byte("test"),
-			FileName:    "test.txt",
-			ContentType: "text/plain",
-		},
-	}
 	resp, err := requests.Post(nil, "https://httpbin.org/anything", requests.RequestOption{
-		Files: fileData,
+		Form: map[string]any{
+			"file": requests.File{
+				Content:     []byte("test"),
+				FileName:    "test.txt",
+				ContentType: "text/plain",
+			},
+		},
 	})
 	if err != nil {
 		t.Fatal(err)

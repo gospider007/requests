@@ -1,10 +1,12 @@
 package main
 
 import (
+	"log"
 	"testing"
 
 	"github.com/gospider007/gson"
 	"github.com/gospider007/requests"
+	"github.com/gospider007/tools"
 )
 
 func TestSendJsonWithMap(t *testing.T) {
@@ -93,6 +95,36 @@ func TestSendJsonWithGson(t *testing.T) {
 		t.Fatal("json data error")
 	}
 	if bodyJson.String() != jsonData.Get("data").String() {
+		t.Fatal("json data error")
+	}
+}
+func TestSendJsonWithOrder(t *testing.T) {
+	orderMap := requests.NewOrderMap()
+	orderMap.Set("age", "1")
+	orderMap.Set("age4", "4")
+	orderMap.Set("Name", "test")
+	orderMap.Set("age2", "2")
+	orderMap.Set("age3", []string{"22", "121"})
+
+	bodyJson, err := gson.Encode(orderMap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := requests.Post(nil, "https://httpbin.org/anything", requests.RequestOption{
+		Json: orderMap,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	jsonData, err := resp.Json()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if jsonData.Get("headers.Content-Type").String() != "application/json" {
+		t.Fatal("json data error")
+	}
+	if tools.BytesToString(bodyJson) != jsonData.Get("data").String() {
+		log.Print(jsonData.Get("data").String())
 		t.Fatal("json data error")
 	}
 }

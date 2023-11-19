@@ -98,7 +98,7 @@ func (obj *DialClient) DialContext(ctx context.Context, network string, addr str
 	if err != nil {
 		return nil, tools.WrapError(err, "addrToIp error,SplitHostPort")
 	}
-	ctxData := ctx.Value(keyPrincipalID).(*reqCtxData)
+	ctxData := GetReqCtxData(ctx)
 	var dialer *net.Dialer
 	if _, ipInt := gtls.ParseHost(host); ipInt == 0 { //domain
 		host, ok := obj.loadHost(host)

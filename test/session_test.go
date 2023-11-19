@@ -15,11 +15,11 @@ func TestSession(t *testing.T) {
 		}
 		if i == 0 {
 			if !resp.IsNewConn() { //return is NewConn
-				t.Error("new conn error")
+				t.Error("new conn error: ", i)
 			}
 		} else {
 			if resp.IsNewConn() {
-				t.Error("new conn error")
+				t.Error("new conn error: ", i)
 			}
 		}
 	}

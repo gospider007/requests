@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"errors"
+	"log"
 	"net"
 	"net/http"
 	"sync/atomic"
@@ -132,10 +133,16 @@ func (obj *connecotr) wrapBody(task *reqTask) {
 }
 func (obj *connecotr) http1Req(task *reqTask) {
 	defer task.cnl()
+	if task.debug {
+		log.Printf("requestId:%s: %s", task.requestId, "http1 req start")
+	}
 	if task.orderHeaders != nil && len(task.orderHeaders) > 0 {
 		task.err = httpWrite(task.req, obj.w, task.orderHeaders)
 	} else if task.err = task.req.Write(obj); task.err == nil {
 		task.err = obj.w.Flush()
+	}
+	if task.debug {
+		log.Printf("requestId:%s: %s", task.requestId, "http1 req write ok")
 	}
 	if task.err == nil {
 		if task.res, task.err = http.ReadResponse(obj.r, task.req); task.res != nil && task.err == nil {
@@ -146,23 +153,38 @@ func (obj *connecotr) http1Req(task *reqTask) {
 	} else {
 		task.err = tools.WrapError(task.err, "http1 write error")
 	}
+	if task.debug {
+		log.Printf("requestId:%s: %s", task.requestId, "http1 req end")
+	}
 }
 
 func (obj *connecotr) http2Req(task *reqTask) {
 	defer task.cnl()
+	if task.debug {
+		log.Printf("requestId:%s: %s", task.requestId, "http2 req start")
+	}
 	if task.res, task.err = obj.h2RawConn.RoundTrip(task.req); task.res != nil && task.err == nil {
 		obj.wrapBody(task)
 	} else if task.err != nil {
 		task.err = tools.WrapError(task.err, "http2 roundTrip error")
 	}
+	if task.debug {
+		log.Printf("requestId:%s: %s", task.requestId, "http2 req end")
+	}
 }
 
 func (obj *connecotr) taskMain(task *reqTask, afterTime *time.Timer) (*http.Response, error, bool) {
 	if obj.h2 && obj.h2Closed() {
+		if task.debug {
+			log.Printf("requestId:%s: %s", task.requestId, "h2 con is closed")
+		}
 		return nil, errors.New("conn is closed"), true
 	}
 	select {
 	case <-obj.closeCtx.Done():
+		if task.debug {
+			log.Printf("requestId:%s: %s", task.requestId, "connecotr closeCnl")
+		}
 		return nil, tools.WrapError(obj.closeCtx.Err(), "close ctx error: "), true
 	default:
 	}
@@ -182,7 +204,11 @@ func (obj *connecotr) taskMain(task *reqTask, afterTime *time.Timer) (*http.Resp
 	select {
 	case <-task.ctx.Done():
 		if task.res != nil && task.err == nil && obj.isPool {
-			<-obj.bodyCtx.Done() //wait body close
+			select {
+			case <-obj.bodyCtx.Done(): //wait body close
+			case <-obj.deleteCtx.Done(): //force conn close
+				task.err = tools.WrapError(obj.deleteCtx.Err(), "delete ctx error: ")
+			}
 		}
 	case <-obj.deleteCtx.Done(): //force conn close
 		task.err = tools.WrapError(obj.deleteCtx.Err(), "delete ctx error: ")
@@ -219,8 +245,6 @@ func (obj *connPool) rwMain(conn *connecotr) {
 		if afterTime != nil {
 			afterTime.Stop()
 		}
-		obj.rt.connsLock.Lock()
-		defer obj.rt.connsLock.Unlock()
 		conn.Close()
 		obj.total.Add(-1)
 		if obj.total.Load() <= 0 {
@@ -237,6 +261,15 @@ func (obj *connPool) rwMain(conn *connecotr) {
 		case <-conn.closeCtx.Done(): //safe close conn
 			return
 		case task := <-obj.tasks: //recv task
+			if task.debug {
+				log.Printf("requestId:%s: %s", task.requestId, "recv task")
+			}
+			if task == nil {
+				if task.debug {
+					log.Printf("requestId:%s: %s", task.requestId, "recv task is nil")
+				}
+				return
+			}
 			res, err, notice := conn.taskMain(task, afterTime)
 			if notice {
 				obj.notice(task)
@@ -250,9 +283,9 @@ func (obj *connPool) rwMain(conn *connecotr) {
 }
 func (obj *connPool) ForceClose() {
 	obj.deleteCnl()
-	delete(obj.rt.connPools, obj.key)
+	obj.Close()
 }
 func (obj *connPool) Close() {
 	obj.closeCnl()
-	delete(obj.rt.connPools, obj.key)
+	obj.rt.delConnPool(obj.key)
 }

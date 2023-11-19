@@ -114,7 +114,7 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	client := &http.Client{
 		Transport: transport,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			ctxData := req.Context().Value(keyPrincipalID).(*reqCtxData)
+			ctxData := GetReqCtxData(req.Context())
 			if ctxData.maxRedirectNum == 0 || ctxData.maxRedirectNum >= len(via) {
 				return nil
 			}

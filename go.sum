@@ -31,6 +31,8 @@ github.com/gospider007/blog v0.0.0-20231024075658-5da1a801a2c8 h1:rcbzO343eHoZ1y
 github.com/gospider007/blog v0.0.0-20231024075658-5da1a801a2c8/go.mod h1:CCJ+hvQ0kxL+qB/Wfr1xt7xspsG4XiczhnAPVxG2m3M=
 github.com/gospider007/bs4 v0.0.0-20231024075735-6bbdac929d8b h1:S/lDIKvIwj7YyTm3QyouHBWmLrzLLLD0pm7NkgzwYA0=
 github.com/gospider007/bs4 v0.0.0-20231024075735-6bbdac929d8b/go.mod h1:n6GeaqU6PyhuPkKD74xSEC1+vITNpurtzhq/ikwBxcQ=
+github.com/gospider007/bs4 v0.0.0-20231119141556-162d71807dcc h1:cYnsCLDMRfuWV3AoK4d2R1CTXdmQpOYm42ms8PhcBFI=
+github.com/gospider007/bs4 v0.0.0-20231119141556-162d71807dcc/go.mod h1:oFH47TbYECc3Mbd+6W3UmJWZoOvj/8ZwXimE8iIedRI=
 github.com/gospider007/gson v0.0.0-20231024092648-c97546a0287d h1:3+FOSLWmVEq3erpgqtInm+v1me0OIm9xxr18YczoFP0=
 github.com/gospider007/gson v0.0.0-20231024092648-c97546a0287d/go.mod h1:8CJ5eDQBzhCtArlT6iHA+1TromaaD/N7tag0FuDB1k0=
 github.com/gospider007/gson v0.0.0-20231108025125-ff62d4066dc4 h1:5s6Ird9YHFd858jV2DBEgJaVuDacV11VvvFd6a4nqRI=
@@ -39,6 +41,8 @@ github.com/gospider007/gson v0.0.0-20231110081735-fa6816715498 h1:NDZlnVcLScXmCe
 github.com/gospider007/gson v0.0.0-20231110081735-fa6816715498/go.mod h1:r8uL+sPUwP8+6n8GZFa2iz2bJe0qNS6EKwkqmiZhHqI=
 github.com/gospider007/gson v0.0.0-20231114084834-650b26cdd864 h1:san+x97YVi5o580y/0e64mrs2b7JkG7dGlsS4+bjw44=
 github.com/gospider007/gson v0.0.0-20231114084834-650b26cdd864/go.mod h1:r8uL+sPUwP8+6n8GZFa2iz2bJe0qNS6EKwkqmiZhHqI=
+github.com/gospider007/gson v0.0.0-20231119141525-66095080057d h1:K9IbMHY2dZfi1ddJWL7a+KkZe6apIYaXN1cD8lDRH5I=
+github.com/gospider007/gson v0.0.0-20231119141525-66095080057d/go.mod h1:r8uL+sPUwP8+6n8GZFa2iz2bJe0qNS6EKwkqmiZhHqI=
 github.com/gospider007/gtls v0.0.0-20231024092712-01193b9f0404 h1:Qp/o+l3KgWmviEsy0OXlFSjA0lbB8YtlcIOxN1xXyoI=
 github.com/gospider007/gtls v0.0.0-20231024092712-01193b9f0404/go.mod h1:fLcidMDKVv8b9NvLy0P/ZclltTaXJvTHANWiPCgDbSI=
 github.com/gospider007/gtls v0.0.0-20231108025158-443489ca9953 h1:CN2nz4q88S3BhNR1QSmXubOgMGnxzWwdDL2OIASwYBs=
@@ -59,6 +63,8 @@ github.com/gospider007/tools v0.0.0-20231104124710-69ac32876ccc h1:29s54Z07h4MVT
 github.com/gospider007/tools v0.0.0-20231104124710-69ac32876ccc/go.mod h1:aVRsLb/dp5mDycIzyS/cKQMl8uPc0mCEXg5PzbfzHZk=
 github.com/gospider007/tools v0.0.0-20231110011734-c2a4739ea0a0 h1:/MfNCUJW9rfx0LsOy/rAWwp1dDZujOocuIks5KNysOk=
 github.com/gospider007/tools v0.0.0-20231110011734-c2a4739ea0a0/go.mod h1:myK4kDqDx4TlplDVnfYMI7Xi5VUbFZ3fxwAh2Cwm7ks=
+github.com/gospider007/tools v0.0.0-20231119141642-40c946cfdb81 h1:WUADmLuZ7rLXllZX0mZzQV5Etl7zJdok5w5uVBH+4G4=
+github.com/gospider007/tools v0.0.0-20231119141642-40c946cfdb81/go.mod h1:myK4kDqDx4TlplDVnfYMI7Xi5VUbFZ3fxwAh2Cwm7ks=
 github.com/gospider007/websocket v0.0.0-20231024120029-ac3d4bf72f42 h1:WeR+cv6ru53SkOt/+O7urqK5L/dLIEtTERoM9BqWjqs=
 github.com/gospider007/websocket v0.0.0-20231024120029-ac3d4bf72f42/go.mod h1:xkiuV/YXMM0ljUWU5ikm5u9e1ssmNia8mk2Fnzg6ux0=
 github.com/gospider007/websocket v0.0.0-20231102021107-d34612e770bd h1:6kmXEifLgDwUtT9D/MUns8kcm81vnBw7FQvQ2vcf/Jc=
@@ -74,6 +80,8 @@ github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHm
 github.com/klauspost/compress v1.13.6/go.mod h1:/3/Vjq9QcHkK5uEr5lBEmyoZ1iFhe47etQ6QUkpK6sk=
 github.com/klauspost/compress v1.17.2 h1:RlWWUY/Dr4fL8qk9YG7DTZ7PDgME2V4csBXA8L/ixi4=
 github.com/klauspost/compress v1.17.2/go.mod h1:ntbaceVETuRiXiv4DpjP66DpAtAGkEQskQzEyD//IeE=
+github.com/klauspost/compress v1.17.3 h1:qkRjuerhUU1EmXLYGkSH6EZL+vPSxIrYjLNAK4slzwA=
+github.com/klauspost/compress v1.17.3/go.mod h1:/dCuZOvVtNoHsyb+cuJD3itjs3NbnF6KH9zAO4BDxPM=
 github.com/klauspost/cpuid/v2 v2.0.12/go.mod h1:g2LTdtYhdyuGPqyWyv7qRAmj1WBqxuObKfj5c0PQa7c=
 github.com/klauspost/cpuid/v2 v2.2.5 h1:0E5MSMDEoAulmXNFquVs//DdoomxaoTY1kUhbc/qbZg=
 github.com/klauspost/cpuid/v2 v2.2.5/go.mod h1:Lcz8mBdAVJIBVzewtcLocK12l3Y+JytZYpaMropDUws=
@@ -85,6 +93,8 @@ github.com/mholt/acmez v1.2.0 h1:1hhLxSgY5FvH5HCnGUuwbKY2VQVo8IU7rxXKSnZ7F30=
 github.com/mholt/acmez v1.2.0/go.mod h1:VT9YwH1xgNX1kmYY89gY8xPJC84BFAisjo8Egigt4kE=
 github.com/miekg/dns v1.1.56 h1:5imZaSeoRNvpM9SzWNhEcP9QliKiz20/dA2QabIGVnE=
 github.com/miekg/dns v1.1.56/go.mod h1:cRm6Oo2C8TY9ZS/TqsSrseAcncm74lfK5G+ikN2SWWY=
+github.com/miekg/dns v1.1.57 h1:Jzi7ApEIzwEPLHWRcafCN9LZSBbqQpxjt/wpgvg7wcM=
+github.com/miekg/dns v1.1.57/go.mod h1:uqRjCRUuEAA6qsOiJvDd+CFo/vW+y5WR6SNmHE55hZk=
 github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
 github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd h1:TRLaZ9cD/w8PVh93nsPXa1VrQ6jlwL5oN8l14QlcNfg=
 github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=

@@ -1,10 +1,7 @@
 package requests
 
 import (
-	"errors"
 	"net/http"
-
-	"github.com/gospider007/gson"
 )
 
 const (
@@ -34,27 +31,13 @@ func (obj *RequestOption) initHeaders() (http.Header, error) {
 	switch headers := obj.Headers.(type) {
 	case http.Header:
 		return headers.Clone(), nil
-	case *gson.Client:
-		if !headers.IsObject() {
-			return nil, errors.New("new headers error")
-		}
-		head := http.Header{}
-		for kk, vv := range headers.Map() {
-			if vv.IsArray() {
-				for _, v := range vv.Array() {
-					head.Add(kk, v.String())
-				}
-			} else {
-				head.Add(kk, vv.String())
-			}
-		}
-		return head, nil
 	default:
-		jsonData, err := gson.Decode(headers)
-		if err != nil {
+		_, dataMap, _, err := obj.newBody(headers, mapType)
+		if dataMap == nil || err != nil {
 			return nil, err
 		}
-		obj.Headers = jsonData
-		return obj.initHeaders()
+		head, order := dataMap.parseHeaders()
+		obj.OrderHeaders = order
+		return head, err
 	}
 }
