@@ -8,10 +8,10 @@ import (
 	"github.com/gospider007/requests"
 )
 
-func TestTryNum(t *testing.T) {
+func TestMaxRetries(t *testing.T) {
 	n := 0
 	resp, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{
-		TryNum: 3,
+		MaxRetries: 3,
 		ResultCallBack: func(ctx context.Context, client *requests.Client, response *requests.Response) error {
 			if n == 0 {
 				n++

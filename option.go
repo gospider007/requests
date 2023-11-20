@@ -13,28 +13,65 @@ import (
 	"github.com/gospider007/websocket"
 )
 
-// Options for sending requests
-type RequestOption struct {
+// Connection Management Options
+type ClientOption struct {
 	ForceHttp1            bool                                                                            //force  use http1 send requests
 	OrderHeaders          []string                                                                        //order headers with http1
 	Ja3                   bool                                                                            //enable ja3 fingerprint
 	Ja3Spec               ja3.Ja3Spec                                                                     //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
-	H2Ja3Spec             ja3.H2Ja3Spec                                                                   //custom h2 fingerprint
-	Proxy                 string                                                                          //proxy,support http,https,socks5,example：http://127.0.0.1:7005
-	DisCookie             bool                                                                            //disable cookies,not use cookies
+	H2Ja3Spec             ja3.H2Ja3Spec                                                                   //h2 fingerprint
+	Proxy                 string                                                                          //proxy,support https,http,socks5
+	DisCookie             bool                                                                            //disable cookies
 	DisDecode             bool                                                                            //disable auto decode
 	DisUnZip              bool                                                                            //disable auto zip decode
 	DisAlive              bool                                                                            //disable  keepalive
-	Bar                   bool                                                                            //enable bar display
+	Bar                   bool                                                                            ////enable bar display
 	Timeout               time.Duration                                                                   //request timeout
 	OptionCallBack        func(ctx context.Context, client *Client, option *RequestOption) error          //option callback,if error is returnd, break request
 	ResultCallBack        func(ctx context.Context, client *Client, response *Response) error             //result callback,if error is returnd,next errCallback
 	ErrCallBack           func(ctx context.Context, client *Client, response *Response, err error) error  //error callback,if error is returnd,break request
 	RequestCallBack       func(ctx context.Context, request *http.Request, response *http.Response) error //request and response callback,if error is returnd,reponse is error
-	TryNum                int                                                                             //try num
+	MaxRetries            int                                                                             //try num
 	MaxRedirectNum        int                                                                             //redirect num ,<0 no redirect,==0 no limit
-	Headers               any                                                                             //request headers：json,map，header
+	Headers               any                                                                             //default headers
 	ResponseHeaderTimeout time.Duration                                                                   //ResponseHeaderTimeout ,default:30
+	TlsHandshakeTimeout   time.Duration                                                                   //tls timeout,default:15
+
+	//network card ip
+	DialTimeout time.Duration //dial tcp timeout,default:15
+	KeepAlive   time.Duration //keepalive,default:30
+	LocalAddr   *net.TCPAddr
+	Dns         *net.UDPAddr  //dns
+	AddrType    gtls.AddrType //dns parse addr type
+	Jar         *Jar          //custom cookies
+
+	GetProxy    func(ctx context.Context, url *url.URL) (string, error) //proxy callback:support https,http,socks5 proxy
+	GetAddrType func(host string) gtls.AddrType
+}
+
+// Options for sending requests
+type RequestOption struct {
+	ForceHttp1      bool                                                                            //force  use http1 send requests
+	OrderHeaders    []string                                                                        //order headers with http1
+	Ja3             bool                                                                            //enable ja3 fingerprint
+	Ja3Spec         ja3.Ja3Spec                                                                     //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
+	H2Ja3Spec       ja3.H2Ja3Spec                                                                   //custom h2 fingerprint
+	Proxy           string                                                                          //proxy,support http,https,socks5,example：http://127.0.0.1:7005
+	DisCookie       bool                                                                            //disable cookies,not use cookies
+	DisDecode       bool                                                                            //disable auto decode
+	DisUnZip        bool                                                                            //disable auto zip decode
+	DisAlive        bool                                                                            //disable  keepalive
+	Bar             bool                                                                            //enable bar display
+	Timeout         time.Duration                                                                   //request timeout
+	OptionCallBack  func(ctx context.Context, client *Client, option *RequestOption) error          //option callback,if error is returnd, break request
+	ResultCallBack  func(ctx context.Context, client *Client, response *Response) error             //result callback,if error is returnd,next errCallback
+	ErrCallBack     func(ctx context.Context, client *Client, response *Response, err error) error  //error callback,if error is returnd,break request
+	RequestCallBack func(ctx context.Context, request *http.Request, response *http.Response) error //request and response callback,if error is returnd,reponse is error
+
+	MaxRetries            int           //try num
+	MaxRedirectNum        int           //redirect num ,<0 no redirect,==0 no limit
+	Headers               any           //request headers：json,map，header
+	ResponseHeaderTimeout time.Duration //ResponseHeaderTimeout ,default:30
 	TlsHandshakeTimeout   time.Duration
 
 	//network card ip
@@ -141,19 +178,10 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 		option.Proxy = ""
 	}
 
-	if option.TryNum < 0 {
-		option.TryNum = 0
-	} else if option.TryNum == 0 {
-		option.TryNum = obj.tryNum
-	}
-	if option.OptionCallBack == nil {
-		option.OptionCallBack = obj.optionCallBack
-	}
-	if option.ResultCallBack == nil {
-		option.ResultCallBack = obj.resultCallBack
-	}
-	if option.ErrCallBack == nil {
-		option.ErrCallBack = obj.errCallBack
+	if option.MaxRetries < 0 {
+		option.MaxRetries = 0
+	} else if option.MaxRetries == 0 {
+		option.MaxRetries = obj.maxRetries
 	}
 	if option.Headers == nil {
 		option.Headers = obj.headers
@@ -206,6 +234,15 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	}
 	if !option.H2Ja3Spec.IsSet() {
 		option.H2Ja3Spec = obj.h2Ja3Spec
+	}
+	if option.OptionCallBack == nil {
+		option.OptionCallBack = obj.optionCallBack
+	}
+	if option.ResultCallBack == nil {
+		option.ResultCallBack = obj.resultCallBack
+	}
+	if option.ErrCallBack == nil {
+		option.ErrCallBack = obj.errCallBack
 	}
 	if option.RequestCallBack == nil {
 		option.RequestCallBack = obj.requestCallBack

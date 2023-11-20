@@ -11,7 +11,7 @@ import (
 func TestErrCallBack(t *testing.T) {
 	n := 0
 	_, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{
-		TryNum: 3,
+		MaxRetries: 3,
 		ResultCallBack: func(ctx context.Context, client *requests.Client, response *requests.Response) error {
 			return errors.New("try")
 		},

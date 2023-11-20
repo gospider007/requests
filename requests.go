@@ -241,7 +241,7 @@ func (obj *Client) Request(ctx context.Context, method string, href string, opti
 		rawOption = options[0]
 	}
 	optionBak := obj.newRequestOption(rawOption)
-	for tryNum := 0; tryNum <= optionBak.TryNum; tryNum++ {
+	for maxRetries := 0; maxRetries <= optionBak.MaxRetries; maxRetries++ {
 		select {
 		case <-obj.ctx.Done():
 			obj.Close()

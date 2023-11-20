@@ -2,7 +2,6 @@ package requests
 
 import (
 	"context"
-	"net"
 	"net/url"
 	"time"
 
@@ -11,42 +10,6 @@ import (
 	"github.com/gospider007/gtls"
 	"github.com/gospider007/ja3"
 )
-
-// Connection Management Options
-type ClientOption struct {
-	ForceHttp1            bool                                                                            //force  use http1 send requests
-	OrderHeaders          []string                                                                        //order headers with http1
-	Ja3                   bool                                                                            //enable ja3 fingerprint
-	Ja3Spec               ja3.Ja3Spec                                                                     //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
-	H2Ja3Spec             ja3.H2Ja3Spec                                                                   //h2 fingerprint
-	Proxy                 string                                                                          //proxy,support https,http,socks5
-	DisCookie             bool                                                                            //disable cookies
-	DisDecode             bool                                                                            //disable auto decode
-	DisUnZip              bool                                                                            //disable auto zip decode
-	DisAlive              bool                                                                            //disable  keepalive
-	Bar                   bool                                                                            ////enable bar display
-	Timeout               time.Duration                                                                   //request timeout
-	OptionCallBack        func(ctx context.Context, client *Client, option *RequestOption) error          //option callback,if error is returnd, break request
-	ResultCallBack        func(ctx context.Context, client *Client, response *Response) error             //result callback,if error is returnd,next errCallback
-	ErrCallBack           func(ctx context.Context, client *Client, response *Response, err error) error  //error callback,if error is returnd,break request
-	RequestCallBack       func(ctx context.Context, request *http.Request, response *http.Response) error //request and response callback,if error is returnd,reponse is error
-	TryNum                int                                                                             //try num
-	MaxRedirectNum        int                                                                             //redirect num ,<0 no redirect,==0 no limit
-	Headers               any                                                                             //default headers
-	ResponseHeaderTimeout time.Duration                                                                   //ResponseHeaderTimeout ,default:30
-	TlsHandshakeTimeout   time.Duration                                                                   //tls timeout,default:15
-
-	//network card ip
-	DialTimeout time.Duration //dial tcp timeout,default:15
-	KeepAlive   time.Duration //keepalive,default:30
-	LocalAddr   *net.TCPAddr
-	Dns         *net.UDPAddr  //dns
-	AddrType    gtls.AddrType //dns parse addr type
-	Jar         *Jar          //custom cookies
-
-	GetProxy    func(ctx context.Context, url *url.URL) (string, error) //proxy callback:support https,http,socks5 proxy
-	GetAddrType func(host string) gtls.AddrType
-}
 
 // Connection Management
 type Client struct {
@@ -59,7 +22,7 @@ type Client struct {
 	disUnZip       bool
 	disAlive       bool
 
-	tryNum int
+	maxRetries int
 
 	requestCallBack func(context.Context, *http.Request, *http.Response) error
 
@@ -134,7 +97,7 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 		disDecode:             option.DisDecode,
 		disUnZip:              option.DisUnZip,
 		disAlive:              option.DisAlive,
-		tryNum:                option.TryNum,
+		maxRetries:            option.MaxRetries,
 		optionCallBack:        option.OptionCallBack,
 		resultCallBack:        option.ResultCallBack,
 		errCallBack:           option.ErrCallBack,
