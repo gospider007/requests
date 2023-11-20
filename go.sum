@@ -49,6 +49,8 @@ github.com/gospider007/gtls v0.0.0-20231108025158-443489ca9953 h1:CN2nz4q88S3BhN
 github.com/gospider007/gtls v0.0.0-20231108025158-443489ca9953/go.mod h1:EACbjhpG22ykBPE0xIKxc6D3N3YWTBoWrvsLLyhYqto=
 github.com/gospider007/gtls v0.0.0-20231109073720-32fe741c06d3 h1:vyqxzWp1OQapjYY3St9CsI6Kln6QZrxwOM7cqgNlt9Y=
 github.com/gospider007/gtls v0.0.0-20231109073720-32fe741c06d3/go.mod h1:8GOdq5AxbOweohgOQ7YNWwEqzIZHLtM5gHHQOPdwfFI=
+github.com/gospider007/gtls v0.0.0-20231120122450-e763299259db h1:8ghU2J0g7BKC1t61TCA3kCkcUsgCn36YwEtTWXsqe+o=
+github.com/gospider007/gtls v0.0.0-20231120122450-e763299259db/go.mod h1:yE9d9KMYxJEQawkOOHBea03dN89uo3hWQxYiv9tnz0A=
 github.com/gospider007/ja3 v0.0.0-20231029025157-38fc2f8f2d91 h1:qQokihfTAX+/U8GIMvZauRtE4G+/1Jq8XIJx8xLr04A=
 github.com/gospider007/ja3 v0.0.0-20231029025157-38fc2f8f2d91/go.mod h1:ur78/uhYDDULSy1ldA/pPpGhjk973Q1VsPnbktXGU/g=
 github.com/gospider007/kinds v0.0.0-20231024093643-7a4424f2d30e h1:lmX6IQKkrNDbXfHsvrv1Uz0MoG2v5+4VC6Gdh9irUNY=
@@ -65,6 +67,8 @@ github.com/gospider007/tools v0.0.0-20231110011734-c2a4739ea0a0 h1:/MfNCUJW9rfx0
 github.com/gospider007/tools v0.0.0-20231110011734-c2a4739ea0a0/go.mod h1:myK4kDqDx4TlplDVnfYMI7Xi5VUbFZ3fxwAh2Cwm7ks=
 github.com/gospider007/tools v0.0.0-20231119141642-40c946cfdb81 h1:WUADmLuZ7rLXllZX0mZzQV5Etl7zJdok5w5uVBH+4G4=
 github.com/gospider007/tools v0.0.0-20231119141642-40c946cfdb81/go.mod h1:myK4kDqDx4TlplDVnfYMI7Xi5VUbFZ3fxwAh2Cwm7ks=
+github.com/gospider007/tools v0.0.0-20231120122411-d631cc2fc371 h1:wF5pm7gilDuDKg4rmhmz4S+/Y3EEVgvZdwgywnhbyKA=
+github.com/gospider007/tools v0.0.0-20231120122411-d631cc2fc371/go.mod h1:myK4kDqDx4TlplDVnfYMI7Xi5VUbFZ3fxwAh2Cwm7ks=
 github.com/gospider007/websocket v0.0.0-20231024120029-ac3d4bf72f42 h1:WeR+cv6ru53SkOt/+O7urqK5L/dLIEtTERoM9BqWjqs=
 github.com/gospider007/websocket v0.0.0-20231024120029-ac3d4bf72f42/go.mod h1:xkiuV/YXMM0ljUWU5ikm5u9e1ssmNia8mk2Fnzg6ux0=
 github.com/gospider007/websocket v0.0.0-20231102021107-d34612e770bd h1:6kmXEifLgDwUtT9D/MUns8kcm81vnBw7FQvQ2vcf/Jc=

@@ -416,6 +416,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		err = errors.New("response is nil")
 		return
 	}
+	response.rawConn = response.response.Body.(*readWriteCloser)
 	if !response.disUnzip {
 		response.disUnzip = response.response.Uncompressed
 	}
@@ -423,6 +424,10 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		response.webSocket, err = websocket.NewClientConn(response.response, response.CloseConn)
 	} else if response.response.Header.Get("Content-Type") == "text/event-stream" {
 		response.sse = newSse(response.response.Body, response.CloseConn)
+	} else if !response.disUnzip {
+		if response.response.Body, err = tools.CompressionDecode(obj.ctx, response.response.Body, response.ContentEncoding()); err != nil {
+			return
+		}
 	}
 	return
 }

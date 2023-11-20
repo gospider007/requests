@@ -20,6 +20,7 @@ import (
 )
 
 type Response struct {
+	rawConn   *readWriteCloser
 	response  *http.Response
 	webSocket *websocket.Conn
 	sse       *Sse
@@ -33,7 +34,7 @@ type Response struct {
 	filePath  string
 	bar       bool
 	isNewConn bool
-	isClosed  bool
+	readBody  bool
 }
 
 type Sse struct {
@@ -230,7 +231,7 @@ func (obj *Response) barRead() (*bytes.Buffer, error) {
 		bar:  bar.NewClient(obj.response.ContentLength),
 		body: bytes.NewBuffer(nil),
 	}
-	err := tools.CopyWitchContext(obj.response.Request.Context(), barData, obj.response.Body, false)
+	err := tools.CopyWitchContext(obj.response.Request.Context(), barData, obj.response.Body, true)
 	if err != nil {
 		return nil, err
 	}
@@ -270,22 +271,25 @@ func (obj *Response) ReadBody() error {
 	if obj.webSocket != nil || obj.sse != nil {
 		return errors.New("ws or sse can not read")
 	}
+	if obj.readBody {
+		return errors.New("already read body")
+	}
 	var bBody *bytes.Buffer
 	var err error
+	defer obj.response.Body.Close()
 	if obj.bar && obj.ContentLength() > 0 {
 		bBody, err = obj.barRead()
 	} else {
 		bBody = bytes.NewBuffer(nil)
-		err = tools.CopyWitchContext(obj.response.Request.Context(), bBody, obj.response.Body, false)
+		err = tools.CopyWitchContext(obj.response.Request.Context(), bBody, obj.response.Body, true)
 	}
+	obj.readBody = true
 	if err != nil {
 		obj.CloseConn()
 		return errors.New("response read content error: " + err.Error())
 	}
-	if !obj.disUnzip {
-		if bBody, err = tools.CompressionDecode(obj.ctx, bBody, obj.ContentEncoding()); err != nil {
-			return errors.New("response compressioin decode error: " + err.Error())
-		}
+	if obj.IsStream() {
+		obj.CloseBody()
 	}
 	if !obj.disDecode && obj.defaultDecode() {
 		if content, encoding, err := tools.Charset(bBody.Bytes(), obj.ContentType()); err == nil {
@@ -299,75 +303,54 @@ func (obj *Response) ReadBody() error {
 	return nil
 }
 
-// conn proxy
-func (obj *Response) Proxy() string {
-	return obj.response.Body.(interface{ Proxy() string }).Proxy()
-}
-
-// conn is in pool ?
-func (obj *Response) InPool() bool {
-	return obj.response.Body.(interface{ InPool() bool }).InPool()
-}
-
 // conn is new conn
 func (obj *Response) IsNewConn() bool {
 	return obj.isNewConn
 }
 
-// conn ja3
-func (obj *Response) Ja3() string {
-	return obj.response.Body.(interface{ Ja3() string }).Ja3()
-}
-
-// conn h2ja3
-func (obj *Response) H2Ja3() string {
-	return obj.response.Body.(interface{ H2Ja3() string }).H2Ja3()
-}
-
 // close body
 func (obj *Response) CloseBody() error {
-	if obj.isClosed {
-		return nil
-	}
-	defer func() {
-		if obj.cnl != nil {
-			obj.cnl()
-		}
-		obj.isClosed = true
-	}()
 	if obj.webSocket != nil {
 		obj.webSocket.Close()
 	}
 	if obj.sse != nil {
 		obj.sse.Close()
 	}
-	if obj.IsStream() {
+	if obj.IsStream() || !obj.readBody {
 		obj.CloseConn()
-		return nil
+	} else {
+		obj.rawConn.Close()
 	}
-	if obj.response != nil && obj.response.Body != nil {
-		if obj.IsStream() {
-			obj.CloseConn()
-			return nil
-		}
-		if err := tools.CopyWitchContext(obj.ctx, io.Discard, obj.response.Body, false); err != nil {
-			obj.CloseConn()
-			return err
-		} else {
-			return obj.response.Body.Close()
-		}
-	}
+	obj.cnl()
 	return nil
+}
+
+// conn proxy
+func (obj *Response) Proxy() string {
+	return obj.rawConn.Proxy()
+}
+
+// conn is in pool ?
+func (obj *Response) InPool() bool {
+	return obj.rawConn.InPool()
+}
+
+// conn ja3
+func (obj *Response) Ja3() string {
+	return obj.rawConn.Ja3()
+}
+
+// conn h2ja3
+func (obj *Response) H2Ja3() string {
+	return obj.rawConn.H2Ja3()
 }
 
 // safe close conn
 func (obj *Response) CloseConn() {
-	obj.response.Body.(interface{ CloseConn() }).CloseConn()
-	obj.isClosed = true
+	obj.rawConn.CloseConn()
 }
 
 // force close conn
 func (obj *Response) ForceCloseConn() {
-	obj.response.Body.(interface{ ForceCloseConn() }).ForceCloseConn()
-	obj.isClosed = true
+	obj.rawConn.ForceCloseConn()
 }
