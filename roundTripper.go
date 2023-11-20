@@ -173,20 +173,21 @@ func (obj *RoundTripper) utlsConfigClone() *utls.Config {
 	return obj.utlsConfig.Clone()
 }
 func (obj *RoundTripper) dial(ctxData *reqCtxData, key *connKey, req *http.Request) (conn *connecotr, err error) {
-	if !ctxData.disProxy && ctxData.proxy == nil {
-		if ctxData.proxy, err = obj.getProxy(req.Context(), req.URL); err != nil {
+	proxy := ctxData.proxy
+	if !ctxData.disProxy && proxy == nil {
+		if proxy, err = obj.getProxy(req.Context(), req.URL); err != nil {
 			return conn, err
 		}
 	}
-	if ctxData.proxy != nil {
-		key.proxy = ctxData.proxy.String()
+	if proxy != nil {
+		key.proxy = proxy.String()
 	}
 	var netConn net.Conn
 	host := getHost(req)
-	if ctxData.proxy == nil {
+	if proxy == nil {
 		netConn, err = obj.dialer.DialContext(req.Context(), "tcp", key.addr)
 	} else {
-		netConn, err = obj.dialer.DialContextWithProxy(req.Context(), "tcp", req.URL.Scheme, key.addr, host, ctxData.proxy, obj.tlsConfigClone())
+		netConn, err = obj.dialer.DialContextWithProxy(req.Context(), "tcp", req.URL.Scheme, key.addr, host, proxy, obj.tlsConfigClone())
 	}
 	if err != nil {
 		return conn, err
