@@ -25,7 +25,7 @@ Requests is a fully featured HTTP client library for Golang. Network requests ca
     * [Form request](https://github.com/gospider007/requests/blob/master/test/request/form_test.go) with `multipart/form-data`
     * [Flow request](https://github.com/gospider007/requests/blob/master/test/request/stream_test.go)
     * [Request URL Path Params](https://github.com/gospider007/requests/blob/master/test/request/params_test.go)
-    * [Local network card](https://github.com/gospider007/requests/blob/master/test/request/params_test.go)
+    * [Local network card](https://github.com/gospider007/requests/blob/master/test/request/localAddr_test.go)
   * [Response](https://github.com/gospider007/requests/tree/master/test/response)
     * [Return whether to reuse connections](https://github.com/gospider007/requests/blob/master/test/response/isNewConn_test.go)
   * [Middleware](https://github.com/gospider007/requests/tree/master/test/middleware)
