@@ -242,7 +242,6 @@ func (obj *connPool) rwMain(conn *connecotr) {
 	conn.withCancel(obj.deleteCtx, obj.closeCtx)
 	var afterTime *time.Timer
 	defer func() {
-		log.Print("这个被删除了")
 		if afterTime != nil {
 			afterTime.Stop()
 		}

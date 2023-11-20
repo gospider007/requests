@@ -205,6 +205,20 @@ func (obj *RequestOption) newBody(val any, valType int) (io.Reader, *orderMap, [
 		obj.once = true
 		return reader, nil, nil, nil
 	}
+	if valType == readType {
+		switch value := val.(type) {
+		case string:
+			return bytes.NewReader(tools.StringToBytes(value)), nil, nil, nil
+		case []byte:
+			return bytes.NewReader(value), nil, nil, nil
+		default:
+			enData, err := gson.Encode(value)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			return bytes.NewReader(enData), nil, nil, nil
+		}
+	}
 	if mapData := any2Map(val); mapData != nil {
 		val = mapData
 	}
@@ -213,69 +227,35 @@ func (obj *RequestOption) newBody(val any, valType int) (io.Reader, *orderMap, [
 		if !value.IsObject() {
 			return nil, nil, nil, errors.New("body-type error")
 		}
-		switch valType {
-		case readType:
-			return bytes.NewReader(value.Bytes()), nil, nil, nil
-		case mapType:
-			orderMap := NewOrderMap()
-			for kk, vv := range value.Map() {
-				if vv.IsArray() {
-					valData := make([]any, len(vv.Array()))
-					for i, v := range vv.Array() {
-						valData[i] = v.Value()
-					}
-					orderMap.Set(kk, valData)
-				} else {
-					orderMap.Set(kk, vv.Value())
+		orderMap := NewOrderMap()
+		for kk, vv := range value.Map() {
+			if vv.IsArray() {
+				valData := make([]any, len(vv.Array()))
+				for i, v := range vv.Array() {
+					valData[i] = v.Value()
 				}
+				orderMap.Set(kk, valData)
+			} else {
+				orderMap.Set(kk, vv.Value())
 			}
-			return nil, orderMap, nil, nil
-		default:
-			return nil, nil, nil, fmt.Errorf("unknow content-type：%d", valType)
 		}
+		return nil, orderMap, nil, nil
 	case *orderMap:
-		switch valType {
-		case readType:
-			enData, err := gson.Encode(value)
-			return bytes.NewReader(enData), nil, nil, err
-		case mapType:
-			return nil, value, nil, nil
-		default:
-			return nil, nil, nil, fmt.Errorf("unknow content-type：%d", valType)
-		}
+		return nil, value, nil, nil
 	case map[any]any:
-		switch valType {
-		case mapType:
-			orderMap := NewOrderMap()
-			for kk, vv := range value {
-				if vvs, ok := vv.([]any); ok {
-					vvData := make([]any, len(vvs))
-					for i, vv := range vvs {
-						vvData[i] = vv
-					}
-					orderMap.Set(fmt.Sprint(kk), vvData)
-				} else {
-					orderMap.Set(fmt.Sprint(kk), vv)
+		orderMap := NewOrderMap()
+		for kk, vv := range value {
+			if vvs, ok := vv.([]any); ok {
+				vvData := make([]any, len(vvs))
+				for i, vv := range vvs {
+					vvData[i] = vv
 				}
+				orderMap.Set(fmt.Sprint(kk), vvData)
+			} else {
+				orderMap.Set(fmt.Sprint(kk), vv)
 			}
-			return nil, orderMap, nil, nil
 		}
-	case string:
-		switch valType {
-		case readType:
-			return bytes.NewReader(tools.StringToBytes(value)), nil, nil, nil
-		case mapType:
-		default:
-			return nil, nil, nil, fmt.Errorf("unknow content-type：%d", valType)
-		}
-	case []byte:
-		switch valType {
-		case readType:
-			return bytes.NewReader(value), nil, nil, nil
-		case mapType:
-		default:
-			return nil, nil, nil, fmt.Errorf("unknow content-type：%d", valType)
-		}
+		return nil, orderMap, nil, nil
 	}
 	result, err := gson.Decode(val)
 	if err != nil {

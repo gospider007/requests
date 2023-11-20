@@ -318,7 +318,7 @@ func (obj *Response) CloseBody() error {
 	}
 	if obj.IsStream() || !obj.readBody {
 		obj.CloseConn()
-	} else {
+	} else if obj.rawConn != nil {
 		obj.rawConn.Close()
 	}
 	obj.cnl()
@@ -327,30 +327,46 @@ func (obj *Response) CloseBody() error {
 
 // conn proxy
 func (obj *Response) Proxy() string {
-	return obj.rawConn.Proxy()
+	if obj.rawConn != nil {
+		return obj.rawConn.Proxy()
+	}
+	return ""
 }
 
 // conn is in pool ?
 func (obj *Response) InPool() bool {
-	return obj.rawConn.InPool()
+	if obj.rawConn != nil {
+		return obj.rawConn.InPool()
+	}
+	return false
 }
 
 // conn ja3
 func (obj *Response) Ja3() string {
-	return obj.rawConn.Ja3()
+	if obj.rawConn != nil {
+		return obj.rawConn.Ja3()
+	}
+	return ""
 }
 
 // conn h2ja3
 func (obj *Response) H2Ja3() string {
-	return obj.rawConn.H2Ja3()
+	if obj.rawConn != nil {
+		return obj.rawConn.H2Ja3()
+	}
+	return ""
 }
 
 // safe close conn
 func (obj *Response) CloseConn() {
-	obj.rawConn.CloseConn()
+	if obj.rawConn != nil {
+		obj.rawConn.CloseConn()
+	}
 }
 
 // force close conn
 func (obj *Response) ForceCloseConn() {
-	obj.rawConn.ForceCloseConn()
+	if obj.rawConn != nil {
+		obj.rawConn.ForceCloseConn()
+	}
 }
