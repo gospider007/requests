@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"runtime"
 	"time"
 
 	"net/textproto"
@@ -15,6 +16,7 @@ import (
 
 	"net/http"
 
+	"github.com/gospider007/blog"
 	"github.com/gospider007/gtls"
 	"github.com/gospider007/ja3"
 	"github.com/gospider007/re"
@@ -270,6 +272,14 @@ func (obj *Client) Request(ctx context.Context, method string, href string, opti
 	}
 	return resp, err
 }
+func debugPrint(requestId string, content ...any) {
+	_, f, l, _ := runtime.Caller(1)
+	contents := []any{}
+	for _, cont := range content {
+		contents = append(contents, cont, " ")
+	}
+	log.Printf("%s:%d , %s: %s, %s: %s", f, l, blog.Color(2, "requestId"), blog.Color(1, requestId), blog.Color(2, "content"), blog.Color(3, contents...))
+}
 func (obj *Client) request(ctx context.Context, option *RequestOption) (response *Response, err error) {
 	response = new(Response)
 	defer func() {
@@ -333,7 +343,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		return response, tools.WrapError(err, errors.New("tempRequest init body error"), err)
 	}
 	if ctxData.debug {
-		log.Printf("requestId:%s: %s", ctxData.requestId, "create request")
+		debugPrint(ctxData.requestId, "create request with ctx")
 	}
 	//create request
 	if body != nil {
@@ -425,6 +435,9 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	} else if response.response.Header.Get("Content-Type") == "text/event-stream" {
 		response.sse = newSse(response.response.Body, response.CloseConn)
 	} else if !response.disUnzip {
+		if ctxData.debug {
+
+		}
 		if response.response.Body, err = tools.CompressionDecode(obj.ctx, response.response.Body, response.ContentEncoding()); err != nil {
 			return
 		}
