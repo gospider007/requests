@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -229,6 +230,7 @@ type connPool struct {
 	total     atomic.Int64
 	tasks     chan *reqTask
 	rt        *RoundTripper
+	lock      sync.Mutex
 }
 
 func (obj *connPool) notice(task *reqTask) {
@@ -248,7 +250,8 @@ func (obj *connPool) rwMain(conn *connecotr) {
 		conn.Close()
 		obj.total.Add(-1)
 		if obj.total.Load() <= 0 {
-			obj.Close()
+			obj.close()
+			obj.rt.delConnPool(obj.key)
 		}
 	}()
 	select {
@@ -281,11 +284,10 @@ func (obj *connPool) rwMain(conn *connecotr) {
 		}
 	}
 }
-func (obj *connPool) ForceClose() {
+func (obj *connPool) forceClose() {
 	obj.deleteCnl()
-	obj.Close()
+	obj.close()
 }
-func (obj *connPool) Close() {
+func (obj *connPool) close() {
 	obj.closeCnl()
-	obj.rt.delConnPool(obj.key)
 }

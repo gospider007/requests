@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"strings"
 	"testing"
 
@@ -109,7 +108,7 @@ func TestSendFormWithOrderMap(t *testing.T) {
 	if !strings.HasPrefix(jsonData.Get("headers.Content-Type").String(), "multipart/form-data") {
 		t.Fatal("json data error")
 	}
-	log.Print(jsonData)
+	// log.Print(jsonData)
 	if jsonData.Get("form.name").String() != "test" {
 		t.Fatal("json data error")
 	}

@@ -298,7 +298,7 @@ func (obj *RoundTripper) closeConns() {
 	obj.connsLock.Lock()
 	defer obj.connsLock.Unlock()
 	for key, pool := range obj.connPools {
-		pool.Close()
+		pool.close()
 		delete(obj.connPools, key)
 	}
 }
@@ -307,7 +307,7 @@ func (obj *RoundTripper) forceCloseConns() {
 	obj.connsLock.Lock()
 	defer obj.connsLock.Unlock()
 	for key, pool := range obj.connPools {
-		pool.ForceClose()
+		pool.forceClose()
 		delete(obj.connPools, key)
 	}
 }
