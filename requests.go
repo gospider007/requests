@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"runtime"
@@ -435,11 +436,15 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	} else if response.response.Header.Get("Content-Type") == "text/event-stream" {
 		response.sse = newSse(response.response.Body, response.CloseConn)
 	} else if !response.disUnzip {
-		if ctxData.debug {
-
+		var unCompressionBody io.ReadCloser
+		unCompressionBody, err = tools.CompressionDecode(response.response.Body, response.ContentEncoding())
+		if err != nil {
+			if err != io.ErrUnexpectedEOF && err != io.EOF {
+				return
+			}
 		}
-		if response.response.Body, err = tools.CompressionDecode(obj.ctx, response.response.Body, response.ContentEncoding()); err != nil {
-			return
+		if unCompressionBody != nil {
+			response.response.Body = unCompressionBody
 		}
 	}
 	return
