@@ -251,7 +251,6 @@ func (obj *connPool) rwMain(conn *connecotr) {
 		obj.total.Add(-1)
 		if obj.total.Load() <= 0 {
 			obj.close()
-			obj.rt.delConnPool(obj.key)
 		}
 	}()
 	select {
@@ -290,4 +289,5 @@ func (obj *connPool) forceClose() {
 }
 func (obj *connPool) close() {
 	obj.closeCnl()
+	obj.rt.delConnPool(obj.key)
 }

@@ -35,6 +35,8 @@ github.com/gospider007/blog v0.0.0-20231121084103-59a004dafccf h1:1laTsuH/wl5pZ5
 github.com/gospider007/blog v0.0.0-20231121084103-59a004dafccf/go.mod h1:CCJ+hvQ0kxL+qB/Wfr1xt7xspsG4XiczhnAPVxG2m3M=
 github.com/gospider007/bs4 v0.0.0-20231119141556-162d71807dcc h1:cYnsCLDMRfuWV3AoK4d2R1CTXdmQpOYm42ms8PhcBFI=
 github.com/gospider007/bs4 v0.0.0-20231119141556-162d71807dcc/go.mod h1:oFH47TbYECc3Mbd+6W3UmJWZoOvj/8ZwXimE8iIedRI=
+github.com/gospider007/bs4 v0.0.0-20231123090151-001db0b91941 h1:Aik3aBqnpujF5LA+JyIm3LNxivobnqAOPr+VVlTbqds=
+github.com/gospider007/bs4 v0.0.0-20231123090151-001db0b91941/go.mod h1:bbSbFlcbgzxvmjVGp8rZq/BX975acPgGbuICISi1usI=
 github.com/gospider007/gson v0.0.0-20231119141525-66095080057d h1:K9IbMHY2dZfi1ddJWL7a+KkZe6apIYaXN1cD8lDRH5I=
 github.com/gospider007/gson v0.0.0-20231119141525-66095080057d/go.mod h1:r8uL+sPUwP8+6n8GZFa2iz2bJe0qNS6EKwkqmiZhHqI=
 github.com/gospider007/gtls v0.0.0-20231120122450-e763299259db h1:8ghU2J0g7BKC1t61TCA3kCkcUsgCn36YwEtTWXsqe+o=

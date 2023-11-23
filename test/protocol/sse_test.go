@@ -14,6 +14,9 @@ func TestSse(t *testing.T) {
 	}
 	defer response.CloseBody()
 	sseCli := response.Sse()
+	if sseCli == nil {
+		t.Error("not is sseCli")
+	}
 	for maxNum := 0; maxNum < 3; maxNum++ {
 		data, err := sseCli.Recv()
 		if err != nil {

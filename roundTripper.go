@@ -71,8 +71,7 @@ func getKey(ctxData *reqCtxData, req *http.Request) connKey {
 type RoundTripper struct {
 	ctx        context.Context
 	cnl        context.CancelFunc
-	connPools  map[connKey]*connPool
-	connsLock  sync.Mutex
+	connPools  sync.Map
 	dialer     *DialClient
 	tlsConfig  *tls.Config
 	utlsConfig *utls.Config
@@ -120,7 +119,6 @@ func newRoundTripper(preCtx context.Context, option roundTripperOption) *RoundTr
 		utlsConfig: utlsConfig,
 		ctx:        ctx,
 		cnl:        cnl,
-		connPools:  make(map[connKey]*connPool),
 		dialer:     dialClient,
 		proxy:      option.GetProxy,
 	}
@@ -137,33 +135,32 @@ func (obj *RoundTripper) newConnPool(conn *connecotr, key connKey) *connPool {
 	return pool
 }
 func (obj *RoundTripper) getConnPool(key connKey) *connPool {
-	obj.connsLock.Lock()
-	defer obj.connsLock.Unlock()
-	return obj.connPools[key]
+	val, ok := obj.connPools.Load(key)
+	if !ok {
+		return nil
+	}
+	return val.(*connPool)
 }
 func (obj *RoundTripper) delConnPool(key connKey) {
-	obj.connsLock.Lock()
-	defer obj.connsLock.Unlock()
-	delete(obj.connPools, key)
+	obj.connPools.Delete(key)
 }
 func (obj *RoundTripper) putConnPool(key connKey, conn *connecotr) {
-	obj.connsLock.Lock()
-	defer obj.connsLock.Unlock()
 	conn.isPool = true
 	if !conn.h2 {
 		go conn.read()
 	}
-	pool, ok := obj.connPools[key]
+	val, ok := obj.connPools.Load(key)
 	if ok {
+		pool := val.(*connPool)
 		select {
 		case <-pool.closeCtx.Done():
-			obj.connPools[key] = obj.newConnPool(conn, key)
+			obj.connPools.Store(key, obj.newConnPool(conn, key))
 		default:
 			pool.total.Add(1)
 			go pool.rwMain(conn)
 		}
 	} else {
-		obj.connPools[key] = obj.newConnPool(conn, key)
+		obj.connPools.Store(key, obj.newConnPool(conn, key))
 	}
 }
 func (obj *RoundTripper) tlsConfigClone() *tls.Config {
@@ -295,21 +292,21 @@ func (obj *RoundTripper) poolRoundTrip(task *reqTask, key connKey) (bool, error)
 }
 
 func (obj *RoundTripper) closeConns() {
-	obj.connsLock.Lock()
-	defer obj.connsLock.Unlock()
-	for key, pool := range obj.connPools {
+	obj.connPools.Range(func(key, value any) bool {
+		pool := value.(*connPool)
 		pool.close()
-		delete(obj.connPools, key)
-	}
+		obj.connPools.Delete(key)
+		return true
+	})
 }
 
 func (obj *RoundTripper) forceCloseConns() {
-	obj.connsLock.Lock()
-	defer obj.connsLock.Unlock()
-	for key, pool := range obj.connPools {
+	obj.connPools.Range(func(key, value any) bool {
+		pool := value.(*connPool)
 		pool.forceClose()
-		delete(obj.connPools, key)
-	}
+		obj.connPools.Delete(key)
+		return true
+	})
 }
 func (obj *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	ctxData := GetReqCtxData(req.Context())
