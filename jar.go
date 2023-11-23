@@ -73,12 +73,8 @@ func (obj *Jar) SetCookies(href string, cookies ...any) error {
 			return err
 		}
 		for _, cook := range cooks {
-			if cook.Path == "" {
-				cook.Path = "/"
-			}
-			if cook.Domain == "" {
-				cook.Domain = domain
-			}
+			cook.Path = "/"
+			cook.Domain = domain
 		}
 		obj.jar.SetCookies(u, cooks)
 	}
