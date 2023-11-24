@@ -35,7 +35,7 @@ var errFatal = errors.New("Fatal error")
 type reqCtxData struct {
 	isWs                  bool
 	forceHttp1            bool
-	maxRedirectNum        int
+	maxRedirect           int
 	proxy                 *url.URL
 	disProxy              bool
 	disAlive              bool
@@ -66,7 +66,7 @@ func NewReqCtxData(ctx context.Context, option *RequestOption) (*reqCtxData, err
 	ctxData.h2Ja3Spec = option.H2Ja3Spec
 	ctxData.forceHttp1 = option.ForceHttp1
 	ctxData.disAlive = option.DisAlive
-	ctxData.maxRedirectNum = option.MaxRedirectNum
+	ctxData.maxRedirect = option.MaxRedirect
 	ctxData.requestCallBack = option.RequestCallBack
 	ctxData.responseHeaderTimeout = option.ResponseHeaderTimeout
 	ctxData.addrType = option.AddrType
@@ -279,7 +279,7 @@ func debugPrint(requestId string, content ...any) {
 	for _, cont := range content {
 		contents = append(contents, cont, " ")
 	}
-	log.Printf("%s:%d , %s: %s, %s: %s", f, l, blog.Color(2, "requestId"), blog.Color(1, requestId), blog.Color(2, "content"), blog.Color(3, contents...))
+	log.Printf("%s:%d, %s>>>%s, %s>>>%s", f, l, blog.Color(2, "requestId"), blog.Color(1, requestId), blog.Color(2, "content"), blog.Color(3, contents...))
 }
 func (obj *Client) request(ctx context.Context, option *RequestOption) (response *Response, err error) {
 	response = new(Response)
@@ -375,7 +375,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	//init ws
 	if ctxData.isWs {
 		if ctxData.debug {
-			log.Printf("requestId:%s: %s", ctxData.requestId, "init websocket headers")
+			debugPrint(ctxData.requestId, "init websocket headers")
 		}
 		websocket.SetClientHeadersOption(reqs.Header, option.WsOption)
 	}
@@ -412,12 +412,12 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		}
 	}
 	if ctxData.debug {
-		log.Printf("requestId:%s: %s", ctxData.requestId, "send request start")
+		debugPrint(ctxData.requestId, "send request start")
 	}
 	//send req
 	response.response, err = obj.getClient(option).Do(reqs)
 	if ctxData.debug {
-		log.Printf("requestId:%s: %s", ctxData.requestId, "send request end")
+		debugPrint(ctxData.requestId, "send request end, err: ", err)
 	}
 	response.isNewConn = ctxData.isNewConn
 	if err != nil {
@@ -432,12 +432,21 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		response.disUnzip = response.response.Uncompressed
 	}
 	if response.response.StatusCode == 101 {
-		response.webSocket, err = websocket.NewClientConn(response.response, response.CloseConn)
+		response.webSocket, err = websocket.NewClientConn(response.response, response.ForceCloseConn)
+		if ctxData.debug {
+			debugPrint(ctxData.requestId, "new websocket client, err: ", err)
+		}
 	} else if response.response.Header.Get("Content-Type") == "text/event-stream" {
-		response.sse = newSse(response.response.Body, response.CloseConn)
+		response.sse = newSse(response.response.Body, response.ForceCloseConn)
+		if ctxData.debug {
+			debugPrint(ctxData.requestId, "new sse client")
+		}
 	} else if !response.disUnzip {
 		var unCompressionBody io.ReadCloser
 		unCompressionBody, err = tools.CompressionDecode(response.response.Body, response.ContentEncoding())
+		if ctxData.debug {
+			debugPrint(ctxData.requestId, "unCompressionBody, err: ", err)
+		}
 		if err != nil {
 			if err != io.ErrUnexpectedEOF && err != io.EOF {
 				return

@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"crypto/tls"
-	"log"
 	"net"
 	"net/url"
 	"sync"
@@ -245,47 +244,47 @@ func (obj *RoundTripper) getProxy(ctx context.Context, proxyUrl *url.URL) (*url.
 
 func (obj *RoundTripper) poolRoundTrip(task *reqTask, key connKey) (bool, error) {
 	if task.debug {
-		log.Printf("requestId:%s: %s", task.requestId, "poolRoundTrip get conn pool")
+		debugPrint(task.requestId, "poolRoundTrip start")
 	}
 	pool := obj.getConnPool(key)
 	if pool == nil {
 		if task.debug {
-			log.Printf("requestId:%s: %s", task.requestId, "poolRoundTrip not found conn pool")
+			debugPrint(task.requestId, "poolRoundTrip not found conn pool")
 		}
 		return false, nil
 	}
 	select {
 	case <-obj.ctx.Done():
 		if task.debug {
-			log.Printf("requestId:%s: %s", task.requestId, "RoundTripper already cloed")
+			debugPrint(task.requestId, "RoundTripper already cloed")
 		}
 		return false, tools.WrapError(obj.ctx.Err(), "roundTripper close ctx error: ")
 	case <-pool.closeCtx.Done():
 		if task.debug {
-			log.Printf("requestId:%s: %s", task.requestId, "pool already cloed")
+			debugPrint(task.requestId, "pool already cloed")
 		}
 		return false, pool.closeCtx.Err()
 	case pool.tasks <- task:
 		if task.debug {
-			log.Printf("requestId:%s: %s", task.requestId, "pool.tasks <- task")
+			debugPrint(task.requestId, "poolRoundTrip tasks <- task")
 		}
 		select {
 		case <-task.emptyPool:
 			if task.debug {
-				log.Printf("requestId:%s: %s", task.requestId, "poolRoundTrip emptyPool")
+				debugPrint(task.requestId, "poolRoundTrip emptyPool")
 			}
 		case <-task.ctx.Done():
 			if task.err == nil && task.res == nil {
 				task.err = tools.WrapError(task.ctx.Err(), "task close ctx error: ")
 			}
 			if task.debug {
-				log.Printf("requestId:%s: %v", task.requestId, task.err)
+				debugPrint(task.requestId, "task ctx done, err: ", task.err)
 			}
 			return true, task.err
 		}
 	default:
 		if task.debug {
-			log.Printf("requestId:%s: %s", task.requestId, "conn pool not idle")
+			debugPrint(task.requestId, "conn pool not idle")
 		}
 	}
 	return false, nil
@@ -334,7 +333,7 @@ func (obj *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 	ctxData.isNewConn = true
 	if task.debug {
-		log.Printf("requestId:%s: %s", ctxData.requestId, "new Conn")
+		debugPrint(ctxData.requestId, "new Conn")
 	}
 newConn:
 	ckey := key
@@ -351,7 +350,7 @@ newConn:
 	conn.key = ckey
 	if task.inPool() && !ctxData.disAlive {
 		if task.debug {
-			log.Printf("requestId:%s: %s", ctxData.requestId, "conn put conn pool")
+			debugPrint(ctxData.requestId, "conn put conn pool")
 		}
 		obj.putConnPool(key, conn)
 	}

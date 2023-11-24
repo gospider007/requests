@@ -16,11 +16,11 @@ type Client struct {
 	forceHttp1   bool
 	orderHeaders []string
 
-	jar            *Jar
-	maxRedirectNum int
-	disDecode      bool
-	disUnZip       bool
-	disAlive       bool
+	jar         *Jar
+	maxRedirect int
+	disDecode   bool
+	disUnZip    bool
+	disAlive    bool
 
 	maxRetries int
 
@@ -78,7 +78,7 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 		Transport: transport,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			ctxData := GetReqCtxData(req.Context())
-			if ctxData.maxRedirectNum == 0 || ctxData.maxRedirectNum >= len(via) {
+			if ctxData.maxRedirect == 0 || ctxData.maxRedirect >= len(via) {
 				return nil
 			}
 			return http.ErrUseLastResponse
@@ -93,7 +93,7 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 		requestCallBack:       option.RequestCallBack,
 		orderHeaders:          option.OrderHeaders,
 		disCookie:             option.DisCookie,
-		maxRedirectNum:        option.MaxRedirectNum,
+		maxRedirect:           option.MaxRedirect,
 		disDecode:             option.DisDecode,
 		disUnZip:              option.DisUnZip,
 		disAlive:              option.DisAlive,

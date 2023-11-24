@@ -317,7 +317,7 @@ func (obj *Response) CloseBody() error {
 		obj.sse.Close()
 	}
 	if obj.IsStream() || !obj.readBody {
-		obj.CloseConn()
+		obj.ForceCloseConn()
 	} else if obj.rawConn != nil {
 		obj.rawConn.Close()
 	}

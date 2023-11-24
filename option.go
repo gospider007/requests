@@ -32,7 +32,7 @@ type ClientOption struct {
 	ErrCallBack           func(ctx context.Context, client *Client, response *Response, err error) error  //error callback,if error is returnd,break request
 	RequestCallBack       func(ctx context.Context, request *http.Request, response *http.Response) error //request and response callback,if error is returnd,reponse is error
 	MaxRetries            int                                                                             //try num
-	MaxRedirectNum        int                                                                             //redirect num ,<0 no redirect,==0 no limit
+	MaxRedirect           int                                                                             //redirect num ,<0 no redirect,==0 no limit
 	Headers               any                                                                             //default headers
 	ResponseHeaderTimeout time.Duration                                                                   //ResponseHeaderTimeout ,default:30
 	TlsHandshakeTimeout   time.Duration                                                                   //tls timeout,default:15
@@ -69,7 +69,7 @@ type RequestOption struct {
 	RequestCallBack func(ctx context.Context, request *http.Request, response *http.Response) error //request and response callback,if error is returnd,reponse is error
 
 	MaxRetries            int           //try num
-	MaxRedirectNum        int           //redirect num ,<0 no redirect,==0 no limit
+	MaxRedirect           int           //redirect num ,<0 no redirect,==0 no limit
 	Headers               any           //request headers：json,map，header
 	ResponseHeaderTimeout time.Duration //ResponseHeaderTimeout ,default:30
 	TlsHandshakeTimeout   time.Duration
@@ -189,8 +189,8 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	if !option.Bar {
 		option.Bar = obj.bar
 	}
-	if option.MaxRedirectNum == 0 {
-		option.MaxRedirectNum = obj.maxRedirectNum
+	if option.MaxRedirect == 0 {
+		option.MaxRedirect = obj.maxRedirect
 	}
 	if option.Timeout == 0 {
 		option.Timeout = obj.timeout
