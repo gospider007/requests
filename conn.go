@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"errors"
+	"io"
 	"net"
 	"net/http"
 	"sync"
@@ -33,7 +34,7 @@ type connecotr struct {
 	h2RawConn *http2.ClientConn
 	rc        chan []byte
 	rn        chan int
-	isRead    bool
+	pr        *pipCon
 	isPool    bool
 }
 
@@ -48,58 +49,25 @@ func (obj *connecotr) Close() error {
 	}
 	return obj.rawConn.Close()
 }
-func (obj *connecotr) read() {
-	if obj.isRead {
-		return
+func (obj *connecotr) read() (err error) {
+	if obj.pr != nil {
+		return nil
 	}
-	obj.isRead = true
-	defer obj.Close()
-	con := make([]byte, 4096)
-	var i int
-	for {
-		i, obj.err = obj.rawConn.Read(con)
-		b := con[:i]
-		for once := true; once || len(b) > 0; once = false {
-			select {
-			case obj.rc <- b:
-				select {
-				case nw := <-obj.rn:
-					b = b[nw:]
-				case <-obj.deleteCtx.Done():
-					return
-				}
-			case <-obj.deleteCtx.Done():
-				return
-			}
-		}
-		if obj.err != nil {
-			return
-		}
-	}
+	var pw *pipCon
+	obj.pr, pw = pipe(obj.deleteCtx)
+	defer func() {
+		obj.pr.cnl(err)
+		pw.cnl(err)
+		obj.Close()
+	}()
+	_, err = io.Copy(pw, obj.rawConn)
+	return
 }
 func (obj *connecotr) Read(b []byte) (i int, err error) {
-	if !obj.isRead {
+	if obj.pr == nil {
 		return obj.rawConn.Read(b)
 	}
-	select {
-	case con := <-obj.rc:
-		i, err = copy(b, con), obj.err
-		select {
-		case obj.rn <- i:
-			if i < len(con) {
-				err = nil
-			}
-		case <-obj.deleteCtx.Done():
-			if err = obj.err; err == nil {
-				err = tools.WrapError(obj.deleteCtx.Err(), "connecotr close")
-			}
-		}
-	case <-obj.deleteCtx.Done():
-		if err = obj.err; err == nil {
-			err = tools.WrapError(obj.deleteCtx.Err(), "connecotr close")
-		}
-	}
-	return
+	return obj.pr.Read(b)
 }
 func (obj *connecotr) Write(b []byte) (int, error) {
 	return obj.rawConn.Write(b)

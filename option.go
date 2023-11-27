@@ -82,35 +82,35 @@ type RequestOption struct {
 	AddrType    gtls.AddrType //dns parse addr type                                             //tls timeout,default:15
 	Jar         *Jar          //custom cookies
 
-	Stream  bool   //disable auto read
-	Referer string //set headers referer value
-	Method  string //method
-	Url     *url.URL
-	Host    string
-	Cookies any // cookies,support :json,map,str，http.Header
-	Params  any //url params，join url query,json,map
+	Method      string //method
+	Url         *url.URL
+	Host        string
+	Referer     string //set headers referer value
+	ContentType string //headers Content-Type value
+	Cookies     any    // cookies,support :json,map,str，http.Header
 
-	Json any //send application/json,support io.Reader,：string,[]bytes,json,map
-	Data any //send application/x-www-form-urlencoded, support io.Reader, string,[]bytes,json,map
-	Form any //send multipart/form-data,file upload,support io.Reader, json,map
-	Text any //send text/xml,support: io.Reader, string,[]bytes,json,map
-	Body any //not setting context-type,support io.Reader, string,[]bytes,json,map
+	Params any //url params，join url query,json,map
+	Json   any //send application/json,support io.Reader,：string,[]bytes,json,map
+	Data   any //send application/x-www-form-urlencoded, support io.Reader, string,[]bytes,json,map
+	Form   any //send multipart/form-data,file upload,support io.Reader, json,map
+	Text   any //send text/xml,support: io.Reader, string,[]bytes,json,map
+	Body   any //not setting context-type,support io.Reader, string,[]bytes,json,map
 
-	ContentType string           //headers Content-Type value
-	WsOption    websocket.Option //websocket option
-	DisProxy    bool             //force disable proxy
-	Debug       bool             //enable debugger
-	once        bool
+	Stream   bool             //disable auto read
+	WsOption websocket.Option //websocket option
+	DisProxy bool             //force disable proxy
+	Debug    bool             //enable debugger
+	once     bool
 }
 
-// Upload files with form-data
+// Upload files with form-data,
 type File struct {
 	FileName    string
 	ContentType string
-	Content     []byte
+	Content     any
 }
 
-func (obj *RequestOption) initBody() (body io.Reader, err error) {
+func (obj *RequestOption) initBody(ctx context.Context) (body io.Reader, err error) {
 	if obj.Body != nil {
 		body, _, _, err = obj.newBody(obj.Body, readType)
 	} else if obj.Form != nil {
@@ -118,12 +118,10 @@ func (obj *RequestOption) initBody() (body io.Reader, err error) {
 		if body, orderMap, _, err = obj.newBody(obj.Form, mapType); err != nil {
 			return
 		}
-		tempBody, contentType, err := orderMap.parseForm()
+		tempBody, contentType, once, err := orderMap.parseForm(ctx)
+		obj.once = once
 		if obj.ContentType == "" {
 			obj.ContentType = contentType
-		}
-		if tempBody == nil {
-			return nil, err
 		}
 		return tempBody, err
 	} else if obj.Data != nil {

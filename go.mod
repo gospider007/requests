@@ -12,7 +12,7 @@ require (
 	github.com/gospider007/net v0.0.0-20231028084010-313c148cf0a1
 	github.com/gospider007/re v0.0.0-20231024115818-adfd03636256
 	github.com/gospider007/tools v0.0.0-20231122021245-1cafbac3ef46
-	github.com/gospider007/websocket v0.0.0-20231124122326-78d52f163d6c
+	github.com/gospider007/websocket v0.0.0-20231124124758-1491f1b57db1
 	github.com/refraction-networking/utls v1.5.4
 	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa
 	golang.org/x/net v0.18.0

@@ -2,6 +2,7 @@ package requests
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -64,7 +65,20 @@ func formWrite(writer *multipart.Writer, key string, val any) (err error) {
 		h := make(textproto.MIMEHeader)
 		h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`, escapeQuotes(key), escapeQuotes(value.FileName)))
 		if value.ContentType == "" {
-			h.Set("Content-Type", http.DetectContentType(value.Content))
+			switch content := value.Content.(type) {
+			case []byte:
+				h.Set("Content-Type", http.DetectContentType(content))
+			case string:
+				h.Set("Content-Type", http.DetectContentType(tools.StringToBytes(content)))
+			case io.Reader:
+				h.Set("Content-Type", "application/octet-stream")
+			default:
+				con, err := gson.Encode(content)
+				if err != nil {
+					return err
+				}
+				h.Set("Content-Type", http.DetectContentType(con))
+			}
 		} else {
 			h.Set("Content-Type", value.ContentType)
 		}
@@ -72,33 +86,98 @@ func formWrite(writer *multipart.Writer, key string, val any) (err error) {
 		if wp, err = writer.CreatePart(h); err != nil {
 			return
 		}
-		_, err = wp.Write(value.Content)
+		switch content := value.Content.(type) {
+		case []byte:
+			_, err = wp.Write(content)
+		case string:
+			_, err = wp.Write(tools.StringToBytes(content))
+		case io.Reader:
+			_, err = io.Copy(wp, content)
+		default:
+			con, err := gson.Encode(content)
+			if err != nil {
+				return err
+			}
+			_, err = wp.Write(con)
+		}
+	case []byte:
+		err = writer.WriteField(key, tools.BytesToString(value))
+	case string:
+		err = writer.WriteField(key, value)
 	default:
-		err = writer.WriteField(key, fmt.Sprint(value))
+		con, err := gson.Encode(val)
+		if err != nil {
+			return err
+		}
+		err = writer.WriteField(key, tools.BytesToString(con))
 	}
 	return
 }
-func (obj *orderMap) parseForm() (tempBody *bytes.Buffer, contentType string, err error) {
+func (obj *orderMap) parseForm(ctx context.Context) (io.Reader, string, bool, error) {
 	if len(obj.order) == 0 || len(obj.data) == 0 {
-		return
+		return nil, "", false, nil
 	}
-	tempBody = bytes.NewBuffer(nil)
-	writer := multipart.NewWriter(tempBody)
+	if obj.isformPip() {
+		pr, pw := pipe(ctx)
+		writer := multipart.NewWriter(pw)
+		go func() {
+			err := obj.formWriteMain(writer)
+			if err == nil {
+				err = io.EOF
+			}
+			pr.Close(err)
+			pw.Close(err)
+		}()
+		return pr, writer.FormDataContentType(), true, nil
+	}
+	body := bytes.NewBuffer(nil)
+	writer := multipart.NewWriter(body)
+	err := obj.formWriteMain(writer)
+	if err != nil {
+		return nil, writer.FormDataContentType(), false, err
+	}
+	return body, writer.FormDataContentType(), false, err
+}
+func (obj *orderMap) isformPip() bool {
+	if len(obj.order) == 0 || len(obj.data) == 0 {
+		return false
+	}
 	for _, key := range obj.order {
 		if vals, ok := obj.data[key].([]any); ok {
 			for _, val := range vals {
-				formWrite(writer, key, val)
+				if file, ok := val.(File); ok {
+					if _, ok := file.Content.(io.Reader); ok {
+						return true
+					}
+				}
 			}
 		} else {
-			formWrite(writer, key, obj.data[key])
+			if file, ok := obj.data[key].(File); ok {
+				if _, ok := file.Content.(io.Reader); ok {
+					return true
+				}
+			}
 		}
 	}
-	if err = writer.Close(); err != nil {
-		return
-	}
-	contentType = writer.FormDataContentType()
-	return
+	return false
 }
+func (obj *orderMap) formWriteMain(writer *multipart.Writer) (err error) {
+	for _, key := range obj.order {
+		if vals, ok := obj.data[key].([]any); ok {
+			for _, val := range vals {
+				if err = formWrite(writer, key, val); err != nil {
+					return
+				}
+			}
+		} else {
+			if err = formWrite(writer, key, obj.data[key]); err != nil {
+				return
+			}
+		}
+	}
+	return writer.Close()
+}
+
 func paramsWrite(buf *bytes.Buffer, key string, val any) {
 	if buf.Len() > 0 {
 		buf.WriteByte('&')

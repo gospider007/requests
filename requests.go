@@ -339,7 +339,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		return
 	}
 	//init body
-	body, err := option.initBody()
+	body, err := option.initBody(response.ctx)
 	if err != nil {
 		return response, tools.WrapError(err, errors.New("tempRequest init body error"), err)
 	}
