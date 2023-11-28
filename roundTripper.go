@@ -7,7 +7,6 @@ import (
 	"errors"
 	"net"
 	"net/url"
-	"sync"
 	"time"
 
 	"net/http"
@@ -67,7 +66,7 @@ func getKey(ctxData *reqCtxData, req *http.Request) connKey {
 type roundTripper struct {
 	ctx        context.Context
 	cnl        context.CancelFunc
-	connPools  sync.Map
+	connPools  *connPools
 	dialer     *DialClient
 	tlsConfig  *tls.Config
 	utlsConfig *utls.Config
@@ -117,46 +116,39 @@ func newRoundTripper(preCtx context.Context, option ClientOption) *roundTripper 
 		cnl:        cnl,
 		dialer:     dialClient,
 		proxy:      option.GetProxy,
+		connPools:  new(connPools),
 	}
 }
 func (obj *roundTripper) newConnPool(conn *connecotr, key connKey) *connPool {
 	pool := new(connPool)
-	pool.key = key
+	pool.connKey = key
 	pool.deleteCtx, pool.deleteCnl = context.WithCancelCause(obj.ctx)
 	pool.closeCtx, pool.closeCnl = context.WithCancelCause(pool.deleteCtx)
 	pool.tasks = make(chan *reqTask)
-	pool.rt = obj
+	pool.connPools = obj.connPools
 	pool.total.Add(1)
 	go pool.rwMain(conn)
 	return pool
 }
 func (obj *roundTripper) getConnPool(key connKey) *connPool {
-	val, ok := obj.connPools.Load(key)
-	if !ok {
-		return nil
-	}
-	return val.(*connPool)
-}
-func (obj *roundTripper) delConnPool(key connKey) {
-	obj.connPools.Delete(key)
+	return obj.connPools.get(key)
 }
 func (obj *roundTripper) putConnPool(key connKey, conn *connecotr) {
-	conn.isPool = true
-	if !conn.h2 {
+	conn.inPool = true
+	if conn.h2RawConn == nil {
 		go conn.read()
 	}
-	val, ok := obj.connPools.Load(key)
-	if ok {
-		pool := val.(*connPool)
+	pool := obj.connPools.get(key)
+	if pool != nil {
 		select {
 		case <-pool.closeCtx.Done():
-			obj.connPools.Store(key, obj.newConnPool(conn, key))
+			obj.connPools.set(key, obj.newConnPool(conn, key))
 		default:
 			pool.total.Add(1)
 			go pool.rwMain(conn)
 		}
 	} else {
-		obj.connPools.Store(key, obj.newConnPool(conn, key))
+		obj.connPools.set(key, obj.newConnPool(conn, key))
 	}
 }
 func (obj *roundTripper) tlsConfigClone() *tls.Config {
@@ -187,6 +179,7 @@ func (obj *roundTripper) dial(ctxData *reqCtxData, key *connKey, req *http.Reque
 	}
 	conne := new(connecotr)
 	conne.withCancel(obj.ctx, obj.ctx)
+	var h2 bool
 	if req.URL.Scheme == "https" {
 		ctx, cnl := context.WithTimeout(req.Context(), ctxData.tlsHandshakeTimeout)
 		defer cnl()
@@ -199,19 +192,19 @@ func (obj *roundTripper) dial(ctxData *reqCtxData, key *connKey, req *http.Reque
 			if err != nil {
 				return conne, tools.WrapError(err, "add ja3 tls error")
 			}
-			conne.h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
+			h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
 			netConn = tlsConn
 		} else {
 			tlsConn, err := obj.dialer.addTls(ctx, netConn, host, ctxData.isWs || ctxData.forceHttp1, obj.tlsConfigClone())
 			if err != nil {
 				return conne, tools.WrapError(err, "add tls error")
 			}
-			conne.h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
+			h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
 			netConn = tlsConn
 		}
 	}
 	conne.rawConn = netConn
-	if conne.h2 {
+	if h2 {
 		if conne.h2RawConn, err = http2.NewClientConn(func() {
 			conne.closeCnl(errors.New("http2 client close"))
 		}, netConn, ctxData.h2Ja3Spec); err != nil {
@@ -286,19 +279,18 @@ func (obj *roundTripper) poolRoundTrip(task *reqTask, key connKey) (bool, error)
 }
 
 func (obj *roundTripper) closeConns() {
-	obj.connPools.Range(func(key, value any) bool {
+	obj.connPools.iter(func(key, value any) bool {
 		pool := value.(*connPool)
 		pool.close()
-		obj.connPools.Delete(key)
+		obj.connPools.del(key.(connKey))
 		return true
 	})
 }
-
 func (obj *roundTripper) forceCloseConns() {
-	obj.connPools.Range(func(key, value any) bool {
+	obj.connPools.iter(func(key, value any) bool {
 		pool := value.(*connPool)
 		pool.forceClose()
-		obj.connPools.Delete(key)
+		obj.connPools.del(key.(connKey))
 		return true
 	})
 }
@@ -336,13 +328,13 @@ newConn:
 	if err != nil {
 		return nil, err
 	}
-	if _, _, notice := conn.taskMain(task, nil); notice {
+	if _, _, notice := conn.taskMain(task, nil, false); notice {
 		goto newConn
 	}
 	if task.err == nil && task.res == nil {
 		task.err = obj.ctx.Err()
 	}
-	conn.key = ckey
+	conn.connKey = ckey
 	if task.inPool() && !ctxData.disAlive {
 		if task.debug {
 			debugPrint(ctxData.requestId, "conn put conn pool")

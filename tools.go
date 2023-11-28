@@ -2,7 +2,6 @@ package requests
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -74,9 +73,6 @@ func removeZone(host string) string
 //go:linkname shouldSendContentLength net/http.(*transferWriter).shouldSendContentLength
 func shouldSendContentLength(t *http.Request) bool
 
-//go:linkname stringContainsCTLByte net/http.stringContainsCTLByte
-func stringContainsCTLByte(s string) bool
-
 func httpWrite(r *http.Request, w *bufio.Writer, orderHeaders []string) (err error) {
 	host := r.Host
 	if host == "" {
@@ -86,20 +82,14 @@ func httpWrite(r *http.Request, w *bufio.Writer, orderHeaders []string) (err err
 	if err != nil {
 		return err
 	}
-	if !httpguts.ValidHostHeader(host) {
-		return errors.New("http: invalid Host header")
-	}
 	host = removeZone(host)
 	ruri := r.URL.RequestURI()
 	if r.Method == "CONNECT" && r.URL.Path == "" {
-		// CONNECT requests normally give just the host and port, not a full URL.
-		ruri = host
 		if r.URL.Opaque != "" {
 			ruri = r.URL.Opaque
+		} else {
+			ruri = host
 		}
-	}
-	if stringContainsCTLByte(ruri) {
-		return errors.New("net/http: can't write control character in Request.URL")
 	}
 	if r.Header.Get("Host") == "" {
 		r.Header.Set("Host", host)

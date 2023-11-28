@@ -99,9 +99,7 @@ func NewReqCtxData(ctx context.Context, option *RequestOption) (*reqCtxData, err
 	}
 	//init orderHeaders,this must after init headers
 	if option.OrderHeaders == nil {
-		if option.Ja3Spec.IsSet() {
-			ctxData.orderHeaders = ja3.DefaultH1OrderHeaders()
-		}
+		ctxData.orderHeaders = ja3.DefaultH1OrderHeaders()
 	} else {
 		orderHeaders := []string{}
 		for _, key := range option.OrderHeaders {

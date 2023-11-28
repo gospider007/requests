@@ -24,7 +24,6 @@ type DialClient struct {
 	dialer      *net.Dialer
 	dnsIpData   sync.Map
 	dns         *net.UDPAddr
-	localAddr   *net.TCPAddr
 	getAddrType func(host string) gtls.AddrType
 }
 type msgClient struct {
@@ -40,16 +39,8 @@ type DialOption struct {
 	Dns         *net.UDPAddr
 	GetAddrType func(host string) gtls.AddrType
 }
-type DialerOption struct {
-	DialTimeout time.Duration
-	KeepAlive   time.Duration
-	LocalAddr   *net.TCPAddr  //network card ip
-	AddrType    gtls.AddrType //first ip type
-	Dns         *net.UDPAddr
-	GetAddrType func(host string) gtls.AddrType
-}
 
-func NewDialer(option DialerOption) *net.Dialer {
+func NewDialer(option DialOption) *net.Dialer {
 	if option.KeepAlive == 0 {
 		option.KeepAlive = time.Second * 30
 	}
@@ -80,16 +71,8 @@ func NewDialer(option DialerOption) *net.Dialer {
 }
 func NewDail(option DialOption) *DialClient {
 	return &DialClient{
-		dialer: NewDialer(DialerOption{
-			DialTimeout: option.DialTimeout,
-			KeepAlive:   option.KeepAlive,
-			LocalAddr:   option.LocalAddr,
-			AddrType:    option.AddrType,
-			Dns:         option.Dns,
-			GetAddrType: option.GetAddrType,
-		}),
+		dialer:      NewDialer(option),
 		dns:         option.Dns,
-		localAddr:   option.LocalAddr,
 		getAddrType: option.GetAddrType,
 	}
 }
@@ -306,45 +289,47 @@ func (obj *DialClient) lookupIPAddr(ctx context.Context, host string, ips []net.
 	return nil, errors.New("dns parse host error")
 }
 func (obj *DialClient) getDialer(ctxData *reqCtxData, parseDns bool) *net.Dialer {
-	var dialerOption DialerOption
+	var dialOption DialOption
 	var isNew bool
 
 	if ctxData.dialTimeout == 0 {
-		dialerOption.DialTimeout = obj.dialer.Timeout
+		dialOption.DialTimeout = obj.dialer.Timeout
 	} else {
-		dialerOption.DialTimeout = ctxData.dialTimeout
+		dialOption.DialTimeout = ctxData.dialTimeout
 		if ctxData.dialTimeout != obj.dialer.Timeout {
 			isNew = true
 		}
 	}
 
 	if ctxData.keepAlive == 0 {
-		dialerOption.KeepAlive = obj.dialer.KeepAlive
+		dialOption.KeepAlive = obj.dialer.KeepAlive
 	} else {
-		dialerOption.KeepAlive = ctxData.keepAlive
+		dialOption.KeepAlive = ctxData.keepAlive
 		if ctxData.keepAlive != obj.dialer.KeepAlive {
 			isNew = true
 		}
 	}
 
 	if ctxData.localAddr == nil {
-		dialerOption.LocalAddr = obj.localAddr
+		if obj.dialer.LocalAddr != nil {
+			dialOption.LocalAddr = obj.dialer.LocalAddr.(*net.TCPAddr)
+		}
 	} else {
-		dialerOption.LocalAddr = ctxData.localAddr
-		if ctxData.localAddr.String() != obj.localAddr.String() {
+		dialOption.LocalAddr = ctxData.localAddr
+		if ctxData.localAddr.String() != obj.dialer.LocalAddr.String() {
 			isNew = true
 		}
 	}
 	if ctxData.dns == nil {
-		dialerOption.Dns = obj.dns
+		dialOption.Dns = obj.dns
 	} else {
-		dialerOption.Dns = ctxData.dns
+		dialOption.Dns = ctxData.dns
 		if parseDns && ctxData.dns.String() != obj.dns.String() {
 			isNew = true
 		}
 	}
 	if isNew {
-		return NewDialer(dialerOption)
+		return NewDialer(dialOption)
 	} else {
 		return obj.dialer
 	}

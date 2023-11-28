@@ -26,10 +26,10 @@ func (obj *readWriteCloser) Close() (err error) {
 	return
 }
 func (obj *readWriteCloser) InPool() bool {
-	return obj.conn.isPool
+	return obj.conn.inPool
 }
 func (obj *readWriteCloser) Proxy() string {
-	return obj.conn.key.proxy
+	return obj.conn.connKey.proxy
 }
 
 // safe close conn

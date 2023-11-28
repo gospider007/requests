@@ -44,13 +44,17 @@ func (obj *orderMap) Del(key string) {
 }
 func (obj *orderMap) parseHeaders() (map[string][]string, []string) {
 	head := make(http.Header)
-	for kk, vv := range obj.data {
-		if vvs, ok := vv.([]string); ok {
+	data := any2Map(obj.data)
+	if data == nil {
+		data = obj.data
+	}
+	for _, kk := range obj.order {
+		if vvs, ok := data[kk].([]any); ok {
 			for _, vv := range vvs {
 				head.Add(kk, fmt.Sprint(vv))
 			}
 		} else {
-			head.Add(kk, fmt.Sprint(vv))
+			head.Add(kk, fmt.Sprint(data[kk]))
 		}
 	}
 	return head, obj.order
@@ -139,8 +143,12 @@ func (obj *orderMap) isformPip() bool {
 	if len(obj.order) == 0 || len(obj.data) == 0 {
 		return false
 	}
+	data := any2Map(obj.data)
+	if data == nil {
+		data = obj.data
+	}
 	for _, key := range obj.order {
-		if vals, ok := obj.data[key].([]any); ok {
+		if vals, ok := data[key].([]any); ok {
 			for _, val := range vals {
 				if file, ok := val.(File); ok {
 					if _, ok := file.Content.(io.Reader); ok {
@@ -149,7 +157,7 @@ func (obj *orderMap) isformPip() bool {
 				}
 			}
 		} else {
-			if file, ok := obj.data[key].(File); ok {
+			if file, ok := data[key].(File); ok {
 				if _, ok := file.Content.(io.Reader); ok {
 					return true
 				}
@@ -159,15 +167,19 @@ func (obj *orderMap) isformPip() bool {
 	return false
 }
 func (obj *orderMap) formWriteMain(writer *multipart.Writer) (err error) {
+	data := any2Map(obj.data)
+	if data == nil {
+		data = obj.data
+	}
 	for _, key := range obj.order {
-		if vals, ok := obj.data[key].([]any); ok {
+		if vals, ok := data[key].([]any); ok {
 			for _, val := range vals {
 				if err = formWrite(writer, key, val); err != nil {
 					return
 				}
 			}
 		} else {
-			if err = formWrite(writer, key, obj.data[key]); err != nil {
+			if err = formWrite(writer, key, data[key]); err != nil {
 				return
 			}
 		}
@@ -184,14 +196,18 @@ func paramsWrite(buf *bytes.Buffer, key string, val any) {
 	buf.WriteString(url.QueryEscape(fmt.Sprint(val)))
 }
 func (obj *orderMap) parseParams() *bytes.Buffer {
+	data := any2Map(obj.data)
+	if data == nil {
+		data = obj.data
+	}
 	buf := bytes.NewBuffer(nil)
 	for _, k := range obj.order {
-		if vals, ok := obj.data[k].([]any); ok {
+		if vals, ok := data[k].([]any); ok {
 			for _, v := range vals {
 				paramsWrite(buf, k, v)
 			}
 		} else {
-			paramsWrite(buf, k, obj.data[k])
+			paramsWrite(buf, k, data[k])
 		}
 	}
 	return buf
@@ -239,14 +255,14 @@ func (obj *orderMap) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func any2Map(val any) map[any]any {
+func any2Map(val any) map[string]any {
 	mapType := reflect.TypeOf(val)
 	if mapType.Kind() != reflect.Map {
 		return nil
 	}
 	mapValue := reflect.ValueOf(val)
 	keys := mapValue.MapKeys()
-	result := make(map[any]any)
+	result := make(map[string]any)
 	for _, key := range keys {
 		keyData := key.Interface()
 		valueData := mapValue.MapIndex(key).Interface()
@@ -258,7 +274,7 @@ func any2Map(val any) map[any]any {
 			}
 			valueData = valueData2
 		}
-		result[keyData] = valueData
+		result[fmt.Sprint(keyData)] = valueData
 	}
 	return result
 }
@@ -305,7 +321,7 @@ func (obj *RequestOption) newBody(val any, valType int) (io.Reader, *orderMap, [
 		return nil, orderMap, nil, nil
 	case *orderMap:
 		return nil, value, nil, nil
-	case map[any]any:
+	case map[string]any:
 		orderMap := NewOrderMap()
 		for kk, vv := range value {
 			if vvs, ok := vv.([]any); ok {
@@ -313,9 +329,9 @@ func (obj *RequestOption) newBody(val any, valType int) (io.Reader, *orderMap, [
 				for i, vv := range vvs {
 					vvData[i] = vv
 				}
-				orderMap.Set(fmt.Sprint(kk), vvData)
+				orderMap.Set(kk, vvData)
 			} else {
-				orderMap.Set(fmt.Sprint(kk), vv)
+				orderMap.Set(kk, vv)
 			}
 		}
 		return nil, orderMap, nil, nil
