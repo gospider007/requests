@@ -1,8 +1,8 @@
 package requests
 
 import (
+	"errors"
 	"io"
-	"net"
 )
 
 type readWriteCloser struct {
@@ -10,7 +10,7 @@ type readWriteCloser struct {
 	conn *connecotr
 }
 
-func (obj *readWriteCloser) Conn() net.Conn {
+func (obj *readWriteCloser) Conn() *connecotr {
 	return obj.conn
 }
 func (obj *readWriteCloser) Read(p []byte) (n int, err error) {
@@ -21,7 +21,7 @@ func (obj *readWriteCloser) Close() (err error) {
 	if !obj.InPool() {
 		obj.ForceCloseConn()
 	} else {
-		obj.conn.bodyCnl()
+		obj.conn.bodyCnl(errors.New("readWriteCloser close"))
 	}
 	return
 }
@@ -31,16 +31,10 @@ func (obj *readWriteCloser) InPool() bool {
 func (obj *readWriteCloser) Proxy() string {
 	return obj.conn.key.proxy
 }
-func (obj *readWriteCloser) Ja3() string {
-	return obj.conn.key.ja3
-}
-func (obj *readWriteCloser) H2Ja3() string {
-	return obj.conn.key.h2Ja3
-}
 
 // safe close conn
 func (obj *readWriteCloser) CloseConn() {
-	obj.conn.closeCnl()
+	obj.conn.closeCnl(errors.New("readWriterCloser close conn"))
 }
 
 // force close conn

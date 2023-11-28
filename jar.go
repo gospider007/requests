@@ -24,19 +24,19 @@ func NewJar() *Jar {
 
 // get cookies
 func (obj *Client) GetCookies(href string) (Cookies, error) {
-	return obj.jar.GetCookies(href)
+	return obj.option.Jar.GetCookies(href)
 }
 
 // set cookies
 func (obj *Client) SetCookies(href string, cookies ...any) error {
-	return obj.jar.SetCookies(href, cookies...)
+	return obj.option.Jar.SetCookies(href, cookies...)
 }
 
 // clear cookies
 func (obj *Client) ClearCookies() {
 	if obj.client.Jar != nil {
-		obj.jar.ClearCookies()
-		obj.client.Jar = obj.jar.jar
+		obj.option.Jar.ClearCookies()
+		obj.client.Jar = obj.option.Jar.jar
 	}
 }
 

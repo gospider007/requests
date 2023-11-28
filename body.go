@@ -43,9 +43,6 @@ func (obj *orderMap) Del(key string) {
 	obj.order = tools.DelSliceVals(obj.order, key)
 }
 func (obj *orderMap) parseHeaders() (map[string][]string, []string) {
-	if len(obj.order) == 0 || len(obj.data) == 0 {
-		return nil, nil
-	}
 	head := make(http.Header)
 	for kk, vv := range obj.data {
 		if vvs, ok := vv.([]string); ok {
@@ -186,10 +183,7 @@ func paramsWrite(buf *bytes.Buffer, key string, val any) {
 	buf.WriteByte('=')
 	buf.WriteString(url.QueryEscape(fmt.Sprint(val)))
 }
-func (obj *orderMap) parseParams() string {
-	if len(obj.order) == 0 || len(obj.data) == 0 {
-		return ""
-	}
+func (obj *orderMap) parseParams() *bytes.Buffer {
 	buf := bytes.NewBuffer(nil)
 	for _, k := range obj.order {
 		if vals, ok := obj.data[k].([]any); ok {
@@ -200,25 +194,15 @@ func (obj *orderMap) parseParams() string {
 			paramsWrite(buf, k, obj.data[k])
 		}
 	}
-	return buf.String()
+	return buf
 }
 func (obj *orderMap) parseData() *bytes.Reader {
-	if len(obj.order) == 0 || len(obj.data) == 0 {
+	val := obj.parseParams().Bytes()
+	if val == nil {
 		return nil
 	}
-	tempVal := url.Values{}
-	for kk, vv := range obj.data {
-		if vvs, ok := vv.([]any); ok {
-			for _, vv := range vvs {
-				tempVal.Add(kk, fmt.Sprint(vv))
-			}
-		} else {
-			tempVal.Add(kk, fmt.Sprint(vv))
-		}
-	}
-	return bytes.NewReader(tools.StringToBytes(tempVal.Encode()))
+	return bytes.NewReader(val)
 }
-
 func (obj *orderMap) MarshalJSON() ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
 	err := buf.WriteByte('{')

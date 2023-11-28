@@ -17,33 +17,30 @@ import (
 
 type connecotr struct {
 	key       connKey
-	err       error
 	deleteCtx context.Context //force close
-	deleteCnl context.CancelFunc
+	deleteCnl context.CancelCauseFunc
 
 	closeCtx context.Context //safe close
-	closeCnl context.CancelFunc
+	closeCnl context.CancelCauseFunc
 
 	bodyCtx context.Context //body close
-	bodyCnl context.CancelFunc
+	bodyCnl context.CancelCauseFunc
 
 	rawConn   net.Conn
 	h2        bool
 	r         *bufio.Reader
 	w         *bufio.Writer
 	h2RawConn *http2.ClientConn
-	rc        chan []byte
-	rn        chan int
 	pr        *pipCon
 	isPool    bool
 }
 
 func (obj *connecotr) withCancel(deleteCtx context.Context, closeCtx context.Context) {
-	obj.deleteCtx, obj.deleteCnl = context.WithCancel(deleteCtx)
-	obj.closeCtx, obj.closeCnl = context.WithCancel(closeCtx)
+	obj.deleteCtx, obj.deleteCnl = context.WithCancelCause(deleteCtx)
+	obj.closeCtx, obj.closeCnl = context.WithCancelCause(closeCtx)
 }
 func (obj *connecotr) Close() error {
-	obj.deleteCnl()
+	obj.deleteCnl(errors.New("connecotr close"))
 	if obj.h2RawConn != nil {
 		obj.h2RawConn.Close()
 	}
@@ -56,11 +53,13 @@ func (obj *connecotr) read() (err error) {
 	var pw *pipCon
 	obj.pr, pw = pipe(obj.deleteCtx)
 	defer func() {
-		obj.pr.cnl(err)
 		pw.cnl(err)
+		obj.pr.cnl(err)
 		obj.Close()
 	}()
-	_, err = io.Copy(pw, obj.rawConn)
+	if _, err = io.Copy(pw, obj.rawConn); err == nil {
+		err = io.EOF
+	}
 	return
 }
 func (obj *connecotr) Read(b []byte) (i int, err error) {
@@ -72,21 +71,6 @@ func (obj *connecotr) Read(b []byte) (i int, err error) {
 func (obj *connecotr) Write(b []byte) (int, error) {
 	return obj.rawConn.Write(b)
 }
-func (obj *connecotr) LocalAddr() net.Addr {
-	return obj.rawConn.LocalAddr()
-}
-func (obj *connecotr) RemoteAddr() net.Addr {
-	return obj.rawConn.RemoteAddr()
-}
-func (obj *connecotr) SetDeadline(t time.Time) error {
-	return obj.rawConn.SetDeadline(t)
-}
-func (obj *connecotr) SetReadDeadline(t time.Time) error {
-	return obj.rawConn.SetReadDeadline(t)
-}
-func (obj *connecotr) SetWriteDeadline(t time.Time) error {
-	return obj.rawConn.SetWriteDeadline(t)
-}
 
 func (obj *connecotr) h2Closed() bool {
 	state := obj.h2RawConn.State()
@@ -94,7 +78,7 @@ func (obj *connecotr) h2Closed() bool {
 }
 func (obj *connecotr) wrapBody(task *reqTask) {
 	body := new(readWriteCloser)
-	obj.bodyCtx, obj.bodyCnl = context.WithCancel(obj.deleteCtx)
+	obj.bodyCtx, obj.bodyCnl = context.WithCancelCause(obj.deleteCtx)
 	body.body = task.res.Body
 	body.conn = obj
 	task.res.Body = body
@@ -191,13 +175,13 @@ func (obj *connecotr) taskMain(task *reqTask, afterTime *time.Timer) (*http.Resp
 
 type connPool struct {
 	deleteCtx context.Context
-	deleteCnl context.CancelFunc
+	deleteCnl context.CancelCauseFunc
 	closeCtx  context.Context
-	closeCnl  context.CancelFunc
+	closeCnl  context.CancelCauseFunc
 	key       connKey
 	total     atomic.Int64
 	tasks     chan *reqTask
-	rt        *RoundTripper
+	rt        *roundTripper
 	lock      sync.Mutex
 }
 
@@ -252,10 +236,10 @@ func (obj *connPool) rwMain(conn *connecotr) {
 	}
 }
 func (obj *connPool) forceClose() {
-	obj.deleteCnl()
+	obj.deleteCnl(errors.New("connPool forceClose"))
 	obj.close()
 }
 func (obj *connPool) close() {
-	obj.closeCnl()
+	obj.closeCnl(errors.New("connPool close"))
 	obj.rt.delConnPool(obj.key)
 }

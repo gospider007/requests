@@ -12,10 +12,10 @@ require (
 	github.com/gospider007/net v0.0.0-20231028084010-313c148cf0a1
 	github.com/gospider007/re v0.0.0-20231024115818-adfd03636256
 	github.com/gospider007/tools v0.0.0-20231122021245-1cafbac3ef46
-	github.com/gospider007/websocket v0.0.0-20231124124758-1491f1b57db1
+	github.com/gospider007/websocket v0.0.0-20231128065110-6296f87425c4
 	github.com/refraction-networking/utls v1.5.4
-	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa
-	golang.org/x/net v0.18.0
+	golang.org/x/exp v0.0.0-20231127185646-65229373498e
+	golang.org/x/net v0.19.0
 )
 
 require (
@@ -42,11 +42,11 @@ require (
 	go.mongodb.org/mongo-driver v1.13.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
-	golang.org/x/crypto v0.15.0 // indirect
+	golang.org/x/crypto v0.16.0 // indirect
 	golang.org/x/image v0.14.0 // indirect
 	golang.org/x/mod v0.14.0 // indirect
-	golang.org/x/sys v0.14.0 // indirect
+	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
-	golang.org/x/tools v0.15.0 // indirect
+	golang.org/x/tools v0.16.0 // indirect
 	nhooyr.io/websocket v1.8.10 // indirect
 )

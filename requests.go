@@ -432,7 +432,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		response.disUnzip = response.response.Uncompressed
 	}
 	if response.response.StatusCode == 101 {
-		response.webSocket, err = websocket.NewClientConn(response.response, response.ForceCloseConn)
+		response.webSocket, err = websocket.NewClientConn(response.rawConn.Conn(), response.response.Header, response.ForceCloseConn)
 		if ctxData.debug {
 			debugPrint(ctxData.requestId, "new websocket client, err: ", err)
 		}

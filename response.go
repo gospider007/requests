@@ -15,6 +15,7 @@ import (
 	"github.com/gospider007/bar"
 	"github.com/gospider007/bs4"
 	"github.com/gospider007/gson"
+	"github.com/gospider007/re"
 	"github.com/gospider007/tools"
 	"github.com/gospider007/websocket"
 )
@@ -61,21 +62,35 @@ func (obj *Sse) Recv() (Event, error) {
 		if err != nil || readStr == "\n" {
 			return event, err
 		}
-		if strings.HasPrefix(readStr, "data: ") {
-			event.Data += readStr[6 : len(readStr)-1]
-		} else if strings.HasPrefix(readStr, "event: ") {
-			event.Event = readStr[7 : len(readStr)-1]
-		} else if strings.HasPrefix(readStr, "id: ") {
-			event.Id = readStr[4 : len(readStr)-1]
-		} else if strings.HasPrefix(readStr, "retry: ") {
-			if event.Retry, err = strconv.Atoi(readStr[7 : len(readStr)-1]); err != nil {
+		reResult := re.Search(`data:\s?(.*)`, readStr)
+		if reResult != nil {
+			event.Data += reResult.Group(1)
+			continue
+		}
+		reResult = re.Search(`event:\s?(.*)`, readStr)
+
+		if reResult != nil {
+			event.Event = reResult.Group(1)
+			continue
+		}
+		reResult = re.Search(`id:\s?(.*)`, readStr)
+		if reResult != nil {
+			event.Id = reResult.Group(1)
+			continue
+		}
+		reResult = re.Search(`retry:\s?(.*)`, readStr)
+		if reResult != nil {
+			if event.Retry, err = strconv.Atoi(reResult.Group(1)); err != nil {
 				return event, err
 			}
-		} else if strings.HasPrefix(readStr, ": ") {
-			event.Comment = readStr[2 : len(readStr)-1]
-		} else {
-			return event, errors.New("content parse error:" + readStr)
+			continue
 		}
+		reResult = re.Search(`:\s?(.*)`, readStr)
+		if reResult != nil {
+			event.Comment = reResult.Group(1)
+			continue
+		}
+		return event, errors.New("content parse error:" + readStr)
 	}
 }
 
@@ -339,22 +354,6 @@ func (obj *Response) InPool() bool {
 		return obj.rawConn.InPool()
 	}
 	return false
-}
-
-// conn ja3
-func (obj *Response) Ja3() string {
-	if obj.rawConn != nil {
-		return obj.rawConn.Ja3()
-	}
-	return ""
-}
-
-// conn h2ja3
-func (obj *Response) H2Ja3() string {
-	if obj.rawConn != nil {
-		return obj.rawConn.H2Ja3()
-	}
-	return ""
 }
 
 // safe close conn

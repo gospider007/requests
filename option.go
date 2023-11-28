@@ -158,92 +158,95 @@ func (obj *RequestOption) initParams() (string, error) {
 	if err != nil {
 		return obj.Url.String(), err
 	}
-	query := dataMap.parseParams()
+	query := dataMap.parseParams().String()
 	if query == "" {
 		return obj.Url.String(), nil
 	}
 	pu := cloneUrl(obj.Url)
-	puValues := pu.Query()
-	pu.RawQuery = puValues.Encode() + "&" + query
+	pquery := pu.Query().Encode()
+	if pquery == "" {
+		pu.RawQuery = query
+	} else {
+		pu.RawQuery = pquery + "&" + query
+	}
 	return pu.String(), nil
 }
 func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	if !option.DisProxy {
-		if option.Proxy == "" && obj.proxy != nil {
-			option.Proxy = obj.proxy.String()
+		if option.Proxy == "" && obj.option.Proxy != "" {
+			option.Proxy = obj.option.Proxy
 		}
 	} else {
 		option.Proxy = ""
 	}
-
 	if option.MaxRetries < 0 {
 		option.MaxRetries = 0
 	} else if option.MaxRetries == 0 {
-		option.MaxRetries = obj.maxRetries
+		option.MaxRetries = obj.option.MaxRetries
 	}
 	if option.Headers == nil {
-		option.Headers = obj.headers
+		option.Headers = obj.option.Headers
 	}
 	if !option.Bar {
-		option.Bar = obj.bar
+		option.Bar = obj.option.Bar
 	}
 	if option.MaxRedirect == 0 {
-		option.MaxRedirect = obj.maxRedirect
+		option.MaxRedirect = obj.option.MaxRedirect
 	}
 	if option.Timeout == 0 {
-		option.Timeout = obj.timeout
+		option.Timeout = obj.option.Timeout
 	}
 	if option.ResponseHeaderTimeout == 0 {
-		option.ResponseHeaderTimeout = obj.responseHeaderTimeout
+		option.ResponseHeaderTimeout = obj.option.ResponseHeaderTimeout
 	}
 	if option.AddrType == 0 {
-		option.AddrType = obj.addrType
+		option.AddrType = obj.option.AddrType
 	}
 	if option.TlsHandshakeTimeout == 0 {
-		option.TlsHandshakeTimeout = obj.tlsHandshakeTimeout
+		option.TlsHandshakeTimeout = obj.option.TlsHandshakeTimeout
 	}
 	if !option.DisCookie {
-		option.DisCookie = obj.disCookie
+		option.DisCookie = obj.option.DisCookie
 	}
 	if !option.DisDecode {
-		option.DisDecode = obj.disDecode
+		option.DisDecode = obj.option.DisDecode
 	}
 	if !option.DisUnZip {
-		option.DisUnZip = obj.disUnZip
+		option.DisUnZip = obj.option.DisUnZip
 	}
 
 	if !option.ForceHttp1 {
-		option.ForceHttp1 = obj.forceHttp1
+		option.ForceHttp1 = obj.option.ForceHttp1
 	}
 
 	if !option.DisAlive {
-		option.DisAlive = obj.disAlive
+		option.DisAlive = obj.option.DisAlive
 	}
 	if option.OrderHeaders == nil {
-		option.OrderHeaders = obj.orderHeaders
+		option.OrderHeaders = obj.option.OrderHeaders
 	}
 
 	if !option.Ja3Spec.IsSet() {
-		if obj.ja3Spec.IsSet() {
-			option.Ja3Spec = obj.ja3Spec
-		} else if option.Ja3 {
+		if obj.option.Ja3Spec.IsSet() {
+			option.Ja3Spec = obj.option.Ja3Spec
+		} else if option.Ja3 || obj.option.Ja3 {
 			option.Ja3Spec = ja3.DefaultJa3Spec()
 		}
 	}
 	if !option.H2Ja3Spec.IsSet() {
-		option.H2Ja3Spec = obj.h2Ja3Spec
+		option.H2Ja3Spec = obj.option.H2Ja3Spec
 	}
 	if option.OptionCallBack == nil {
-		option.OptionCallBack = obj.optionCallBack
+		option.OptionCallBack = obj.option.OptionCallBack
 	}
 	if option.ResultCallBack == nil {
-		option.ResultCallBack = obj.resultCallBack
+		option.ResultCallBack = obj.option.ResultCallBack
 	}
 	if option.ErrCallBack == nil {
-		option.ErrCallBack = obj.errCallBack
+		option.ErrCallBack = obj.option.ErrCallBack
 	}
 	if option.RequestCallBack == nil {
-		option.RequestCallBack = obj.requestCallBack
+		option.RequestCallBack = obj.option.RequestCallBack
 	}
 	return option
 }
