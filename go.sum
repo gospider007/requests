@@ -45,6 +45,8 @@ github.com/gospider007/re v0.0.0-20231024115818-adfd03636256 h1:Z6kHRANoWB+/4rDz
 github.com/gospider007/re v0.0.0-20231024115818-adfd03636256/go.mod h1:X58uk0/F3mVskuQOZng0ZKJiAt3ETn0wxuLN//rVZrE=
 github.com/gospider007/tools v0.0.0-20231122021245-1cafbac3ef46 h1:vskdS8WLAveNSDHsAAdwiD+LBLMHq3AND1nGnVydwfM=
 github.com/gospider007/tools v0.0.0-20231122021245-1cafbac3ef46/go.mod h1:myK4kDqDx4TlplDVnfYMI7Xi5VUbFZ3fxwAh2Cwm7ks=
+github.com/gospider007/tools v0.0.0-20231128142841-23217c299fc2 h1:io2bXntt5LSwWIBPztZUQrGnXlqrphVi5zdGBgHuyb8=
+github.com/gospider007/tools v0.0.0-20231128142841-23217c299fc2/go.mod h1:wiILK6EotceHz/Rnb6ux8PzY3sr5OV+mYuIcbtxpkYI=
 github.com/gospider007/websocket v0.0.0-20231128065110-6296f87425c4 h1:h+74nkhhTDN2tiaDjHwR4CjqBTHgh+t1pqE2IAWHN3k=
 github.com/gospider007/websocket v0.0.0-20231128065110-6296f87425c4/go.mod h1:OncvZIlq9TzwD/tQS/BYY/RKBqbW4+gGY3Ere1K7s24=
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=

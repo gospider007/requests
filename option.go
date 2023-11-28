@@ -10,6 +10,7 @@ import (
 
 	"github.com/gospider007/gtls"
 	"github.com/gospider007/ja3"
+	"github.com/gospider007/tools"
 	"github.com/gospider007/websocket"
 )
 
@@ -45,6 +46,7 @@ type ClientOption struct {
 	AddrType    gtls.AddrType //dns parse addr type
 	Jar         *Jar          //custom cookies
 
+	//other option
 	GetProxy    func(ctx context.Context, url *url.URL) (string, error) //proxy callback:support https,http,socks5 proxy
 	GetAddrType func(host string) gtls.AddrType
 }
@@ -82,6 +84,7 @@ type RequestOption struct {
 	AddrType    gtls.AddrType //dns parse addr type                                             //tls timeout,default:15
 	Jar         *Jar          //custom cookies
 
+	// other option
 	Method      string //method
 	Url         *url.URL
 	Host        string
@@ -172,81 +175,12 @@ func (obj *RequestOption) initParams() (string, error) {
 	return pu.String(), nil
 }
 func (obj *Client) newRequestOption(option RequestOption) RequestOption {
-	if !option.DisProxy {
-		if option.Proxy == "" && obj.option.Proxy != "" {
-			option.Proxy = obj.option.Proxy
-		}
-	} else {
-		option.Proxy = ""
-	}
+	tools.Merge(&option, obj.option)
 	if option.MaxRetries < 0 {
 		option.MaxRetries = 0
-	} else if option.MaxRetries == 0 {
-		option.MaxRetries = obj.option.MaxRetries
 	}
-	if option.Headers == nil {
-		option.Headers = obj.option.Headers
-	}
-	if !option.Bar {
-		option.Bar = obj.option.Bar
-	}
-	if option.MaxRedirect == 0 {
-		option.MaxRedirect = obj.option.MaxRedirect
-	}
-	if option.Timeout == 0 {
-		option.Timeout = obj.option.Timeout
-	}
-	if option.ResponseHeaderTimeout == 0 {
-		option.ResponseHeaderTimeout = obj.option.ResponseHeaderTimeout
-	}
-	if option.AddrType == 0 {
-		option.AddrType = obj.option.AddrType
-	}
-	if option.TlsHandshakeTimeout == 0 {
-		option.TlsHandshakeTimeout = obj.option.TlsHandshakeTimeout
-	}
-	if !option.DisCookie {
-		option.DisCookie = obj.option.DisCookie
-	}
-	if !option.DisDecode {
-		option.DisDecode = obj.option.DisDecode
-	}
-	if !option.DisUnZip {
-		option.DisUnZip = obj.option.DisUnZip
-	}
-
-	if !option.ForceHttp1 {
-		option.ForceHttp1 = obj.option.ForceHttp1
-	}
-
-	if !option.DisAlive {
-		option.DisAlive = obj.option.DisAlive
-	}
-	if option.OrderHeaders == nil {
-		option.OrderHeaders = obj.option.OrderHeaders
-	}
-
-	if !option.Ja3Spec.IsSet() {
-		if obj.option.Ja3Spec.IsSet() {
-			option.Ja3Spec = obj.option.Ja3Spec
-		} else if option.Ja3 || obj.option.Ja3 {
-			option.Ja3Spec = ja3.DefaultJa3Spec()
-		}
-	}
-	if !option.H2Ja3Spec.IsSet() {
-		option.H2Ja3Spec = obj.option.H2Ja3Spec
-	}
-	if option.OptionCallBack == nil {
-		option.OptionCallBack = obj.option.OptionCallBack
-	}
-	if option.ResultCallBack == nil {
-		option.ResultCallBack = obj.option.ResultCallBack
-	}
-	if option.ErrCallBack == nil {
-		option.ErrCallBack = obj.option.ErrCallBack
-	}
-	if option.RequestCallBack == nil {
-		option.RequestCallBack = obj.option.RequestCallBack
+	if !option.Ja3Spec.IsSet() && option.Ja3 {
+		option.Ja3Spec = ja3.DefaultJa3Spec()
 	}
 	return option
 }
