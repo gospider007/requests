@@ -21,7 +21,7 @@ func (obj *readWriteCloser) Close() (err error) {
 	if !obj.InPool() {
 		obj.ForceCloseConn()
 	} else {
-		obj.conn.bodyCnl(errors.New("readWriteCloser close"))
+		obj.conn.bodyCnl(errors.New("body close"))
 	}
 	return
 }

@@ -102,7 +102,6 @@ type RequestOption struct {
 	Stream   bool             //disable auto read
 	WsOption websocket.Option //websocket option
 	DisProxy bool             //force disable proxy
-	Debug    bool             //enable debugger
 	once     bool
 }
 
@@ -153,17 +152,17 @@ func (obj *RequestOption) initBody(ctx context.Context) (body io.Reader, err err
 	}
 	return
 }
-func (obj *RequestOption) initParams() (string, error) {
+func (obj *RequestOption) initParams() (*url.URL, error) {
 	if obj.Params == nil {
-		return obj.Url.String(), nil
+		return obj.Url, nil
 	}
 	_, dataMap, _, err := obj.newBody(obj.Params, mapType)
 	if err != nil {
-		return obj.Url.String(), err
+		return obj.Url, err
 	}
 	query := dataMap.parseParams().String()
 	if query == "" {
-		return obj.Url.String(), nil
+		return obj.Url, nil
 	}
 	pu := cloneUrl(obj.Url)
 	pquery := pu.Query().Encode()
@@ -172,7 +171,7 @@ func (obj *RequestOption) initParams() (string, error) {
 	} else {
 		pu.RawQuery = pquery + "&" + query
 	}
-	return pu.String(), nil
+	return pu, nil
 }
 func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	tools.Merge(&option, obj.option)

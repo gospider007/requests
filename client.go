@@ -86,21 +86,21 @@ func (obj *Client) Close() {
 	obj.cnl()
 }
 
-func (obj *Client) getClient(option *RequestOption) *http.Client {
+func (obj *Client) send(option *RequestOption, reqs *http.Request) (*http.Response, error) {
 	if option.DisCookie {
-		return &http.Client{
+		return (&http.Client{
 			Transport:     obj.client.Transport,
 			CheckRedirect: obj.client.CheckRedirect,
 			Timeout:       obj.client.Timeout,
-		}
+		}).Do(reqs)
 	}
 	if option.Jar != nil {
-		return &http.Client{
+		return (&http.Client{
 			Transport:     obj.client.Transport,
 			CheckRedirect: obj.client.CheckRedirect,
 			Timeout:       obj.client.Timeout,
 			Jar:           option.Jar.jar,
-		}
+		}).Do(reqs)
 	}
-	return obj.client
+	return obj.client.Do(reqs)
 }

@@ -27,6 +27,8 @@ github.com/google/pprof v0.0.0-20230926050212-f7f687d19a98 h1:pUa4ghanp6q4IJHwE9
 github.com/google/pprof v0.0.0-20230926050212-f7f687d19a98/go.mod h1:czg5+yv1E0ZGTi6S6vVK1mke0fV+FaUhNGcd6VRS9Ik=
 github.com/gospider007/bar v0.0.0-20231121084140-33c7b6797626 h1:zDK4PcXQmAX37JdGUp45gFDMolnBGzWVXgemm5ekG1Y=
 github.com/gospider007/bar v0.0.0-20231121084140-33c7b6797626/go.mod h1:aYPgmG9340i9x9VQZhf34/XtIj7PHDTq0wSO+7zU/8s=
+github.com/gospider007/bar v0.0.0-20231201075546-252b6e7b6a54 h1:3rtF5ZK6b9L8pIsn9AUtSbRBiSpcWW/3Os9XYNyDvKI=
+github.com/gospider007/bar v0.0.0-20231201075546-252b6e7b6a54/go.mod h1:aYPgmG9340i9x9VQZhf34/XtIj7PHDTq0wSO+7zU/8s=
 github.com/gospider007/blog v0.0.0-20231121084103-59a004dafccf h1:1laTsuH/wl5pZ5QlHzacX09QzvwQw0DFENoRMpGBK8Y=
 github.com/gospider007/blog v0.0.0-20231121084103-59a004dafccf/go.mod h1:CCJ+hvQ0kxL+qB/Wfr1xt7xspsG4XiczhnAPVxG2m3M=
 github.com/gospider007/bs4 v0.0.0-20231123090151-001db0b91941 h1:Aik3aBqnpujF5LA+JyIm3LNxivobnqAOPr+VVlTbqds=
@@ -43,10 +45,10 @@ github.com/gospider007/net v0.0.0-20231028084010-313c148cf0a1 h1:tYOQEvELrV+USjK
 github.com/gospider007/net v0.0.0-20231028084010-313c148cf0a1/go.mod h1:3ggAwYdh0NB0OvtiX0l5AfHdBjgsIt9MGsXCQ3iCzQc=
 github.com/gospider007/re v0.0.0-20231024115818-adfd03636256 h1:Z6kHRANoWB+/4rDzq51vBts0rIXilDrF8pdRNmbMJi4=
 github.com/gospider007/re v0.0.0-20231024115818-adfd03636256/go.mod h1:X58uk0/F3mVskuQOZng0ZKJiAt3ETn0wxuLN//rVZrE=
-github.com/gospider007/tools v0.0.0-20231122021245-1cafbac3ef46 h1:vskdS8WLAveNSDHsAAdwiD+LBLMHq3AND1nGnVydwfM=
-github.com/gospider007/tools v0.0.0-20231122021245-1cafbac3ef46/go.mod h1:myK4kDqDx4TlplDVnfYMI7Xi5VUbFZ3fxwAh2Cwm7ks=
 github.com/gospider007/tools v0.0.0-20231128142841-23217c299fc2 h1:io2bXntt5LSwWIBPztZUQrGnXlqrphVi5zdGBgHuyb8=
 github.com/gospider007/tools v0.0.0-20231128142841-23217c299fc2/go.mod h1:wiILK6EotceHz/Rnb6ux8PzY3sr5OV+mYuIcbtxpkYI=
+github.com/gospider007/tools v0.0.0-20231201075443-f0a4bc8cd616 h1:Ix8hbbbaIX9REGs0qqU1b48L3BlleDyNkCPdv297LF8=
+github.com/gospider007/tools v0.0.0-20231201075443-f0a4bc8cd616/go.mod h1:wiILK6EotceHz/Rnb6ux8PzY3sr5OV+mYuIcbtxpkYI=
 github.com/gospider007/websocket v0.0.0-20231128065110-6296f87425c4 h1:h+74nkhhTDN2tiaDjHwR4CjqBTHgh+t1pqE2IAWHN3k=
 github.com/gospider007/websocket v0.0.0-20231128065110-6296f87425c4/go.mod h1:OncvZIlq9TzwD/tQS/BYY/RKBqbW4+gGY3Ere1K7s24=
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=

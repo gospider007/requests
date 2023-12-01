@@ -45,6 +45,9 @@ func getAddr(uurl *url.URL) string {
 	return uurl.Host
 }
 func cloneUrl(u *url.URL) *url.URL {
+	if u == nil {
+		return nil
+	}
 	r := *u
 	return &r
 }

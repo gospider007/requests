@@ -16,11 +16,6 @@ type pipCon struct {
 }
 
 func (obj *pipCon) Read(b []byte) (n int, err error) {
-	defer func() {
-		if err != nil {
-			obj.Close(err)
-		}
-	}()
 	select {
 	case con := <-obj.reader:
 		n = copy(b, con)
@@ -35,11 +30,6 @@ func (obj *pipCon) Read(b []byte) (n int, err error) {
 	}
 }
 func (obj *pipCon) Write(b []byte) (n int, err error) {
-	defer func() {
-		if err != nil {
-			obj.Close(err)
-		}
-	}()
 	obj.lock.Lock()
 	defer obj.lock.Unlock()
 	for once := true; once || len(b) > 0; once = false {

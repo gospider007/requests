@@ -5,9 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
-	"runtime"
 	"time"
 
 	"net/textproto"
@@ -17,7 +15,6 @@ import (
 
 	"net/http"
 
-	"github.com/gospider007/blog"
 	"github.com/gospider007/gtls"
 	"github.com/gospider007/ja3"
 	"github.com/gospider007/re"
@@ -53,10 +50,7 @@ type reqCtxData struct {
 	localAddr   *net.TCPAddr  //network card ip
 	addrType    gtls.AddrType //first ip type
 	dns         *net.UDPAddr
-
-	isNewConn bool
-	debug     bool
-	requestId string
+	isNewConn   bool
 }
 
 func NewReqCtxData(ctx context.Context, option *RequestOption) (*reqCtxData, error) {
@@ -70,15 +64,13 @@ func NewReqCtxData(ctx context.Context, option *RequestOption) (*reqCtxData, err
 	ctxData.requestCallBack = option.RequestCallBack
 	ctxData.responseHeaderTimeout = option.ResponseHeaderTimeout
 	ctxData.addrType = option.AddrType
-
 	ctxData.dialTimeout = option.DialTimeout
 	ctxData.keepAlive = option.KeepAlive
 	ctxData.localAddr = option.LocalAddr
 	ctxData.dns = option.Dns
-	ctxData.debug = option.Debug
-	if option.Debug {
-		ctxData.requestId = tools.NaoId()
-	}
+	ctxData.disProxy = option.DisProxy
+	ctxData.tlsHandshakeTimeout = option.TlsHandshakeTimeout
+	ctxData.orderHeaders = option.OrderHeaders
 	//init scheme
 	if option.Url != nil {
 		switch option.Url.Scheme {
@@ -94,15 +86,13 @@ func NewReqCtxData(ctx context.Context, option *RequestOption) (*reqCtxData, err
 	//init tls timeout
 	if option.TlsHandshakeTimeout == 0 {
 		ctxData.tlsHandshakeTimeout = time.Second * 15
-	} else {
-		ctxData.tlsHandshakeTimeout = option.TlsHandshakeTimeout
 	}
 	//init orderHeaders,this must after init headers
-	if option.OrderHeaders == nil {
+	if ctxData.orderHeaders == nil {
 		ctxData.orderHeaders = ja3.DefaultH1OrderHeaders()
 	} else {
 		orderHeaders := []string{}
-		for _, key := range option.OrderHeaders {
+		for _, key := range ctxData.orderHeaders {
 			key = textproto.CanonicalMIMEHeaderKey(key)
 			if !slices.Contains(orderHeaders, key) {
 				orderHeaders = append(orderHeaders, key)
@@ -116,7 +106,6 @@ func NewReqCtxData(ctx context.Context, option *RequestOption) (*reqCtxData, err
 		ctxData.orderHeaders = orderHeaders
 	}
 	//init proxy
-	ctxData.disProxy = option.DisProxy
 
 	if option.Proxy != "" {
 		tempProxy, err := gtls.VerifyProxy(option.Proxy)
@@ -242,6 +231,15 @@ func (obj *Client) Request(ctx context.Context, method string, href string, opti
 		rawOption = options[0]
 	}
 	optionBak := obj.newRequestOption(rawOption)
+	if optionBak.Method == "" {
+		optionBak.Method = method
+	}
+	if optionBak.Url == nil {
+		if optionBak.Url, err = url.Parse(href); err != nil {
+			err = tools.WrapError(err, "url parse error")
+			return
+		}
+	}
 	for maxRetries := 0; maxRetries <= optionBak.MaxRetries; maxRetries++ {
 		select {
 		case <-obj.ctx.Done():
@@ -251,15 +249,6 @@ func (obj *Client) Request(ctx context.Context, method string, href string, opti
 			return nil, tools.WrapError(ctx.Err(), "request ctx 错误")
 		default:
 			option := optionBak
-			if option.Method == "" {
-				option.Method = method
-			}
-			if option.Url == nil {
-				if option.Url, err = url.Parse(href); err != nil {
-					err = tools.WrapError(err, "url parse error")
-					return
-				}
-			}
 			resp, err = obj.request(ctx, &option)
 			if err == nil || errors.Is(err, errFatal) || option.once {
 				return
@@ -271,20 +260,11 @@ func (obj *Client) Request(ctx context.Context, method string, href string, opti
 	}
 	return resp, err
 }
-func debugPrint(requestId string, content ...any) {
-	_, f, l, _ := runtime.Caller(1)
-	contents := []any{}
-	for _, cont := range content {
-		contents = append(contents, cont, " ")
-	}
-	log.Printf("%s:%d, %s>>>%s, %s>>>%s", f, l, blog.Color(2, "requestId"), blog.Color(1, requestId), blog.Color(2, "content"), blog.Color(3, contents...))
-}
 func (obj *Client) request(ctx context.Context, option *RequestOption) (response *Response, err error) {
 	response = new(Response)
 	defer func() {
 		if err == nil && !response.IsStream() {
 			err = response.ReadBody()
-			defer response.CloseBody()
 		}
 		if err == nil && option.ResultCallBack != nil {
 			err = option.ResultCallBack(ctx, obj, response)
@@ -296,6 +276,8 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 					err = tools.WrapError(errFatal, err2)
 				}
 			}
+		} else if !response.IsStream() {
+			response.CloseBody()
 		}
 	}()
 	if option.OptionCallBack != nil {
@@ -311,14 +293,17 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	if headers == nil {
 		headers = defaultHeaders()
 	}
+
 	response.bar = option.Bar
 	response.disUnzip = option.DisUnZip
 	response.disDecode = option.DisDecode
 	response.stream = option.Stream
 
 	method := strings.ToUpper(option.Method)
+	if method == "" {
+		method = http.MethodGet
+	}
 
-	var reqs *http.Request
 	//init ctxData
 	ctxData, err := NewReqCtxData(ctx, option)
 	if err != nil {
@@ -341,19 +326,11 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	if err != nil {
 		return response, tools.WrapError(err, errors.New("tempRequest init body error"), err)
 	}
-	if ctxData.debug {
-		debugPrint(ctxData.requestId, "create request with ctx")
-	}
 	//create request
-	if body != nil {
-		reqs, err = http.NewRequestWithContext(response.ctx, method, href, body)
-	} else {
-		reqs, err = http.NewRequestWithContext(response.ctx, method, href, nil)
-	}
+	reqs, err := http.NewRequestWithContext(response.ctx, method, href.String(), body)
 	if err != nil {
 		return response, tools.WrapError(errFatal, errors.New("tempRequest 构造request失败"), err)
 	}
-
 	//init headers
 	reqs.Header = headers
 	//add Referer
@@ -366,28 +343,21 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	}
 
 	//set ContentType
-	if reqs.Header.Get("Content-Type") == "" && reqs.Header.Get("content-type") == "" && option.ContentType != "" {
+	if option.ContentType != "" && reqs.Header.Get("Content-Type") == "" {
 		reqs.Header.Set("Content-Type", option.ContentType)
 	}
 
 	//init ws
 	if ctxData.isWs {
-		if ctxData.debug {
-			debugPrint(ctxData.requestId, "init websocket headers")
-		}
 		websocket.SetClientHeadersOption(reqs.Header, option.WsOption)
 	}
-	switch reqs.URL.Scheme {
-	case "file":
+
+	if reqs.URL.Scheme == "file" {
 		response.filePath = re.Sub(`^/+`, "", reqs.URL.Path)
 		response.content, err = os.ReadFile(response.filePath)
 		if err != nil {
 			err = tools.WrapError(errFatal, errors.New("read filePath data error"), err)
 		}
-		return
-	case "http", "https":
-	default:
-		err = tools.WrapError(errFatal, fmt.Errorf("url scheme error: %s", reqs.URL.Scheme))
 		return
 	}
 	//add host
@@ -409,42 +379,30 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 			reqs.AddCookie(vv)
 		}
 	}
-	if ctxData.debug {
-		debugPrint(ctxData.requestId, "send request start")
-	}
 	//send req
-	response.response, err = obj.getClient(option).Do(reqs)
-	if ctxData.debug {
-		debugPrint(ctxData.requestId, "send request end, err: ", err)
-	}
+	response.response, err = obj.send(option, reqs)
 	response.isNewConn = ctxData.isNewConn
 	if err != nil {
 		err = tools.WrapError(err, "roundTripper error")
 		return
-	} else if response.response == nil {
+	}
+	if response.response == nil {
 		err = errors.New("response is nil")
 		return
 	}
-	response.rawConn = response.response.Body.(*readWriteCloser)
+	if response.response.Body != nil {
+		response.rawConn = response.response.Body.(*readWriteCloser)
+	}
 	if !response.disUnzip {
 		response.disUnzip = response.response.Uncompressed
 	}
 	if response.response.StatusCode == 101 {
 		response.webSocket, err = websocket.NewClientConn(response.rawConn.Conn(), response.response.Header, response.ForceCloseConn)
-		if ctxData.debug {
-			debugPrint(ctxData.requestId, "new websocket client, err: ", err)
-		}
 	} else if response.response.Header.Get("Content-Type") == "text/event-stream" {
 		response.sse = newSse(response.response.Body, response.ForceCloseConn)
-		if ctxData.debug {
-			debugPrint(ctxData.requestId, "new sse client")
-		}
 	} else if !response.disUnzip {
 		var unCompressionBody io.ReadCloser
 		unCompressionBody, err = tools.CompressionDecode(response.response.Body, response.ContentEncoding())
-		if ctxData.debug {
-			debugPrint(ctxData.requestId, "unCompressionBody, err: ", err)
-		}
 		if err != nil {
 			if err != io.ErrUnexpectedEOF && err != io.EOF {
 				return

@@ -238,19 +238,8 @@ type barBody struct {
 
 func (obj *barBody) Write(con []byte) (int, error) {
 	l, err := obj.body.Write(con)
-	obj.bar.Print(int64(l))
+	obj.bar.Add(int64(l))
 	return l, err
-}
-func (obj *Response) barRead() (*bytes.Buffer, error) {
-	barData := &barBody{
-		bar:  bar.NewClient(obj.response.ContentLength),
-		body: bytes.NewBuffer(nil),
-	}
-	err := tools.CopyWitchContext(obj.response.Request.Context(), barData, obj.response.Body, true)
-	if err != nil {
-		return nil, err
-	}
-	return barData.body, nil
 }
 func (obj *Response) defaultDecode() bool {
 	return strings.Contains(obj.ContentType(), "html")
@@ -259,21 +248,16 @@ func (obj *Response) defaultDecode() bool {
 func (obj *Response) Read(con []byte) (i int, err error) {
 	done := make(chan struct{})
 	go func() {
-		defer close(done)
-		defer func() {
-			if recErr := recover(); recErr != nil && err == nil {
-				err, _ = recErr.(error)
-			}
-		}()
 		i, err = obj.response.Body.Read(con)
+		close(done)
 	}()
 	select {
-	case <-obj.ctx.Done():
-		obj.response.Body.Close()
-		return 0, obj.ctx.Err()
+	case <-obj.response.Request.Context().Done():
+		obj.ForceCloseConn()
+		err = obj.response.Request.Context().Err()
 	case <-done:
-		return
 	}
+	return
 }
 
 // return true if response is stream
@@ -283,28 +267,26 @@ func (obj *Response) IsStream() bool {
 
 // read body
 func (obj *Response) ReadBody() error {
-	if obj.webSocket != nil || obj.sse != nil {
-		return errors.New("ws or sse can not read")
+	if obj.IsStream() {
+		return errors.New("can not read stream")
 	}
 	if obj.readBody {
 		return errors.New("already read body")
 	}
-	var bBody *bytes.Buffer
-	var err error
-	defer obj.response.Body.Close()
-	if obj.bar && obj.ContentLength() > 0 {
-		bBody, err = obj.barRead()
-	} else {
-		bBody = bytes.NewBuffer(nil)
-		err = tools.CopyWitchContext(obj.response.Request.Context(), bBody, obj.response.Body, true)
-	}
 	obj.readBody = true
-	if err != nil {
-		obj.CloseConn()
-		return errors.New("response read content error: " + err.Error())
+	var err error
+	bBody := bytes.NewBuffer(nil)
+	if obj.bar && obj.ContentLength() > 0 {
+		err = tools.CopyWitchContext(obj.response.Request.Context(), &barBody{
+			bar:  bar.NewClient(obj.response.ContentLength),
+			body: bBody,
+		}, obj.response.Body)
+	} else {
+		err = tools.CopyWitchContext(obj.response.Request.Context(), bBody, obj.response.Body)
 	}
-	if obj.IsStream() {
-		obj.CloseBody()
+	if err != nil {
+		obj.ForceCloseConn()
+		return errors.New("response read content error: " + err.Error())
 	}
 	if !obj.disDecode && obj.defaultDecode() {
 		if content, encoding, err := tools.Charset(bBody.Bytes(), obj.ContentType()); err == nil {
@@ -315,6 +297,7 @@ func (obj *Response) ReadBody() error {
 	} else {
 		obj.content = bBody.Bytes()
 	}
+	obj.response.Body.Close()
 	return nil
 }
 

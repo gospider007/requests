@@ -46,6 +46,7 @@ func TestSse(t *testing.T) {
 			t.Error(err)
 		}
 	}()
+	time.Sleep(time.Second * 3)
 	response, err := requests.Get(nil, "http://127.0.0.1:3333/events") // Send WebSocket request
 	if err != nil {
 		t.Error(err)
