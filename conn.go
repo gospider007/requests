@@ -9,17 +9,14 @@ import (
 	"net/http"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/gospider007/net/http2"
 	"github.com/gospider007/tools"
 )
 
 type connecotr struct {
-	connKey   connKey
 	deleteCtx context.Context //force close
 	deleteCnl context.CancelCauseFunc
-	afterTime *time.Timer
 	closeCtx  context.Context //safe close
 	closeCnl  context.CancelCauseFunc
 
@@ -28,27 +25,21 @@ type connecotr struct {
 
 	rawConn   net.Conn
 	h2RawConn *http2.ClientConn
-
-	r      *bufio.Reader
-	w      *bufio.Writer
-	pr     *pipCon
-	inPool bool
+	proxy     string
+	r         *bufio.Reader
+	w         *bufio.Writer
+	pr        *pipCon
+	inPool    bool
 }
 
-func newConnecotr(ctx context.Context, netConn net.Conn) *connecotr {
-	conne := new(connecotr)
-	conne.withCancel(ctx, ctx)
-	conne.rawConn = netConn
-	return conne
-}
 func (obj *connecotr) withCancel(deleteCtx context.Context, closeCtx context.Context) {
 	obj.deleteCtx, obj.deleteCnl = context.WithCancelCause(deleteCtx)
 	obj.closeCtx, obj.closeCnl = context.WithCancelCause(closeCtx)
 }
 func (obj *connecotr) Close() error {
 	obj.deleteCnl(errors.New("connecotr close"))
-	if obj.afterTime != nil {
-		obj.afterTime.Stop()
+	if obj.pr != nil {
+		obj.pr.Close(errors.New("connecotr close"))
 	}
 	if obj.h2RawConn != nil {
 		obj.h2RawConn.Close()
@@ -64,8 +55,7 @@ func (obj *connecotr) read() (err error) {
 	if _, err = io.Copy(pw, obj.rawConn); err == nil {
 		err = io.EOF
 	}
-	pw.cnl(err)
-	obj.pr.cnl(err)
+	pw.Close(err)
 	obj.Close()
 	return
 }
@@ -95,17 +85,18 @@ func (obj *connecotr) wrapBody(task *reqTask) {
 }
 func (obj *connecotr) http1Req(task *reqTask) {
 	task.err = httpWrite(task.req, obj.w, task.orderHeaders)
-	// if task.err = task.req.Write(obj); task.err == nil {
+	// if task.err = task.req.Write(obj.w); task.err == nil {
 	// 	task.err = obj.w.Flush()
 	// }
 	if task.err == nil {
-		if task.res, task.err = http.ReadResponse(obj.r, task.req); task.res != nil && task.err == nil {
-			obj.wrapBody(task)
-		} else if task.err != nil {
+		task.res, task.err = http.ReadResponse(obj.r, task.req)
+		if task.err != nil {
 			task.err = tools.WrapError(task.err, "http1 read error")
+		} else if task.res == nil {
+			task.err = errors.New("response is nil")
+		} else {
+			obj.wrapBody(task)
 		}
-	} else {
-		task.err = tools.WrapError(task.err, "http1 write error")
 	}
 	task.cnl()
 }
@@ -130,14 +121,12 @@ func (obj *connecotr) waitBodyClose() error {
 func (obj *connecotr) taskMain(task *reqTask, waitBody bool) (retry bool) {
 	if obj.h2Closed() {
 		obj.Close()
-		task.err = errors.New("conn is closed")
 		return true
 	}
 	if !waitBody {
 		select {
 		case <-obj.closeCtx.Done():
 			obj.Close()
-			task.err = tools.WrapError(obj.closeCtx.Err(), "conn close ctx error: ")
 			return true
 		default:
 		}
@@ -147,11 +136,6 @@ func (obj *connecotr) taskMain(task *reqTask, waitBody bool) (retry bool) {
 	} else {
 		go obj.http1Req(task)
 	}
-	if obj.afterTime == nil {
-		obj.afterTime = time.NewTimer(task.responseHeaderTimeout)
-	} else {
-		obj.afterTime.Reset(task.responseHeaderTimeout)
-	}
 	select {
 	case <-task.ctx.Done():
 		if task.err != nil {
@@ -159,8 +143,8 @@ func (obj *connecotr) taskMain(task *reqTask, waitBody bool) (retry bool) {
 			return false
 		}
 		if task.res == nil {
-			obj.Close()
 			task.err = errors.New("response is nil")
+			obj.Close()
 			return false
 		}
 		if waitBody {
@@ -168,13 +152,8 @@ func (obj *connecotr) taskMain(task *reqTask, waitBody bool) (retry bool) {
 		}
 		return false
 	case <-obj.deleteCtx.Done(): //force conn close
-		task.cnl()
 		task.err = tools.WrapError(obj.deleteCtx.Err(), "delete ctx error: ")
-		obj.Close()
-		return false
-	case <-obj.afterTime.C:
 		task.cnl()
-		task.err = errors.New("response Header is Timeout")
 		obj.Close()
 		return false
 	}
@@ -185,11 +164,12 @@ type connPool struct {
 	deleteCnl context.CancelCauseFunc
 	closeCtx  context.Context
 	closeCnl  context.CancelCauseFunc
-	connKey   connKey
+	connKey   string
 	total     atomic.Int64
 	tasks     chan *reqTask
 	connPools *connPools
 }
+
 type connPools struct {
 	connPools sync.Map
 }
@@ -197,28 +177,26 @@ type connPools struct {
 func newConnPools() *connPools {
 	return new(connPools)
 }
-func (obj *connPools) get(key connKey) *connPool {
+
+func (obj *connPools) get(key string) *connPool {
 	val, ok := obj.connPools.Load(key)
 	if !ok {
 		return nil
 	}
-	pool := val.(*connPool)
-	select {
-	case <-pool.closeCtx.Done():
-		return nil
-	default:
-		return pool
-	}
+	return val.(*connPool)
 }
-func (obj *connPools) set(key connKey, pool *connPool) {
+
+func (obj *connPools) set(key string, pool *connPool) {
 	obj.connPools.Store(key, pool)
 }
-func (obj *connPools) del(key connKey) {
+
+func (obj *connPools) del(key string) {
 	obj.connPools.Delete(key)
 }
-func (obj *connPools) iter(f func(key connKey, value *connPool) bool) {
+
+func (obj *connPools) iter(f func(key string, value *connPool) bool) {
 	obj.connPools.Range(func(key, value any) bool {
-		return f(key.(connKey), value.(*connPool))
+		return f(key.(string), value.(*connPool))
 	})
 }
 
@@ -260,10 +238,10 @@ func (obj *connPool) rwMain(conn *connecotr) {
 	}
 }
 func (obj *connPool) forceClose() {
-	obj.deleteCnl(errors.New("connPool forceClose"))
 	obj.close()
+	obj.deleteCnl(errors.New("connPool forceClose"))
 }
 func (obj *connPool) close() {
-	obj.closeCnl(errors.New("connPool close"))
 	obj.connPools.del(obj.connKey)
+	obj.closeCnl(errors.New("connPool close"))
 }

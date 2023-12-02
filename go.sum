@@ -39,6 +39,8 @@ github.com/gospider007/gtls v0.0.0-20231120122450-e763299259db h1:8ghU2J0g7BKC1t
 github.com/gospider007/gtls v0.0.0-20231120122450-e763299259db/go.mod h1:yE9d9KMYxJEQawkOOHBea03dN89uo3hWQxYiv9tnz0A=
 github.com/gospider007/ja3 v0.0.0-20231029025157-38fc2f8f2d91 h1:qQokihfTAX+/U8GIMvZauRtE4G+/1Jq8XIJx8xLr04A=
 github.com/gospider007/ja3 v0.0.0-20231029025157-38fc2f8f2d91/go.mod h1:ur78/uhYDDULSy1ldA/pPpGhjk973Q1VsPnbktXGU/g=
+github.com/gospider007/ja3 v0.0.0-20231202085054-c1b92675187e h1:6Brr8+E6fht8IVFBJBkUoFMr8HQ9yzsrVxt8m/wVtQ8=
+github.com/gospider007/ja3 v0.0.0-20231202085054-c1b92675187e/go.mod h1:kWf9x0hQS+pgOpu1lRiVdE5nozLj71j740cWvjzKqok=
 github.com/gospider007/kinds v0.0.0-20231024093643-7a4424f2d30e h1:lmX6IQKkrNDbXfHsvrv1Uz0MoG2v5+4VC6Gdh9irUNY=
 github.com/gospider007/kinds v0.0.0-20231024093643-7a4424f2d30e/go.mod h1:nB4OMmd8Ji92yEmgjbHcqLcBHTAhSSmlGNb2JpTYK9A=
 github.com/gospider007/net v0.0.0-20231028084010-313c148cf0a1 h1:tYOQEvELrV+USjKGsAroC1cvsLMHgGlUPQY1TKS/PDM=
@@ -49,6 +51,8 @@ github.com/gospider007/tools v0.0.0-20231128142841-23217c299fc2 h1:io2bXntt5LSwW
 github.com/gospider007/tools v0.0.0-20231128142841-23217c299fc2/go.mod h1:wiILK6EotceHz/Rnb6ux8PzY3sr5OV+mYuIcbtxpkYI=
 github.com/gospider007/tools v0.0.0-20231201075443-f0a4bc8cd616 h1:Ix8hbbbaIX9REGs0qqU1b48L3BlleDyNkCPdv297LF8=
 github.com/gospider007/tools v0.0.0-20231201075443-f0a4bc8cd616/go.mod h1:wiILK6EotceHz/Rnb6ux8PzY3sr5OV+mYuIcbtxpkYI=
+github.com/gospider007/tools v0.0.0-20231202084937-8b2bc66f8198 h1:phk1GNobIIQWL5/G5dtgs35hotucdYv2FScMjlHHZ+Q=
+github.com/gospider007/tools v0.0.0-20231202084937-8b2bc66f8198/go.mod h1:wiILK6EotceHz/Rnb6ux8PzY3sr5OV+mYuIcbtxpkYI=
 github.com/gospider007/websocket v0.0.0-20231128065110-6296f87425c4 h1:h+74nkhhTDN2tiaDjHwR4CjqBTHgh+t1pqE2IAWHN3k=
 github.com/gospider007/websocket v0.0.0-20231128065110-6296f87425c4/go.mod h1:OncvZIlq9TzwD/tQS/BYY/RKBqbW4+gGY3Ere1K7s24=
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=
@@ -56,6 +60,8 @@ github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHm
 github.com/klauspost/compress v1.13.6/go.mod h1:/3/Vjq9QcHkK5uEr5lBEmyoZ1iFhe47etQ6QUkpK6sk=
 github.com/klauspost/compress v1.17.3 h1:qkRjuerhUU1EmXLYGkSH6EZL+vPSxIrYjLNAK4slzwA=
 github.com/klauspost/compress v1.17.3/go.mod h1:/dCuZOvVtNoHsyb+cuJD3itjs3NbnF6KH9zAO4BDxPM=
+github.com/klauspost/compress v1.17.4 h1:Ej5ixsIri7BrIjBkRZLTo6ghwrEtHFk7ijlczPW4fZ4=
+github.com/klauspost/compress v1.17.4/go.mod h1:/dCuZOvVtNoHsyb+cuJD3itjs3NbnF6KH9zAO4BDxPM=
 github.com/klauspost/cpuid/v2 v2.0.12/go.mod h1:g2LTdtYhdyuGPqyWyv7qRAmj1WBqxuObKfj5c0PQa7c=
 github.com/klauspost/cpuid/v2 v2.2.6 h1:ndNyv040zDGIDh8thGkXYjnFtiN02M1PVVF+JE/48xc=
 github.com/klauspost/cpuid/v2 v2.2.6/go.mod h1:Lcz8mBdAVJIBVzewtcLocK12l3Y+JytZYpaMropDUws=

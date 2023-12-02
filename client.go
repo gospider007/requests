@@ -16,6 +16,7 @@ type Client struct {
 	ctx       context.Context
 	cnl       context.CancelFunc
 	transport *roundTripper
+	closed    bool
 }
 
 var defaultClient, _ = NewClient(nil)
@@ -82,6 +83,7 @@ func (obj *Client) ForceCloseConns() {
 
 // Close the client and cannot be used again after shutdown
 func (obj *Client) Close() {
+	obj.closed = true
 	obj.ForceCloseConns()
 	obj.cnl()
 }

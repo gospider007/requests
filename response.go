@@ -266,7 +266,7 @@ func (obj *Response) IsStream() bool {
 }
 
 // read body
-func (obj *Response) ReadBody() error {
+func (obj *Response) ReadBody() (err error) {
 	if obj.IsStream() {
 		return errors.New("can not read stream")
 	}
@@ -274,8 +274,11 @@ func (obj *Response) ReadBody() error {
 		return errors.New("already read body")
 	}
 	obj.readBody = true
-	var err error
-	bBody := bytes.NewBuffer(nil)
+	bBody := bufferPool.Get().(*bytes.Buffer)
+	defer func() {
+		bBody.Reset()
+		bufferPool.Put(bBody)
+	}()
 	if obj.bar && obj.ContentLength() > 0 {
 		err = tools.CopyWitchContext(obj.response.Request.Context(), &barBody{
 			bar:  bar.NewClient(obj.response.ContentLength),
@@ -289,16 +292,11 @@ func (obj *Response) ReadBody() error {
 		return errors.New("response read content error: " + err.Error())
 	}
 	if !obj.disDecode && obj.defaultDecode() {
-		if content, encoding, err := tools.Charset(bBody.Bytes(), obj.ContentType()); err == nil {
-			obj.content, obj.encoding = content, encoding
-		} else {
-			obj.content = bBody.Bytes()
-		}
+		obj.content, obj.encoding, _ = tools.Charset(bBody.Bytes(), obj.ContentType())
 	} else {
 		obj.content = bBody.Bytes()
 	}
-	obj.response.Body.Close()
-	return nil
+	return
 }
 
 // conn is new conn
@@ -316,8 +314,8 @@ func (obj *Response) CloseBody() error {
 	}
 	if obj.IsStream() || !obj.readBody {
 		obj.ForceCloseConn()
-	} else if obj.rawConn != nil {
-		obj.rawConn.Close()
+	} else { //close body
+		obj.closeBody()
 	}
 	obj.cnl()
 	return nil
@@ -337,6 +335,13 @@ func (obj *Response) InPool() bool {
 		return obj.rawConn.InPool()
 	}
 	return false
+}
+
+// close body
+func (obj *Response) closeBody() {
+	if obj.rawConn != nil {
+		obj.rawConn.Close()
+	}
 }
 
 // safe close conn

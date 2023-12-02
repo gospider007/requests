@@ -256,15 +256,12 @@ func (obj *orderMap) MarshalJSON() ([]byte, error) {
 }
 
 func any2Map(val any) map[string]any {
-	mapType := reflect.TypeOf(val)
-	if mapType.Kind() != reflect.Map {
+	if reflect.TypeOf(val).Kind() != reflect.Map {
 		return nil
 	}
 	mapValue := reflect.ValueOf(val)
-	keys := mapValue.MapKeys()
 	result := make(map[string]any)
-	for _, key := range keys {
-		keyData := key.Interface()
+	for _, key := range mapValue.MapKeys() {
 		valueData := mapValue.MapIndex(key).Interface()
 		sliceValue := reflect.ValueOf(valueData)
 		if sliceValue.Kind() == reflect.Slice {
@@ -273,13 +270,14 @@ func any2Map(val any) map[string]any {
 				valueData2 = append(valueData2, sliceValue.Index(i).Interface())
 			}
 			valueData = valueData2
+		} else {
+			result[fmt.Sprint(key.Interface())] = valueData
 		}
-		result[fmt.Sprint(keyData)] = valueData
 	}
 	return result
 }
 
-func (obj *RequestOption) newBody(val any, valType int) (io.Reader, *orderMap, []string, error) {
+func (obj *RequestOption) newBody(val any, valType int) (reader io.Reader, parseOrderMap *orderMap, orderKey []string, err error) {
 	if reader, ok := val.(io.Reader); ok {
 		obj.once = true
 		return reader, nil, nil, nil
@@ -301,6 +299,7 @@ func (obj *RequestOption) newBody(val any, valType int) (io.Reader, *orderMap, [
 	if mapData := any2Map(val); mapData != nil {
 		val = mapData
 	}
+mapL:
 	switch value := val.(type) {
 	case *gson.Client:
 		if !value.IsObject() {
@@ -336,9 +335,8 @@ func (obj *RequestOption) newBody(val any, valType int) (io.Reader, *orderMap, [
 		}
 		return nil, orderMap, nil, nil
 	}
-	result, err := gson.Decode(val)
-	if err != nil {
+	if val, err = gson.Decode(val); err != nil {
 		return nil, nil, nil, err
 	}
-	return obj.newBody(result, valType)
+	goto mapL
 }

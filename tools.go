@@ -2,11 +2,14 @@ package requests
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
+	"sync"
 	_ "unsafe"
 
 	"golang.org/x/exp/slices"
@@ -29,18 +32,24 @@ func getHost(req *http.Request) string {
 	}
 	return host
 }
-func getAddr(uurl *url.URL) string {
+func getAddr(uurl *url.URL) (addr string) {
 	if uurl == nil {
 		return ""
 	}
 	_, port, _ := net.SplitHostPort(uurl.Host)
 	if port == "" {
+		bs := builderPool.Get().(strings.Builder)
+		bs.WriteString(uurl.Host)
+		bs.WriteString(":")
 		if uurl.Scheme == "https" {
-			port = "443"
+			bs.WriteString("443")
 		} else {
-			port = "80"
+			bs.WriteString("80")
 		}
-		return fmt.Sprintf("%s:%s", uurl.Host, port)
+		addr = bs.String()
+		bs.Reset()
+		builderPool.Put(bs)
+		return
 	}
 	return uurl.Host
 }
@@ -103,16 +112,34 @@ func httpWrite(r *http.Request, w *bufio.Writer, orderHeaders []string) (err err
 	if r.Header.Get("Content-Length") == "" && shouldSendContentLength(r) {
 		r.Header.Set("Content-Length", fmt.Sprint(r.ContentLength))
 	}
-	if _, err = fmt.Fprintf(w, "%s %s HTTP/1.1\r\n", r.Method, ruri); err != nil {
+	bs := builderPool.Get().(strings.Builder)
+	defer func() {
+		bs.Reset()
+		builderPool.Put(bs)
+	}()
+	bs.WriteString(r.Method)
+	bs.WriteString(" ")
+	bs.WriteString(ruri)
+	bs.WriteString(" ")
+	bs.WriteString(r.Proto)
+	bs.WriteString("\r\n")
+	if _, err = w.WriteString(bs.String()); err != nil {
 		return err
 	}
 	for _, k := range orderHeaders {
-		if k2, ok := replaceMap[k]; ok {
-			k = k2
-		}
-		for _, v := range r.Header.Values(k) {
-			if _, err = fmt.Fprintf(w, "%s: %s\r\n", k, v); err != nil {
-				return err
+		if vs, ok := r.Header[k]; ok {
+			if k2, ok := replaceMap[k]; ok {
+				k = k2
+			}
+			for _, v := range vs {
+				bs.Reset()
+				bs.WriteString(k)
+				bs.WriteString(": ")
+				bs.WriteString(v)
+				bs.WriteString("\r\n")
+				if _, err = w.WriteString(bs.String()); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -122,7 +149,12 @@ func httpWrite(r *http.Request, w *bufio.Writer, orderHeaders []string) (err err
 				k = k2
 			}
 			for _, v := range vs {
-				if _, err = fmt.Fprintf(w, "%s: %s\r\n", k, v); err != nil {
+				bs.Reset()
+				bs.WriteString(k)
+				bs.WriteString(": ")
+				bs.WriteString(v)
+				bs.WriteString("\r\n")
+				if _, err = w.WriteString(bs.String()); err != nil {
 					return err
 				}
 			}
@@ -137,4 +169,16 @@ func httpWrite(r *http.Request, w *bufio.Writer, orderHeaders []string) (err err
 		}
 	}
 	return w.Flush()
+}
+
+var bufferPool sync.Pool
+var builderPool sync.Pool
+
+func init() {
+	bufferPool.New = func() interface{} {
+		return bytes.NewBuffer(nil)
+	}
+	builderPool.New = func() interface{} {
+		return strings.Builder{}
+	}
 }

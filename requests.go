@@ -3,15 +3,14 @@ package requests
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"net"
+	"strings"
 	"time"
 
 	"net/textproto"
 	"net/url"
 	"os"
-	"strings"
 
 	"net/http"
 
@@ -71,22 +70,22 @@ func NewReqCtxData(ctx context.Context, option *RequestOption) (*reqCtxData, err
 	ctxData.disProxy = option.DisProxy
 	ctxData.tlsHandshakeTimeout = option.TlsHandshakeTimeout
 	ctxData.orderHeaders = option.OrderHeaders
+
 	//init scheme
 	if option.Url != nil {
-		switch option.Url.Scheme {
-		case "ws":
+		if option.Url.Scheme == "ws" {
 			ctxData.isWs = true
 			option.Url.Scheme = "http"
-		case "wss":
+		} else if option.Url.Scheme == "wss" {
 			ctxData.isWs = true
 			option.Url.Scheme = "https"
 		}
 	}
-
 	//init tls timeout
 	if option.TlsHandshakeTimeout == 0 {
 		ctxData.tlsHandshakeTimeout = time.Second * 15
 	}
+
 	//init orderHeaders,this must after init headers
 	if ctxData.orderHeaders == nil {
 		ctxData.orderHeaders = ja3.DefaultH1OrderHeaders()
@@ -106,7 +105,6 @@ func NewReqCtxData(ctx context.Context, option *RequestOption) (*reqCtxData, err
 		ctxData.orderHeaders = orderHeaders
 	}
 	//init proxy
-
 	if option.Proxy != "" {
 		tempProxy, err := gtls.VerifyProxy(option.Proxy)
 		if err != nil {
@@ -219,9 +217,9 @@ func (obj *Client) Trace(ctx context.Context, href string, options ...RequestOpt
 }
 
 // Define a function named Request that takes in four parameters:
-func (obj *Client) Request(ctx context.Context, method string, href string, options ...RequestOption) (resp *Response, err error) {
-	if obj == nil {
-		return nil, errors.New("client is nil")
+func (obj *Client) Request(ctx context.Context, method string, href string, options ...RequestOption) (response *Response, err error) {
+	if obj.closed {
+		return nil, errors.New("client is closed")
 	}
 	if ctx == nil {
 		ctx = obj.ctx
@@ -231,9 +229,6 @@ func (obj *Client) Request(ctx context.Context, method string, href string, opti
 		rawOption = options[0]
 	}
 	optionBak := obj.newRequestOption(rawOption)
-	if optionBak.Method == "" {
-		optionBak.Method = method
-	}
 	if optionBak.Url == nil {
 		if optionBak.Url, err = url.Parse(href); err != nil {
 			err = tools.WrapError(err, "url parse error")
@@ -241,42 +236,34 @@ func (obj *Client) Request(ctx context.Context, method string, href string, opti
 		}
 	}
 	for maxRetries := 0; maxRetries <= optionBak.MaxRetries; maxRetries++ {
-		select {
-		case <-obj.ctx.Done():
-			obj.Close()
-			return nil, tools.WrapError(obj.ctx.Err(), "client ctx 错误")
-		case <-ctx.Done():
-			return nil, tools.WrapError(ctx.Err(), "request ctx 错误")
-		default:
-			option := optionBak
-			resp, err = obj.request(ctx, &option)
-			if err == nil || errors.Is(err, errFatal) || option.once {
-				return
-			}
+		option := optionBak
+		response, err = obj.request(ctx, &option)
+		if err == nil || errors.Is(err, errFatal) || option.once {
+			return
 		}
 	}
-	if err == nil {
-		err = errors.New("max try num")
-	}
-	return resp, err
+	return
 }
 func (obj *Client) request(ctx context.Context, option *RequestOption) (response *Response, err error) {
 	response = new(Response)
 	defer func() {
+		//read body
 		if err == nil && !response.IsStream() {
 			err = response.ReadBody()
 		}
+		//result callback
 		if err == nil && option.ResultCallBack != nil {
 			err = option.ResultCallBack(ctx, obj, response)
 		}
-		if err != nil {
+
+		if err != nil { //err callback, must close body
 			response.CloseBody()
 			if option.ErrCallBack != nil {
 				if err2 := option.ErrCallBack(ctx, obj, response, err); err2 != nil {
 					err = tools.WrapError(errFatal, err2)
 				}
 			}
-		} else if !response.IsStream() {
+		} else if !response.IsStream() { //is not is stream must close body
 			response.CloseBody()
 		}
 	}()
@@ -285,24 +272,10 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 			return
 		}
 	}
-	//init headers and orderheaders,befor init ctxData
-	headers, err := option.initHeaders()
-	if err != nil {
-		return response, tools.WrapError(err, errors.New("tempRequest init headers error"), err)
-	}
-	if headers == nil {
-		headers = defaultHeaders()
-	}
-
 	response.bar = option.Bar
 	response.disUnzip = option.DisUnZip
 	response.disDecode = option.DisDecode
 	response.stream = option.Stream
-
-	method := strings.ToUpper(option.Method)
-	if method == "" {
-		method = http.MethodGet
-	}
 
 	//init ctxData
 	ctxData, err := NewReqCtxData(ctx, option)
@@ -327,18 +300,42 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		return response, tools.WrapError(err, errors.New("tempRequest init body error"), err)
 	}
 	//create request
-	reqs, err := http.NewRequestWithContext(response.ctx, method, href.String(), body)
+	reqs, err := http.NewRequestWithContext(response.ctx, strings.ToUpper(option.Method), href.String(), body)
 	if err != nil {
 		return response, tools.WrapError(errFatal, errors.New("tempRequest 构造request失败"), err)
 	}
 	//init headers
-	reqs.Header = headers
+
+	//init headers and orderheaders,befor init ctxData
+	headers, err := option.initHeaders()
+	if err != nil {
+		return response, tools.WrapError(err, errors.New("tempRequest init headers error"), err)
+	}
+	if headers == nil {
+		reqs.Header = http.Header{
+			"User-Agent":         []string{UserAgent},
+			"Accept":             []string{"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"},
+			"Accept-Encoding":    []string{"gzip, deflate, br"},
+			"Accept-Language":    []string{AcceptLanguage},
+			"Sec-Ch-Ua":          []string{SecChUa},
+			"Sec-Ch-Ua-Mobile":   []string{"?0"},
+			"Sec-Ch-Ua-Platform": []string{`"Windows"`},
+		}
+	} else {
+		reqs.Header = headers
+	}
 	//add Referer
 	if reqs.Header.Get("Referer") == "" {
 		if option.Referer != "" {
 			reqs.Header.Set("Referer", option.Referer)
-		} else {
-			reqs.Header.Set("Referer", fmt.Sprintf("%s://%s", reqs.URL.Scheme, reqs.URL.Host))
+		} else if reqs.URL.Scheme != "" && reqs.URL.Host != "" {
+			referBuild := builderPool.Get().(strings.Builder)
+			referBuild.WriteString(reqs.URL.Scheme)
+			referBuild.WriteString("://")
+			referBuild.WriteString(reqs.URL.Host)
+			reqs.Header.Set("Referer", referBuild.String())
+			referBuild.Reset()
+			builderPool.Put(referBuild)
 		}
 	}
 

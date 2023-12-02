@@ -10,24 +10,22 @@ import (
 
 	"github.com/gospider007/gtls"
 	"github.com/gospider007/ja3"
-	"github.com/gospider007/tools"
 	"github.com/gospider007/websocket"
 )
 
 // Connection Management Options
 type ClientOption struct {
-	ForceHttp1            bool                                                                            //force  use http1 send requests
 	OrderHeaders          []string                                                                        //order headers with http1
-	Ja3                   bool                                                                            //enable ja3 fingerprint
 	Ja3Spec               ja3.Ja3Spec                                                                     //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
 	H2Ja3Spec             ja3.H2Ja3Spec                                                                   //h2 fingerprint
 	Proxy                 string                                                                          //proxy,support https,http,socks5
+	ForceHttp1            bool                                                                            //force  use http1 send requests
+	Ja3                   bool                                                                            //enable ja3 fingerprint
 	DisCookie             bool                                                                            //disable cookies
 	DisDecode             bool                                                                            //disable auto decode
 	DisUnZip              bool                                                                            //disable auto zip decode
 	DisAlive              bool                                                                            //disable  keepalive
 	Bar                   bool                                                                            ////enable bar display
-	Timeout               time.Duration                                                                   //request timeout
 	OptionCallBack        func(ctx context.Context, client *Client, option *RequestOption) error          //option callback,if error is returnd, break request
 	ResultCallBack        func(ctx context.Context, client *Client, response *Response) error             //result callback,if error is returnd,next errCallback
 	ErrCallBack           func(ctx context.Context, client *Client, response *Response, err error) error  //error callback,if error is returnd,break request
@@ -35,6 +33,7 @@ type ClientOption struct {
 	MaxRetries            int                                                                             //try num
 	MaxRedirect           int                                                                             //redirect num ,<0 no redirect,==0 no limit
 	Headers               any                                                                             //default headers
+	Timeout               time.Duration                                                                   //request timeout
 	ResponseHeaderTimeout time.Duration                                                                   //ResponseHeaderTimeout ,default:30
 	TlsHandshakeTimeout   time.Duration                                                                   //tls timeout,default:15
 
@@ -53,18 +52,17 @@ type ClientOption struct {
 
 // Options for sending requests
 type RequestOption struct {
-	ForceHttp1      bool                                                                            //force  use http1 send requests
 	OrderHeaders    []string                                                                        //order headers with http1
-	Ja3             bool                                                                            //enable ja3 fingerprint
 	Ja3Spec         ja3.Ja3Spec                                                                     //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
 	H2Ja3Spec       ja3.H2Ja3Spec                                                                   //custom h2 fingerprint
 	Proxy           string                                                                          //proxy,support http,https,socks5,example：http://127.0.0.1:7005
+	ForceHttp1      bool                                                                            //force  use http1 send requests
+	Ja3             bool                                                                            //enable ja3 fingerprint
 	DisCookie       bool                                                                            //disable cookies,not use cookies
 	DisDecode       bool                                                                            //disable auto decode
 	DisUnZip        bool                                                                            //disable auto zip decode
 	DisAlive        bool                                                                            //disable  keepalive
 	Bar             bool                                                                            //enable bar display
-	Timeout         time.Duration                                                                   //request timeout
 	OptionCallBack  func(ctx context.Context, client *Client, option *RequestOption) error          //option callback,if error is returnd, break request
 	ResultCallBack  func(ctx context.Context, client *Client, response *Response) error             //result callback,if error is returnd,next errCallback
 	ErrCallBack     func(ctx context.Context, client *Client, response *Response, err error) error  //error callback,if error is returnd,break request
@@ -73,6 +71,7 @@ type RequestOption struct {
 	MaxRetries            int           //try num
 	MaxRedirect           int           //redirect num ,<0 no redirect,==0 no limit
 	Headers               any           //request headers：json,map，header
+	Timeout               time.Duration //request timeout
 	ResponseHeaderTimeout time.Duration //ResponseHeaderTimeout ,default:30
 	TlsHandshakeTimeout   time.Duration
 
@@ -174,7 +173,89 @@ func (obj *RequestOption) initParams() (*url.URL, error) {
 	return pu, nil
 }
 func (obj *Client) newRequestOption(option RequestOption) RequestOption {
-	tools.Merge(&option, obj.option)
+	// start
+	if option.OrderHeaders == nil {
+		option.OrderHeaders = obj.option.OrderHeaders
+	}
+	if !option.Ja3Spec.IsSet() {
+		option.Ja3Spec = obj.option.Ja3Spec
+	}
+	if !option.H2Ja3Spec.IsSet() {
+		option.H2Ja3Spec = obj.option.H2Ja3Spec
+	}
+	if option.Proxy == "" {
+		option.Proxy = obj.option.Proxy
+	}
+	if !option.ForceHttp1 {
+		option.ForceHttp1 = obj.option.ForceHttp1
+	}
+	if !option.Ja3 {
+		option.Ja3 = obj.option.Ja3
+	}
+	if !option.DisCookie {
+		option.DisCookie = obj.option.DisCookie
+	}
+	if !option.DisDecode {
+		option.DisDecode = obj.option.DisDecode
+	}
+	if !option.DisUnZip {
+		option.DisUnZip = obj.option.DisUnZip
+	}
+	if !option.DisAlive {
+		option.DisAlive = obj.option.DisAlive
+	}
+	if !option.Bar {
+		option.Bar = obj.option.Bar
+	}
+	if option.OptionCallBack == nil {
+		option.OptionCallBack = obj.option.OptionCallBack
+	}
+	if option.ResultCallBack == nil {
+		option.ResultCallBack = obj.option.ResultCallBack
+	}
+	if option.ErrCallBack == nil {
+		option.ErrCallBack = obj.option.ErrCallBack
+	}
+	if option.RequestCallBack == nil {
+		option.RequestCallBack = obj.option.RequestCallBack
+	}
+	if option.MaxRetries == 0 {
+		option.MaxRetries = obj.option.MaxRetries
+	}
+	if option.MaxRedirect == 0 {
+		option.MaxRedirect = obj.option.MaxRedirect
+	}
+	if option.Headers == nil {
+		option.Headers = obj.option.Headers
+	}
+	if option.Timeout == 0 {
+		option.Timeout = obj.option.Timeout
+	}
+	if option.ResponseHeaderTimeout == 0 {
+		option.ResponseHeaderTimeout = obj.option.ResponseHeaderTimeout
+	}
+	if option.TlsHandshakeTimeout == 0 {
+		option.TlsHandshakeTimeout = obj.option.TlsHandshakeTimeout
+	}
+	if option.DialTimeout == 0 {
+		option.DialTimeout = obj.option.DialTimeout
+	}
+	if option.KeepAlive == 0 {
+		option.KeepAlive = obj.option.KeepAlive
+	}
+	if option.LocalAddr == nil {
+		option.LocalAddr = obj.option.LocalAddr
+	}
+	if option.Dns == nil {
+		option.Dns = obj.option.Dns
+	}
+	if option.AddrType == 0 {
+		option.AddrType = obj.option.AddrType
+	}
+	if option.Jar == nil {
+		option.Jar = obj.option.Jar
+	}
+	//end
 	if option.MaxRetries < 0 {
 		option.MaxRetries = 0
 	}

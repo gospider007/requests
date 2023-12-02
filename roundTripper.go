@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net"
 	"net/url"
+	"strings"
 	"time"
 
 	"net/http"
@@ -18,28 +19,15 @@ import (
 )
 
 type reqTask struct {
-	ctx                   context.Context
-	cnl                   context.CancelFunc
-	req                   *http.Request
-	res                   *http.Response
-	emptyPool             chan struct{}
-	err                   error
-	orderHeaders          []string
-	responseHeaderTimeout time.Duration
+	ctx          context.Context
+	cnl          context.CancelFunc
+	req          *http.Request
+	res          *http.Response
+	emptyPool    chan struct{}
+	err          error
+	orderHeaders []string
 }
 
-func newReqTask(ctx context.Context, req *http.Request, ctxData *reqCtxData) *reqTask {
-	if ctxData.responseHeaderTimeout == 0 {
-		ctxData.responseHeaderTimeout = time.Second * 30
-	}
-	task := new(reqTask)
-	task.req = req
-	task.emptyPool = make(chan struct{})
-	task.orderHeaders = ctxData.orderHeaders
-	task.responseHeaderTimeout = ctxData.responseHeaderTimeout
-	task.ctx, task.cnl = context.WithCancel(ctx)
-	return task
-}
 func (obj *reqTask) inPool() bool {
 	return obj.err == nil && obj.res != nil && obj.res.StatusCode != 101 && obj.res.Header.Get("Content-Type") != "text/event-stream"
 }
@@ -49,14 +37,15 @@ type connKey struct {
 	addr  string
 }
 
-func getKey(ctxData *reqCtxData, req *http.Request) connKey {
-	key := connKey{
-		addr: getAddr(req.URL),
-	}
-	if ctxData.proxy != nil {
-		key.proxy = ctxData.proxy.String()
-	}
-	return key
+func getKey(ctxData *reqCtxData, req *http.Request) (key string) {
+	b := builderPool.Get().(strings.Builder)
+	b.WriteString(getAddr(ctxData.proxy))
+	b.WriteString("@")
+	b.WriteString(getAddr(req.URL))
+	key = b.String()
+	b.Reset()
+	builderPool.Put(b)
+	return
 }
 
 type roundTripper struct {
@@ -115,7 +104,7 @@ func newRoundTripper(preCtx context.Context, option ClientOption) *roundTripper 
 		connPools:  newConnPools(),
 	}
 }
-func (obj *roundTripper) newConnPool(conn *connecotr, key connKey) *connPool {
+func (obj *roundTripper) newConnPool(conn *connecotr, key string) *connPool {
 	pool := new(connPool)
 	pool.connKey = key
 	pool.deleteCtx, pool.deleteCnl = context.WithCancelCause(obj.ctx)
@@ -126,10 +115,7 @@ func (obj *roundTripper) newConnPool(conn *connecotr, key connKey) *connPool {
 	go pool.rwMain(conn)
 	return pool
 }
-func (obj *roundTripper) getConnPool(key connKey) *connPool {
-	return obj.connPools.get(key)
-}
-func (obj *roundTripper) putConnPool(key connKey, conn *connecotr) {
+func (obj *roundTripper) putConnPool(key string, conn *connecotr) {
 	conn.inPool = true
 	if conn.h2RawConn == nil {
 		go conn.read()
@@ -148,11 +134,15 @@ func (obj *roundTripper) tlsConfigClone() *tls.Config {
 func (obj *roundTripper) utlsConfigClone() *utls.Config {
 	return obj.utlsConfig.Clone()
 }
-func (obj *roundTripper) dial(ctxData *reqCtxData, key *connKey, req *http.Request) (conn *connecotr, err error) {
+func (obj *roundTripper) newConnecotr(netConn net.Conn) *connecotr {
+	conne := new(connecotr)
+	conne.withCancel(obj.ctx, obj.ctx)
+	conne.rawConn = netConn
+	return conne
+}
+func (obj *roundTripper) dial(ctxData *reqCtxData, req *http.Request) (conn *connecotr, err error) {
 	proxy := cloneUrl(ctxData.proxy)
-	if proxy != nil {
-		key.proxy = proxy.String()
-	} else if !ctxData.disProxy && obj.getProxy != nil {
+	if proxy == nil && !ctxData.disProxy && obj.getProxy != nil {
 		proxyStr, err := obj.getProxy(req.Context(), proxy)
 		if err != nil {
 			return conn, err
@@ -161,7 +151,7 @@ func (obj *roundTripper) dial(ctxData *reqCtxData, key *connKey, req *http.Reque
 			return conn, err
 		}
 	}
-	netConn, err := obj.dialer.DialContextWithProxy(req.Context(), ctxData, "tcp", req.URL.Scheme, key.addr, getHost(req), proxy, obj.tlsConfigClone())
+	netConn, err := obj.dialer.DialContextWithProxy(req.Context(), ctxData, "tcp", req.URL.Scheme, getAddr(req.URL), getHost(req), proxy, obj.tlsConfigClone())
 	if err != nil {
 		return conn, err
 	}
@@ -189,7 +179,10 @@ func (obj *roundTripper) dial(ctxData *reqCtxData, key *connKey, req *http.Reque
 			netConn = tlsConn
 		}
 	}
-	conne := newConnecotr(obj.ctx, netConn)
+	conne := obj.newConnecotr(netConn)
+	if proxy != nil {
+		conne.proxy = proxy.String()
+	}
 	if h2 {
 		if conne.h2RawConn, err = http2.NewClientConn(func() {
 			conne.closeCnl(errors.New("http2 client close"))
@@ -205,11 +198,12 @@ func (obj *roundTripper) setGetProxy(getProxy func(ctx context.Context, url *url
 	obj.getProxy = getProxy
 }
 
-func (obj *roundTripper) poolRoundTrip(task *reqTask, key connKey) (newConn bool) {
-	pool := obj.getConnPool(key)
+func (obj *roundTripper) poolRoundTrip(ctxData *reqCtxData, task *reqTask, key string) (newConn bool) {
+	pool := obj.connPools.get(key)
 	if pool == nil {
 		return true
 	}
+	task.ctx, task.cnl = context.WithTimeout(obj.ctx, ctxData.responseHeaderTimeout)
 	select {
 	case pool.tasks <- task:
 		select {
@@ -222,18 +216,17 @@ func (obj *roundTripper) poolRoundTrip(task *reqTask, key connKey) (newConn bool
 		return true
 	}
 }
-func (obj *roundTripper) connRoundTrip(ctxData *reqCtxData, task *reqTask, key connKey) (retry bool) {
-	ckey := key
-	conn, err := obj.dial(ctxData, &ckey, task.req)
+func (obj *roundTripper) connRoundTrip(ctxData *reqCtxData, task *reqTask, key string) (retry bool) {
+	conn, err := obj.dial(ctxData, task.req)
 	if err != nil {
 		task.err = err
 		return
 	}
+	task.ctx, task.cnl = context.WithTimeout(obj.ctx, ctxData.responseHeaderTimeout)
 	retry = conn.taskMain(task, false)
 	if retry || task.err != nil {
 		return retry
 	}
-	conn.connKey = ckey
 	if task.inPool() && !ctxData.disAlive {
 		obj.putConnPool(key, conn)
 	}
@@ -241,18 +234,28 @@ func (obj *roundTripper) connRoundTrip(ctxData *reqCtxData, task *reqTask, key c
 }
 
 func (obj *roundTripper) closeConns() {
-	obj.connPools.iter(func(key connKey, pool *connPool) bool {
+	obj.connPools.iter(func(key string, pool *connPool) bool {
 		pool.close()
 		obj.connPools.del(key)
 		return true
 	})
 }
 func (obj *roundTripper) forceCloseConns() {
-	obj.connPools.iter(func(key connKey, pool *connPool) bool {
+	obj.connPools.iter(func(key string, pool *connPool) bool {
 		pool.forceClose()
 		obj.connPools.del(key)
 		return true
 	})
+}
+func (obj *roundTripper) newReqTask(req *http.Request, ctxData *reqCtxData) *reqTask {
+	if ctxData.responseHeaderTimeout == 0 {
+		ctxData.responseHeaderTimeout = time.Second * 30
+	}
+	task := new(reqTask)
+	task.req = req
+	task.emptyPool = make(chan struct{})
+	task.orderHeaders = ctxData.orderHeaders
+	return task
 }
 func (obj *roundTripper) RoundTrip(req *http.Request) (response *http.Response, err error) {
 	ctxData := GetReqCtxData(req.Context())
@@ -262,11 +265,11 @@ func (obj *roundTripper) RoundTrip(req *http.Request) (response *http.Response, 
 		}
 	}
 	key := getKey(ctxData, req) //pool key
-	task := newReqTask(obj.ctx, req, ctxData)
+	task := obj.newReqTask(req, ctxData)
 	//get pool conn
 	var isNewConn bool
 	if !ctxData.disAlive {
-		isNewConn = obj.poolRoundTrip(task, key)
+		isNewConn = obj.poolRoundTrip(ctxData, task, key)
 	}
 	if ctxData.disAlive || isNewConn {
 		ctxData.isNewConn = true

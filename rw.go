@@ -16,6 +16,13 @@ func (obj *readWriteCloser) Conn() *connecotr {
 func (obj *readWriteCloser) Read(p []byte) (n int, err error) {
 	return obj.body.Read(p)
 }
+func (obj *readWriteCloser) InPool() bool {
+	return obj.conn.inPool
+}
+func (obj *readWriteCloser) Proxy() string {
+	return obj.conn.proxy
+}
+
 func (obj *readWriteCloser) Close() (err error) {
 	err = obj.body.Close()
 	if !obj.InPool() {
@@ -24,12 +31,6 @@ func (obj *readWriteCloser) Close() (err error) {
 		obj.conn.bodyCnl(errors.New("body close"))
 	}
 	return
-}
-func (obj *readWriteCloser) InPool() bool {
-	return obj.conn.inPool
-}
-func (obj *readWriteCloser) Proxy() string {
-	return obj.conn.connKey.proxy
 }
 
 // safe close conn
