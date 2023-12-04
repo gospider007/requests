@@ -235,6 +235,9 @@ func (obj *Client) Request(ctx context.Context, method string, href string, opti
 			return
 		}
 	}
+	if optionBak.Method == "" {
+		optionBak.Method = method
+	}
 	for maxRetries := 0; maxRetries <= optionBak.MaxRetries; maxRetries++ {
 		option := optionBak
 		response, err = obj.request(ctx, &option)
