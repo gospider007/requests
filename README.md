@@ -49,7 +49,7 @@ Requests is a fully featured HTTP client library for Golang. Network requests ca
   * [DNS Settings](https://github.com/gospider007/requests/blob/master/test/dns_test.go)
   * [Proxy](https://github.com/gospider007/requests/blob/master/test/proxy_test.go)
   * [Well tested client library](https://github.com/gospider007/requests/tree/master/test)
-  * [benchmark](https://github.com/gospider007/benchmark)
+  * [Benchmark](https://github.com/gospider007/benchmark)
 ## Supported Go Versions
 Recommended to use `go1.21.3` and above.
 Initially Requests started supporting `go modules`
