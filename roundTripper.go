@@ -203,7 +203,7 @@ func (obj *roundTripper) poolRoundTrip(ctxData *reqCtxData, task *reqTask, key s
 	if pool == nil {
 		return true
 	}
-	task.ctx, task.cnl = context.WithTimeout(obj.ctx, ctxData.responseHeaderTimeout)
+	task.ctx, task.cnl = context.WithTimeout(task.req.Context(), ctxData.responseHeaderTimeout)
 	select {
 	case pool.tasks <- task:
 		select {
@@ -222,7 +222,7 @@ func (obj *roundTripper) connRoundTrip(ctxData *reqCtxData, task *reqTask, key s
 		task.err = err
 		return
 	}
-	task.ctx, task.cnl = context.WithTimeout(obj.ctx, ctxData.responseHeaderTimeout)
+	task.ctx, task.cnl = context.WithTimeout(task.req.Context(), ctxData.responseHeaderTimeout)
 	retry = conn.taskMain(task, false)
 	if retry || task.err != nil {
 		return retry
