@@ -23,19 +23,26 @@ func (obj *readWriteCloser) Proxy() string {
 	return obj.conn.proxy
 }
 
+var gospiderBodyCloseErr = errors.New("gospider body close error")
+
 func (obj *readWriteCloser) Close() (err error) {
-	err = obj.body.Close()
 	if !obj.InPool() {
 		obj.ForceCloseConn()
 	} else {
-		obj.conn.bodyCnl(errors.New("body close"))
+		err = obj.body.Close() //reuse conn
+		obj.conn.bodyCnl(gospiderBodyCloseErr)
 	}
 	return
 }
 
 // safe close conn
 func (obj *readWriteCloser) CloseConn() {
-	obj.conn.closeCnl(errors.New("readWriterCloser close conn"))
+	if !obj.InPool() {
+		obj.ForceCloseConn()
+	} else {
+		obj.conn.bodyCnl(errors.New("readWriterCloser close conn"))
+		obj.conn.closeCnl(errors.New("readWriterCloser close conn"))
+	}
 }
 
 // force close conn

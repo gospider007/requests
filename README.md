@@ -17,7 +17,6 @@
 Requests is a fully featured HTTP client library for Golang. Network requests can be completed with just a few lines of code
 ---
 ## Features
-  * GET, POST, PUT, DELETE, HEAD, PATCH, OPTIONS, etc.
   * [Simple for settings and Request](https://github.com/gospider007/requests#quickly-send-requests)
   * [Request](https://github.com/gospider007/requests/tree/master/test/request) Support Automatic type conversion, Support orderly map
     * [Json Request](https://github.com/gospider007/requests/blob/master/test/request/json_test.go) with `application/json`

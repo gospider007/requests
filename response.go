@@ -304,23 +304,6 @@ func (obj *Response) IsNewConn() bool {
 	return obj.isNewConn
 }
 
-// close body
-func (obj *Response) CloseBody() error {
-	if obj.webSocket != nil {
-		obj.webSocket.Close()
-	}
-	if obj.sse != nil {
-		obj.sse.Close()
-	}
-	if obj.IsStream() || !obj.readBody {
-		obj.ForceCloseConn()
-	} else { //close body
-		obj.closeBody()
-	}
-	obj.cnl()
-	return nil
-}
-
 // conn proxy
 func (obj *Response) Proxy() string {
 	if obj.rawConn != nil {
@@ -338,17 +321,33 @@ func (obj *Response) InPool() bool {
 }
 
 // close body
-func (obj *Response) closeBody() {
-	if obj.rawConn != nil {
-		obj.rawConn.Close()
-	}
+func (obj *Response) CloseBody() {
+	obj.close(false)
 }
 
 // safe close conn
 func (obj *Response) CloseConn() {
-	if obj.rawConn != nil {
-		obj.rawConn.CloseConn()
+	obj.close(true)
+}
+
+// close
+func (obj *Response) close(closeConn bool) {
+	if obj.webSocket != nil {
+		obj.webSocket.Close()
 	}
+	if obj.sse != nil {
+		obj.sse.Close()
+	}
+	if obj.IsStream() || !obj.readBody {
+		obj.ForceCloseConn()
+	} else if obj.rawConn != nil {
+		if closeConn {
+			obj.rawConn.CloseConn()
+		} else {
+			obj.rawConn.Close()
+		}
+	}
+	obj.cnl() //must later
 }
 
 // force close conn

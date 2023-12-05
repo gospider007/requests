@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"sync"
@@ -78,7 +79,7 @@ func (obj *connecotr) h2Closed() bool {
 }
 func (obj *connecotr) wrapBody(task *reqTask) {
 	body := new(readWriteCloser)
-	obj.bodyCtx, obj.bodyCnl = context.WithCancelCause(obj.deleteCtx)
+	obj.bodyCtx, obj.bodyCnl = context.WithCancelCause(task.req.Context())
 	body.body = task.res.Body
 	body.conn = obj
 	task.res.Body = body
@@ -112,7 +113,11 @@ func (obj *connecotr) http2Req(task *reqTask) {
 func (obj *connecotr) waitBodyClose() error {
 	select {
 	case <-obj.bodyCtx.Done(): //wait body close
-		return nil
+		if err := context.Cause(obj.bodyCtx); errors.Is(err, gospiderBodyCloseErr) {
+			return nil
+		} else {
+			return err
+		}
 	case <-obj.deleteCtx.Done(): //force conn close
 		return tools.WrapError(context.Cause(obj.deleteCtx), "delete ctx error: ")
 	}
@@ -217,6 +222,7 @@ func (obj *connPool) rwMain(conn *connecotr) {
 		}
 	}()
 	if err := conn.waitBodyClose(); err != nil {
+		log.Print(err)
 		return
 	}
 	for {
