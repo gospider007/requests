@@ -163,14 +163,13 @@ func (obj *RequestOption) initParams() (*url.URL, error) {
 	if query == "" {
 		return obj.Url, nil
 	}
-	pu := cloneUrl(obj.Url)
-	pquery := pu.Query().Encode()
+	pquery := obj.Url.Query().Encode()
 	if pquery == "" {
-		pu.RawQuery = query
+		obj.Url.RawQuery = query
 	} else {
-		pu.RawQuery = pquery + "&" + query
+		obj.Url.RawQuery = pquery + "&" + query
 	}
-	return pu, nil
+	return obj.Url, nil
 }
 func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	// start

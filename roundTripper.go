@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"net"
+	"net/textproto"
 	"net/url"
 	"strings"
 	"time"
@@ -141,14 +142,16 @@ func (obj *roundTripper) newConnecotr(netConn net.Conn) *connecotr {
 	return conne
 }
 func (obj *roundTripper) dial(ctxData *reqCtxData, req *http.Request) (conn *connecotr, err error) {
-	proxy := cloneUrl(ctxData.proxy)
-	if proxy == nil && !ctxData.disProxy && obj.getProxy != nil {
-		proxyStr, err := obj.getProxy(req.Context(), proxy)
-		if err != nil {
-			return conn, err
-		}
-		if proxy, err = gtls.VerifyProxy(proxyStr); err != nil {
-			return conn, err
+	var proxy *url.URL
+	if !ctxData.disProxy {
+		if proxy = cloneUrl(ctxData.proxy); proxy == nil && obj.getProxy != nil {
+			proxyStr, err := obj.getProxy(req.Context(), proxy)
+			if err != nil {
+				return conn, err
+			}
+			if proxy, err = gtls.VerifyProxy(proxyStr); err != nil {
+				return conn, err
+			}
 		}
 	}
 	netConn, err := obj.dialer.DialContextWithProxy(req.Context(), ctxData, "tcp", req.URL.Scheme, getAddr(req.URL), getHost(req), proxy, obj.tlsConfigClone())
@@ -190,7 +193,7 @@ func (obj *roundTripper) dial(ctxData *reqCtxData, req *http.Request) (conn *con
 			return conne, err
 		}
 	} else {
-		conne.r, conne.w = bufio.NewReader(conne), bufio.NewWriter(conne)
+		conne.r, conne.w = textproto.NewReader(bufio.NewReader(conne)), bufio.NewWriter(conne)
 	}
 	return conne, err
 }
@@ -261,6 +264,13 @@ func (obj *roundTripper) RoundTrip(req *http.Request) (response *http.Response, 
 	ctxData := GetReqCtxData(req.Context())
 	if ctxData.requestCallBack != nil {
 		if err = ctxData.requestCallBack(req.Context(), req, nil); err != nil {
+			if err == http.ErrUseLastResponse {
+				if req.Response == nil {
+					return nil, errors.New("errUseLastResponse response is nil")
+				} else {
+					return req.Response, nil
+				}
+			}
 			return nil, err
 		}
 	}

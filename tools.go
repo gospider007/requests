@@ -3,11 +3,15 @@ package requests
 import (
 	"bufio"
 	"bytes"
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"net/textproto"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	_ "unsafe"
@@ -84,6 +88,12 @@ func removeZone(host string) string
 
 //go:linkname shouldSendContentLength net/http.(*transferWriter).shouldSendContentLength
 func shouldSendContentLength(t *http.Request) bool
+
+//go:linkname removeEmptyPort net/http.removeEmptyPort
+func removeEmptyPort(host string) string
+
+//go:linkname readTransfer net/http.readTransfer
+func readTransfer(msg any, r *bufio.Reader) (err error)
 
 func httpWrite(r *http.Request, w *bufio.Writer, orderHeaders []string) (err error) {
 	host := r.Host
@@ -181,4 +191,67 @@ func init() {
 	builderPool.New = func() interface{} {
 		return strings.Builder{}
 	}
+}
+
+func newRequestWithContext(ctx context.Context, method string, u *url.URL, body io.Reader) (*http.Request, error) {
+	req := (&http.Request{}).WithContext(ctx)
+	if method == "" {
+		req.Method = http.MethodGet
+	} else {
+		req.Method = strings.ToUpper(method)
+	}
+	req.URL = u
+	req.Proto = "HTTP/1.1"
+	req.ProtoMajor = 1
+	req.ProtoMinor = 1
+	req.Host = u.Host
+	u.Host = removeEmptyPort(u.Host)
+	if body != nil {
+		if v, ok := body.(interface{ Len() int }); ok {
+			req.ContentLength = int64(v.Len())
+		}
+		rc, ok := body.(io.ReadCloser)
+		if !ok {
+			rc = io.NopCloser(body)
+		}
+		req.Body = rc
+	}
+	return req, nil
+}
+
+func readResponse(tp *textproto.Reader, req *http.Request) (*http.Response, error) {
+	resp := &http.Response{
+		Request: req,
+	}
+	// Parse the first line of the response.
+	line, err := tp.ReadLine()
+	if err != nil {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+		return nil, err
+	}
+	proto, status, ok := strings.Cut(line, " ")
+	if !ok {
+		return nil, errors.New("malformed HTTP response")
+	}
+	resp.Proto = proto
+	resp.Status = strings.TrimLeft(status, " ")
+	statusCode, _, _ := strings.Cut(resp.Status, " ")
+	if resp.StatusCode, err = strconv.Atoi(statusCode); err != nil {
+		return nil, errors.New("malformed HTTP status code")
+	}
+	if resp.ProtoMajor, resp.ProtoMinor, ok = http.ParseHTTPVersion(resp.Proto); !ok {
+		return nil, errors.New("malformed HTTP version")
+	}
+	// Parse the response headers.
+	mimeHeader, err := tp.ReadMIMEHeader()
+	if err != nil {
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
+		return nil, err
+	}
+	resp.Header = http.Header(mimeHeader)
+	return resp, readTransfer(resp, tp.R)
 }

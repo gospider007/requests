@@ -229,17 +229,19 @@ func (obj *Client) Request(ctx context.Context, method string, href string, opti
 		rawOption = options[0]
 	}
 	optionBak := obj.newRequestOption(rawOption)
-	if optionBak.Url == nil {
-		if optionBak.Url, err = url.Parse(href); err != nil {
+	if optionBak.Method == "" {
+		optionBak.Method = method
+	}
+	uhref := optionBak.Url
+	if uhref == nil {
+		if uhref, err = url.Parse(href); err != nil {
 			err = tools.WrapError(err, "url parse error")
 			return
 		}
 	}
-	if optionBak.Method == "" {
-		optionBak.Method = method
-	}
 	for maxRetries := 0; maxRetries <= optionBak.MaxRetries; maxRetries++ {
 		option := optionBak
+		option.Url = cloneUrl(uhref)
 		response, err = obj.request(ctx, &option)
 		if err == nil || errors.Is(err, errFatal) || option.once {
 			return
@@ -280,6 +282,22 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	response.disDecode = option.DisDecode
 	response.stream = option.Stream
 
+	//init headers and orderheaders,befor init ctxData
+	headers, err := option.initHeaders()
+	if err != nil {
+		return response, tools.WrapError(err, errors.New("tempRequest init headers error"), err)
+	}
+	if headers == nil {
+		headers = http.Header{
+			"User-Agent":         []string{UserAgent},
+			"Accept":             []string{"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"},
+			"Accept-Encoding":    []string{"gzip, deflate, br"},
+			"Accept-Language":    []string{AcceptLanguage},
+			"Sec-Ch-Ua":          []string{SecChUa},
+			"Sec-Ch-Ua-Mobile":   []string{"?0"},
+			"Sec-Ch-Ua-Platform": []string{`"Windows"`},
+		}
+	}
 	//init ctxData
 	ctxData, err := NewReqCtxData(ctx, option)
 	if err != nil {
@@ -303,30 +321,11 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		return response, tools.WrapError(err, errors.New("tempRequest init body error"), err)
 	}
 	//create request
-	reqs, err := http.NewRequestWithContext(response.ctx, strings.ToUpper(option.Method), href.String(), body)
+	reqs, err := newRequestWithContext(response.ctx, option.Method, href, body)
 	if err != nil {
 		return response, tools.WrapError(errFatal, errors.New("tempRequest 构造request失败"), err)
 	}
-	//init headers
-
-	//init headers and orderheaders,befor init ctxData
-	headers, err := option.initHeaders()
-	if err != nil {
-		return response, tools.WrapError(err, errors.New("tempRequest init headers error"), err)
-	}
-	if headers == nil {
-		reqs.Header = http.Header{
-			"User-Agent":         []string{UserAgent},
-			"Accept":             []string{"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"},
-			"Accept-Encoding":    []string{"gzip, deflate, br"},
-			"Accept-Language":    []string{AcceptLanguage},
-			"Sec-Ch-Ua":          []string{SecChUa},
-			"Sec-Ch-Ua-Mobile":   []string{"?0"},
-			"Sec-Ch-Ua-Platform": []string{`"Windows"`},
-		}
-	} else {
-		reqs.Header = headers
-	}
+	reqs.Header = headers
 	//add Referer
 	if reqs.Header.Get("Referer") == "" {
 		if option.Referer != "" {
