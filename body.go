@@ -14,6 +14,7 @@ import (
 
 	"github.com/gospider007/gson"
 	"github.com/gospider007/tools"
+	"golang.org/x/exp/maps"
 )
 
 const (
@@ -44,17 +45,13 @@ func (obj *orderMap) Del(key string) {
 }
 func (obj *orderMap) parseHeaders() (map[string][]string, []string) {
 	head := make(http.Header)
-	data := any2Map(obj.data)
-	if data == nil {
-		data = obj.data
-	}
 	for _, kk := range obj.order {
-		if vvs, ok := data[kk].([]any); ok {
+		if vvs, ok := obj.data[kk].([]any); ok {
 			for _, vv := range vvs {
 				head.Add(kk, fmt.Sprint(vv))
 			}
 		} else {
-			head.Add(kk, fmt.Sprint(data[kk]))
+			head.Add(kk, fmt.Sprint(obj.data[kk]))
 		}
 	}
 	return head, obj.order
@@ -143,12 +140,8 @@ func (obj *orderMap) isformPip() bool {
 	if len(obj.order) == 0 || len(obj.data) == 0 {
 		return false
 	}
-	data := any2Map(obj.data)
-	if data == nil {
-		data = obj.data
-	}
 	for _, key := range obj.order {
-		if vals, ok := data[key].([]any); ok {
+		if vals, ok := obj.data[key].([]any); ok {
 			for _, val := range vals {
 				if file, ok := val.(File); ok {
 					if _, ok := file.Content.(io.Reader); ok {
@@ -157,7 +150,7 @@ func (obj *orderMap) isformPip() bool {
 				}
 			}
 		} else {
-			if file, ok := data[key].(File); ok {
+			if file, ok := obj.data[key].(File); ok {
 				if _, ok := file.Content.(io.Reader); ok {
 					return true
 				}
@@ -167,19 +160,15 @@ func (obj *orderMap) isformPip() bool {
 	return false
 }
 func (obj *orderMap) formWriteMain(writer *multipart.Writer) (err error) {
-	data := any2Map(obj.data)
-	if data == nil {
-		data = obj.data
-	}
 	for _, key := range obj.order {
-		if vals, ok := data[key].([]any); ok {
+		if vals, ok := obj.data[key].([]any); ok {
 			for _, val := range vals {
 				if err = formWrite(writer, key, val); err != nil {
 					return
 				}
 			}
 		} else {
-			if err = formWrite(writer, key, data[key]); err != nil {
+			if err = formWrite(writer, key, obj.data[key]); err != nil {
 				return
 			}
 		}
@@ -196,18 +185,14 @@ func paramsWrite(buf *bytes.Buffer, key string, val any) {
 	buf.WriteString(url.QueryEscape(fmt.Sprint(val)))
 }
 func (obj *orderMap) parseParams() *bytes.Buffer {
-	data := any2Map(obj.data)
-	if data == nil {
-		data = obj.data
-	}
 	buf := bytes.NewBuffer(nil)
 	for _, k := range obj.order {
-		if vals, ok := data[k].([]any); ok {
+		if vals, ok := obj.data[k].([]any); ok {
 			for _, v := range vals {
 				paramsWrite(buf, k, v)
 			}
 		} else {
-			paramsWrite(buf, k, data[k])
+			paramsWrite(buf, k, obj.data[k])
 		}
 	}
 	return buf
@@ -269,7 +254,7 @@ func any2Map(val any) map[string]any {
 			for i := 0; i < sliceValue.Len(); i++ {
 				valueData2 = append(valueData2, sliceValue.Index(i).Interface())
 			}
-			valueData = valueData2
+			result[fmt.Sprint(key.Interface())] = valueData2
 		} else {
 			result[fmt.Sprint(key.Interface())] = valueData
 		}
@@ -319,20 +304,14 @@ mapL:
 		}
 		return nil, orderMap, nil, nil
 	case *orderMap:
+		if mapData := any2Map(value.data); mapData != nil {
+			value.data = mapData
+		}
 		return nil, value, nil, nil
 	case map[string]any:
 		orderMap := NewOrderMap()
-		for kk, vv := range value {
-			if vvs, ok := vv.([]any); ok {
-				vvData := make([]any, len(vvs))
-				for i, vv := range vvs {
-					vvData[i] = vv
-				}
-				orderMap.Set(kk, vvData)
-			} else {
-				orderMap.Set(kk, vv)
-			}
-		}
+		orderMap.data = value
+		orderMap.order = maps.Keys(value)
 		return nil, orderMap, nil, nil
 	}
 	if val, err = gson.Decode(val); err != nil {

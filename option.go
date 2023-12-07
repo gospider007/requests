@@ -111,45 +111,68 @@ type File struct {
 	Content     any
 }
 
-func (obj *RequestOption) initBody(ctx context.Context) (body io.Reader, err error) {
+func (obj *RequestOption) initBody(ctx context.Context) (io.Reader, error) {
 	if obj.Body != nil {
-		body, _, _, err = obj.newBody(obj.Body, readType)
+		body, _, _, err := obj.newBody(obj.Body, readType)
+		if err != nil || body == nil {
+			return nil, err
+		}
+		return body, err
 	} else if obj.Form != nil {
 		var orderMap *orderMap
-		if body, orderMap, _, err = obj.newBody(obj.Form, mapType); err != nil {
-			return
+		_, orderMap, _, err := obj.newBody(obj.Form, mapType)
+		if err != nil {
+			return nil, err
 		}
-		tempBody, contentType, once, err := orderMap.parseForm(ctx)
+		body, contentType, once, err := orderMap.parseForm(ctx)
 		obj.once = once
 		if obj.ContentType == "" {
 			obj.ContentType = contentType
 		}
-		return tempBody, err
-	} else if obj.Data != nil {
-		var orderMap *orderMap
-		if _, orderMap, _, err = obj.newBody(obj.Data, mapType); err != nil {
-			return
+		if body == nil {
+			return body, nil
 		}
-		body = orderMap.parseData()
+		return body, nil
+	} else if obj.Data != nil {
+		_, orderMap, _, err := obj.newBody(obj.Data, mapType)
+		if err != nil {
+			return nil, err
+		}
+		body := orderMap.parseData()
 		if obj.ContentType == "" {
 			obj.ContentType = "application/x-www-form-urlencoded"
 		}
+		if body == nil {
+			return body, nil
+		}
+		return body, nil
 	} else if obj.Json != nil {
-		if body, _, _, err = obj.newBody(obj.Json, readType); err != nil {
-			return
+		body, _, _, err := obj.newBody(obj.Json, readType)
+		if err != nil {
+			return nil, err
 		}
 		if obj.ContentType == "" {
 			obj.ContentType = "application/json"
 		}
+		if body == nil {
+			return nil, nil
+		}
+		return body, nil
 	} else if obj.Text != nil {
-		if body, _, _, err = obj.newBody(obj.Text, readType); err != nil {
-			return
+		body, _, _, err := obj.newBody(obj.Text, readType)
+		if err != nil {
+			return nil, err
 		}
 		if obj.ContentType == "" {
 			obj.ContentType = "text/plain"
 		}
+		if body == nil {
+			return nil, err
+		}
+		return body, nil
+	} else {
+		return nil, nil
 	}
-	return
 }
 func (obj *RequestOption) initParams() (*url.URL, error) {
 	if obj.Params == nil {

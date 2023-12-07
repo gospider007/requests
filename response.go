@@ -285,7 +285,7 @@ func (obj *Response) ReadBody() (err error) {
 			body: bBody,
 		}, obj.response.Body)
 	} else {
-		err = tools.CopyWitchContext(obj.response.Request.Context(), bBody, obj.response.Body)
+		err = tools.CopyWitchContext(obj.ctx, bBody, obj.response.Body)
 	}
 	if err != nil {
 		obj.ForceCloseConn()
