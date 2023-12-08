@@ -63,8 +63,8 @@ func (obj *Jar) SetCookies(href string, cookies ...any) error {
 	}
 	domain := u.Hostname()
 	if _, addType := gtls.ParseHost(domain); addType == 0 {
-		if domain, err = publicsuffix.EffectiveTLDPlusOne(domain); err != nil {
-			return err
+		if tlp, err := publicsuffix.EffectiveTLDPlusOne(domain); err == nil {
+			domain = tlp
 		}
 	}
 	for _, cookie := range cookies {
@@ -73,8 +73,12 @@ func (obj *Jar) SetCookies(href string, cookies ...any) error {
 			return err
 		}
 		for _, cook := range cooks {
-			cook.Path = "/"
-			cook.Domain = domain
+			if cook.Path == "" {
+				cook.Path = "/"
+			}
+			if cook.Domain == "" {
+				cook.Domain = domain
+			}
 		}
 		obj.jar.SetCookies(u, cooks)
 	}
