@@ -1,6 +1,7 @@
 package requests
 
 import (
+	"errors"
 	"net/http"
 )
 
@@ -20,9 +21,15 @@ func (obj *RequestOption) initHeaders() (http.Header, error) {
 	case http.Header:
 		return headers.Clone(), nil
 	default:
-		_, dataMap, _, err := obj.newBody(headers, mapType)
-		if dataMap == nil || err != nil {
+		body, dataMap, _, err := obj.newBody(headers, mapType)
+		if err != nil {
 			return nil, err
+		}
+		if body != nil {
+			return nil, errors.New("headers type error")
+		}
+		if dataMap == nil {
+			return nil, nil
 		}
 		head, order := dataMap.parseHeaders()
 		obj.OrderHeaders = order

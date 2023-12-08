@@ -2,6 +2,7 @@ package requests
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -120,9 +121,15 @@ func (obj *RequestOption) initBody(ctx context.Context) (io.Reader, error) {
 		return body, err
 	} else if obj.Form != nil {
 		var orderMap *orderMap
-		_, orderMap, _, err := obj.newBody(obj.Form, mapType)
+		body, orderMap, _, err := obj.newBody(obj.Form, mapType)
 		if err != nil {
 			return nil, err
+		}
+		if body != nil {
+			return nil, errors.New("form type error")
+		}
+		if orderMap == nil {
+			return nil, nil
 		}
 		body, contentType, once, err := orderMap.parseForm(ctx)
 		obj.once = once
@@ -130,20 +137,26 @@ func (obj *RequestOption) initBody(ctx context.Context) (io.Reader, error) {
 			obj.ContentType = contentType
 		}
 		if body == nil {
-			return body, nil
+			return nil, nil
 		}
 		return body, nil
 	} else if obj.Data != nil {
-		_, orderMap, _, err := obj.newBody(obj.Data, mapType)
+		body, orderMap, _, err := obj.newBody(obj.Data, mapType)
 		if err != nil {
-			return nil, err
+			return body, err
 		}
-		body := orderMap.parseData()
 		if obj.ContentType == "" {
 			obj.ContentType = "application/x-www-form-urlencoded"
 		}
-		if body == nil {
+		if body != nil {
 			return body, nil
+		}
+		if orderMap == nil {
+			return nil, nil
+		}
+		body = orderMap.parseData()
+		if body == nil {
+			return nil, nil
 		}
 		return body, nil
 	} else if obj.Json != nil {
@@ -167,7 +180,7 @@ func (obj *RequestOption) initBody(ctx context.Context) (io.Reader, error) {
 			obj.ContentType = "text/plain"
 		}
 		if body == nil {
-			return nil, err
+			return nil, nil
 		}
 		return body, nil
 	} else {
@@ -178,9 +191,12 @@ func (obj *RequestOption) initParams() (*url.URL, error) {
 	if obj.Params == nil {
 		return obj.Url, nil
 	}
-	_, dataMap, _, err := obj.newBody(obj.Params, mapType)
+	body, dataMap, _, err := obj.newBody(obj.Params, mapType)
 	if err != nil {
-		return obj.Url, err
+		return nil, err
+	}
+	if body != nil {
+		return nil, errors.New("params type error")
 	}
 	query := dataMap.parseParams().String()
 	if query == "" {
