@@ -62,6 +62,9 @@ func (obj Cookies) GetVal(name string) string {
 		return vals[i-1]
 	}
 }
+func (obj Cookies) append(cook *http.Cookie) Cookies {
+	return append(obj, cook)
+}
 
 // read cookies or parse cookies,support json,map,[]string,http.Header,string
 func ReadCookies(val any) (Cookies, error) {

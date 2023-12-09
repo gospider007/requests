@@ -1,7 +1,6 @@
 package requests
 
 import (
-	"errors"
 	"net/http/cookiejar"
 	"net/url"
 
@@ -10,63 +9,59 @@ import (
 )
 
 // cookies jar
-type Jar struct {
+type jar struct {
 	jar *cookiejar.Jar
 }
 
 // new cookies jar
-func NewJar() *Jar {
-	jar, _ := cookiejar.New(nil)
-	return &Jar{
-		jar: jar,
+func NewJar() *jar {
+	j, _ := cookiejar.New(nil)
+	return &jar{
+		jar: j,
 	}
 }
 
 // get cookies
-func (obj *Client) GetCookies(href string) (Cookies, error) {
+func (obj *Client) GetCookies(href *url.URL) Cookies {
+	if obj.option.Jar == nil {
+		return nil
+	}
 	return obj.option.Jar.GetCookies(href)
 }
 
 // set cookies
-func (obj *Client) SetCookies(href string, cookies ...any) error {
+func (obj *Client) SetCookies(href *url.URL, cookies ...any) error {
+	if obj.option.Jar == nil {
+		return nil
+	}
 	return obj.option.Jar.SetCookies(href, cookies...)
 }
 
 // clear cookies
 func (obj *Client) ClearCookies() {
-	if obj.client.Jar != nil {
-		obj.option.Jar.ClearCookies()
-		obj.client.Jar = obj.option.Jar.jar
+	if obj.option.Jar == nil {
+		return
 	}
+	obj.option.Jar.ClearCookies()
 }
 
 // Get cookies
-func (obj *Jar) GetCookies(href string) (Cookies, error) {
-	if obj.jar == nil {
-		return nil, errors.New("jar is nil")
-	}
-	u, err := url.Parse(href)
-	if err != nil {
-		return nil, err
-	}
-	return obj.jar.Cookies(u), nil
+func (obj *jar) GetCookies(u *url.URL) Cookies {
+	return obj.jar.Cookies(u)
 }
-
-// Set cookies
-func (obj *Jar) SetCookies(href string, cookies ...any) error {
-	if obj.jar == nil {
-		return errors.New("jar is nil")
-	}
-	u, err := url.Parse(href)
-	if err != nil {
-		return err
-	}
+func getDomain(u *url.URL) string {
 	domain := u.Hostname()
 	if _, addType := gtls.ParseHost(domain); addType == 0 {
 		if tlp, err := publicsuffix.EffectiveTLDPlusOne(domain); err == nil {
 			domain = tlp
 		}
 	}
+	return domain
+}
+
+// Set cookies
+func (obj *jar) SetCookies(u *url.URL, cookies ...any) error {
+	domain := getDomain(u)
 	for _, cookie := range cookies {
 		cooks, err := ReadCookies(cookie)
 		if err != nil {
@@ -86,7 +81,7 @@ func (obj *Jar) SetCookies(href string, cookies ...any) error {
 }
 
 // Clear cookies
-func (obj *Jar) ClearCookies() {
+func (obj *jar) ClearCookies() {
 	jar, _ := cookiejar.New(nil)
 	obj.jar = jar
 }

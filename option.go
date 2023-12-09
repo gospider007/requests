@@ -44,7 +44,7 @@ type ClientOption struct {
 	LocalAddr   *net.TCPAddr
 	Dns         *net.UDPAddr  //dns
 	AddrType    gtls.AddrType //dns parse addr type
-	Jar         *Jar          //custom cookies
+	Jar         *jar          //custom cookies
 
 	//other option
 	GetProxy    func(ctx context.Context, url *url.URL) (string, error) //proxy callback:support https,http,socks5 proxy
@@ -82,7 +82,7 @@ type RequestOption struct {
 	LocalAddr   *net.TCPAddr
 	Dns         *net.UDPAddr  //dns
 	AddrType    gtls.AddrType //dns parse addr type                                             //tls timeout,default:15
-	Jar         *Jar          //custom cookies
+	Jar         *jar          //custom cookies
 
 	// other option
 	Method      string //method
@@ -297,6 +297,9 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	}
 	if !option.Ja3Spec.IsSet() && option.Ja3 {
 		option.Ja3Spec = ja3.DefaultJa3Spec()
+	}
+	if option.DisCookie {
+		option.Jar = nil
 	}
 	return option
 }

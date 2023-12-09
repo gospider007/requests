@@ -2,6 +2,8 @@ package requests
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"net/url"
 
 	"net/http"
@@ -12,22 +14,13 @@ import (
 // Connection Management
 type Client struct {
 	option    ClientOption
-	client    *http.Client
+	transport *roundTripper
 	ctx       context.Context
 	cnl       context.CancelFunc
-	transport *roundTripper
 	closed    bool
 }
 
 var defaultClient, _ = NewClient(nil)
-
-func checkRedirect(req *http.Request, via []*http.Request) error {
-	ctxData := GetReqCtxData(req.Context())
-	if ctxData.maxRedirect == 0 || ctxData.maxRedirect >= len(via) {
-		return nil
-	}
-	return http.ErrUseLastResponse
-}
 
 // New Connection Management
 func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error) {
@@ -41,14 +34,12 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	result := new(Client)
 	result.ctx, result.cnl = context.WithCancel(preCtx)
 	result.transport = newRoundTripper(result.ctx, option)
-	result.client = &http.Client{Transport: result.transport, CheckRedirect: checkRedirect}
 	result.option = option
 	//cookiesjar
 	if !result.option.DisCookie {
 		if result.option.Jar == nil {
 			result.option.Jar = NewJar()
 		}
-		result.client.Jar = result.option.Jar.jar
 	}
 	var err error
 	if result.option.Proxy != "" {
@@ -88,21 +79,67 @@ func (obj *Client) Close() {
 	obj.cnl()
 }
 
-func (obj *Client) send(option *RequestOption, reqs *http.Request) (*http.Response, error) {
-	if option.DisCookie {
-		return (&http.Client{
-			Transport:     obj.client.Transport,
-			CheckRedirect: obj.client.CheckRedirect,
-			Timeout:       obj.client.Timeout,
-		}).Do(reqs)
+func checkRedirect(req *http.Request, via []*http.Request) error {
+	ctxData := GetReqCtxData(req.Context())
+	if ctxData.maxRedirect == 0 || ctxData.maxRedirect >= len(via) {
+		return nil
+	}
+	return http.ErrUseLastResponse
+}
+
+func (obj *Client) do(req *http.Request, option *RequestOption) (resp *http.Response, err error) {
+	var redirectNum int
+	for {
+		redirectNum++
+		resp, err = obj.send(req, option)
+		if req.Body != nil {
+			req.Body.Close()
+		}
+		if err != nil {
+			return
+		}
+		if option.MaxRedirect < 0 { //dis redirect
+			return
+		}
+		if option.MaxRedirect > 0 && redirectNum > option.MaxRedirect {
+			return
+		}
+		loc := resp.Header.Get("Location")
+		if loc == "" {
+			return resp, nil
+		}
+		u, err := req.URL.Parse(loc)
+		if err != nil {
+			return resp, fmt.Errorf("failed to parse Location header %q: %v", loc, err)
+		}
+		ireq, err := newRequestWithContext(req.Context(), http.MethodGet, u, nil)
+		if err != nil {
+			return resp, err
+		}
+		ireq.Response = resp
+		ireq.Header = defaultHeaders()
+		ireq.Header.Set("Referer", req.URL.String())
+		if getDomain(u) == getDomain(req.URL) {
+			ireq.Header.Set("Cookie", Cookies(req.Cookies()).String())
+			addCookie(ireq, resp.Cookies())
+		}
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+		req = ireq
+	}
+}
+func (obj *Client) send(req *http.Request, option *RequestOption) (resp *http.Response, err error) {
+	if option.Jar != nil {
+		addCookie(req, option.Jar.GetCookies(req.URL))
+	}
+	resp, err = obj.transport.RoundTrip(req)
+	if err != nil {
+		return nil, err
 	}
 	if option.Jar != nil {
-		return (&http.Client{
-			Transport:     obj.client.Transport,
-			CheckRedirect: obj.client.CheckRedirect,
-			Timeout:       obj.client.Timeout,
-			Jar:           option.Jar.jar,
-		}).Do(reqs)
+		if rc := resp.Cookies(); len(rc) > 0 {
+			option.Jar.SetCookies(req.URL, rc)
+		}
 	}
-	return obj.client.Do(reqs)
+	return resp, nil
 }

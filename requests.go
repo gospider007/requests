@@ -288,15 +288,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		return response, tools.WrapError(err, errors.New("tempRequest init headers error"), err)
 	}
 	if headers == nil {
-		headers = http.Header{
-			"User-Agent":         []string{UserAgent},
-			"Accept":             []string{"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"},
-			"Accept-Encoding":    []string{"gzip, deflate, br"},
-			"Accept-Language":    []string{AcceptLanguage},
-			"Sec-Ch-Ua":          []string{SecChUa},
-			"Sec-Ch-Ua-Mobile":   []string{"?0"},
-			"Sec-Ch-Ua-Platform": []string{`"Windows"`},
-		}
+		headers = defaultHeaders()
 	}
 	//init ctxData
 	ctxData, err := NewReqCtxData(ctx, option)
@@ -374,12 +366,10 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		return response, tools.WrapError(err, errors.New("tempRequest init cookies error"), err)
 	}
 	if cookies != nil {
-		for _, vv := range cookies {
-			reqs.AddCookie(vv)
-		}
+		addCookie(reqs, cookies)
 	}
 	//send req
-	response.response, err = obj.send(option, reqs)
+	response.response, err = obj.do(reqs, option)
 	response.isNewConn = ctxData.isNewConn
 	if err != nil {
 		err = tools.WrapError(err, "roundTripper error")

@@ -111,7 +111,11 @@ func (obj *Response) Sse() *Sse {
 
 // return URL redirected address
 func (obj *Response) Location() (*url.URL, error) {
-	return obj.response.Location()
+	u, err := obj.response.Location()
+	if err == http.ErrNoLocation {
+		err = nil
+	}
+	return u, err
 }
 
 // return response Proto

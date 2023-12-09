@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"log"
 	"net"
 	"net/textproto"
 	"sync"
@@ -218,7 +217,6 @@ func (obj *connPool) rwMain(conn *connecotr) {
 		}
 	}()
 	if err := conn.waitBodyClose(); err != nil {
-		log.Print(err)
 		return
 	}
 	for {

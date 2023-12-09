@@ -255,3 +255,15 @@ func readResponse(tp *textproto.Reader, req *http.Request) (*http.Response, erro
 	resp.Header = http.Header(mimeHeader)
 	return resp, readTransfer(resp, tp.R)
 }
+
+func addCookie(req *http.Request, cookies Cookies) {
+	cooks := Cookies(readCookies(req.Header, ""))
+	for _, cook := range cookies {
+		if val := cooks.Get(cook.Name); val == nil {
+			cooks = cooks.append(cook)
+		}
+	}
+	if result := cooks.String(); result != "" {
+		req.Header.Set("Cookie", result)
+	}
+}
