@@ -1,8 +1,8 @@
 package requests
 
 import (
+	"bytes"
 	"context"
-	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -125,9 +125,6 @@ func (obj *RequestOption) initBody(ctx context.Context) (io.Reader, error) {
 		if err != nil {
 			return nil, err
 		}
-		if body != nil {
-			return nil, errors.New("form type error")
-		}
 		if orderMap == nil {
 			return nil, nil
 		}
@@ -154,23 +151,27 @@ func (obj *RequestOption) initBody(ctx context.Context) (io.Reader, error) {
 		if orderMap == nil {
 			return nil, nil
 		}
-		body = orderMap.parseData()
-		if body == nil {
+		body2 := orderMap.parseData()
+		if body2 == nil {
 			return nil, nil
 		}
-		return body, nil
+		return body2, nil
 	} else if obj.Json != nil {
-		body, _, _, err := obj.newBody(obj.Json, readType)
+		_, orderMap, _, err := obj.newBody(obj.Json, mapType)
 		if err != nil {
 			return nil, err
 		}
 		if obj.ContentType == "" {
 			obj.ContentType = "application/json"
 		}
+		body, err := orderMap.MarshalJSON()
+		if err != nil {
+			return nil, err
+		}
 		if body == nil {
 			return nil, nil
 		}
-		return body, nil
+		return bytes.NewReader(body), nil
 	} else if obj.Text != nil {
 		body, _, _, err := obj.newBody(obj.Text, readType)
 		if err != nil {
@@ -191,12 +192,9 @@ func (obj *RequestOption) initParams() (*url.URL, error) {
 	if obj.Params == nil {
 		return obj.Url, nil
 	}
-	body, dataMap, _, err := obj.newBody(obj.Params, mapType)
+	_, dataMap, _, err := obj.newBody(obj.Params, mapType)
 	if err != nil {
 		return nil, err
-	}
-	if body != nil {
-		return nil, errors.New("params type error")
 	}
 	query := dataMap.parseParams().String()
 	if query == "" {

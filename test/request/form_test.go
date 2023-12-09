@@ -113,3 +113,15 @@ func TestSendFormWithOrderMap(t *testing.T) {
 		t.Fatal("json data error")
 	}
 }
+
+func TestSendFileWithEmptiyMap(t *testing.T) {
+	resp, err := requests.Post(nil, "https://httpbin.org/anything", requests.RequestOption{
+		Form: map[string]string{},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode() != 200 {
+		t.Fatal("status code error")
+	}
+}

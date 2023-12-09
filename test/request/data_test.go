@@ -88,3 +88,18 @@ func TestSendDataWithGson(t *testing.T) {
 		t.Fatal("json data error")
 	}
 }
+func TestSendDataWithEmptiyMap(t *testing.T) {
+	resp, err := requests.Post(nil, "https://httpbin.org/anything", requests.RequestOption{
+		Data: map[string]string{},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	jsonData, err := resp.Json()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if jsonData.Get("headers.Content-Type").String() != "application/x-www-form-urlencoded" {
+		t.Fatal("json data error")
+	}
+}

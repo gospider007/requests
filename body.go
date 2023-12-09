@@ -263,21 +263,22 @@ func any2Map(val any) map[string]any {
 }
 
 func (obj *RequestOption) newBody(val any, valType int) (reader io.Reader, parseOrderMap *orderMap, orderKey []string, err error) {
-	switch value := val.(type) {
-	case io.Reader:
-		obj.once = true
-		return value, nil, nil, nil
-	case string:
-		return bytes.NewReader(tools.StringToBytes(value)), nil, nil, nil
-	case []byte:
-		return bytes.NewReader(value), nil, nil, nil
-	}
 	if valType == readType {
-		enData, err := gson.Encode(val)
-		if err != nil {
-			return nil, nil, nil, err
+		switch value := val.(type) {
+		case io.Reader:
+			obj.once = true
+			return value, nil, nil, nil
+		case string:
+			return bytes.NewReader(tools.StringToBytes(value)), nil, nil, nil
+		case []byte:
+			return bytes.NewReader(value), nil, nil, nil
+		default:
+			enData, err := gson.Encode(val)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			return bytes.NewReader(enData), nil, nil, nil
 		}
-		return bytes.NewReader(enData), nil, nil, nil
 	}
 	if mapData := any2Map(val); mapData != nil {
 		val = mapData
@@ -313,7 +314,14 @@ mapL:
 		return nil, orderMap, nil, nil
 	}
 	if val, err = gson.Decode(val); err != nil {
-		return nil, nil, nil, err
+		switch value := val.(type) {
+		case string:
+			return bytes.NewReader(tools.StringToBytes(value)), nil, nil, nil
+		case []byte:
+			return bytes.NewReader(value), nil, nil, nil
+		default:
+			return nil, nil, nil, err
+		}
 	}
 	goto mapL
 }
