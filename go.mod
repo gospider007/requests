@@ -24,8 +24,6 @@ require (
 	github.com/caddyserver/certmagic v0.20.0 // indirect
 	github.com/cloudflare/circl v1.3.6 // indirect
 	github.com/gaukas/godicttls v0.0.4 // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
-	github.com/google/pprof v0.0.0-20231205033806-a5a03c77bf08 // indirect
 	github.com/gospider007/blog v0.0.0-20231121084103-59a004dafccf // indirect
 	github.com/gospider007/kinds v0.0.0-20231024093643-7a4424f2d30e // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
@@ -36,8 +34,6 @@ require (
 	github.com/miekg/dns v1.1.57 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/onsi/ginkgo/v2 v2.13.2 // indirect
-	github.com/onsi/gomega v1.30.0 // indirect
 	github.com/quic-go/quic-go v0.40.1 // indirect
 	github.com/tidwall/gjson v1.17.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
