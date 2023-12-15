@@ -23,29 +23,32 @@ const (
 )
 
 type orderMap struct {
-	data  map[string]any
-	order []string
+	data map[string]any
+	keys []string
 }
 
 func NewOrderMap() *orderMap {
 	return &orderMap{
-		data:  make(map[string]any),
-		order: []string{},
+		data: make(map[string]any),
+		keys: []string{},
 	}
 }
 
 func (obj *orderMap) Set(key string, val any) {
 	obj.Del(key)
 	obj.data[key] = val
-	obj.order = append(obj.order, key)
+	obj.keys = append(obj.keys, key)
 }
 func (obj *orderMap) Del(key string) {
 	delete(obj.data, key)
-	obj.order = tools.DelSliceVals(obj.order, key)
+	obj.keys = tools.DelSliceVals(obj.keys, key)
+}
+func (obj *orderMap) Keys() []string {
+	return obj.keys
 }
 func (obj *orderMap) parseHeaders() (map[string][]string, []string) {
 	head := make(http.Header)
-	for _, kk := range obj.order {
+	for _, kk := range obj.keys {
 		if vvs, ok := obj.data[kk].([]any); ok {
 			for _, vv := range vvs {
 				head.Add(kk, fmt.Sprint(vv))
@@ -54,7 +57,7 @@ func (obj *orderMap) parseHeaders() (map[string][]string, []string) {
 			head.Add(kk, fmt.Sprint(obj.data[kk]))
 		}
 	}
-	return head, obj.order
+	return head, obj.keys
 }
 
 func formWrite(writer *multipart.Writer, key string, val any) (err error) {
@@ -112,7 +115,7 @@ func formWrite(writer *multipart.Writer, key string, val any) (err error) {
 	return
 }
 func (obj *orderMap) parseForm(ctx context.Context) (io.Reader, string, bool, error) {
-	if len(obj.order) == 0 || len(obj.data) == 0 {
+	if len(obj.keys) == 0 || len(obj.data) == 0 {
 		return nil, "", false, nil
 	}
 	if obj.isformPip() {
@@ -137,10 +140,10 @@ func (obj *orderMap) parseForm(ctx context.Context) (io.Reader, string, bool, er
 	return body, writer.FormDataContentType(), false, err
 }
 func (obj *orderMap) isformPip() bool {
-	if len(obj.order) == 0 || len(obj.data) == 0 {
+	if len(obj.keys) == 0 || len(obj.data) == 0 {
 		return false
 	}
-	for _, key := range obj.order {
+	for _, key := range obj.keys {
 		if vals, ok := obj.data[key].([]any); ok {
 			for _, val := range vals {
 				if file, ok := val.(File); ok {
@@ -160,7 +163,7 @@ func (obj *orderMap) isformPip() bool {
 	return false
 }
 func (obj *orderMap) formWriteMain(writer *multipart.Writer) (err error) {
-	for _, key := range obj.order {
+	for _, key := range obj.keys {
 		if vals, ok := obj.data[key].([]any); ok {
 			for _, val := range vals {
 				if err = formWrite(writer, key, val); err != nil {
@@ -186,7 +189,7 @@ func paramsWrite(buf *bytes.Buffer, key string, val any) {
 }
 func (obj *orderMap) parseParams() *bytes.Buffer {
 	buf := bytes.NewBuffer(nil)
-	for _, k := range obj.order {
+	for _, k := range obj.keys {
 		if vals, ok := obj.data[k].([]any); ok {
 			for _, v := range vals {
 				paramsWrite(buf, k, v)
@@ -210,7 +213,7 @@ func (obj *orderMap) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	for i, k := range obj.order {
+	for i, k := range obj.keys {
 		if i > 0 {
 			if err = buf.WriteByte(','); err != nil {
 				return nil, err
@@ -310,7 +313,7 @@ mapL:
 	case map[string]any:
 		orderMap := NewOrderMap()
 		orderMap.data = value
-		orderMap.order = maps.Keys(value)
+		orderMap.keys = maps.Keys(value)
 		return nil, orderMap, nil, nil
 	}
 	if val, err = gson.Decode(val); err != nil {

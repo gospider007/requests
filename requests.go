@@ -69,8 +69,6 @@ func NewReqCtxData(ctx context.Context, option *RequestOption) (*reqCtxData, err
 	ctxData.dns = option.Dns
 	ctxData.disProxy = option.DisProxy
 	ctxData.tlsHandshakeTimeout = option.TlsHandshakeTimeout
-	ctxData.orderHeaders = option.OrderHeaders
-
 	//init scheme
 	if option.Url != nil {
 		if option.Url.Scheme == "ws" {
@@ -242,6 +240,7 @@ func (obj *Client) Request(ctx context.Context, method string, href string, opti
 	for maxRetries := 0; maxRetries <= optionBak.MaxRetries; maxRetries++ {
 		option := optionBak
 		option.Url = cloneUrl(uhref)
+		option.client = obj
 		response, err = obj.request(ctx, &option)
 		if err == nil || errors.Is(err, errFatal) || option.once {
 			return
@@ -258,13 +257,13 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		}
 		//result callback
 		if err == nil && option.ResultCallBack != nil {
-			err = option.ResultCallBack(ctx, obj, response)
+			err = option.ResultCallBack(ctx, option, response)
 		}
 
 		if err != nil { //err callback, must close body
 			response.CloseBody()
 			if option.ErrCallBack != nil {
-				if err2 := option.ErrCallBack(ctx, obj, response, err); err2 != nil {
+				if err2 := option.ErrCallBack(ctx, option, response, err); err2 != nil {
 					err = tools.WrapError(errFatal, err2)
 				}
 			}
@@ -273,7 +272,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		}
 	}()
 	if option.OptionCallBack != nil {
-		if err = option.OptionCallBack(ctx, obj, option); err != nil {
+		if err = option.OptionCallBack(ctx, option); err != nil {
 			return
 		}
 	}
@@ -283,7 +282,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	response.stream = option.Stream
 
 	//init headers and orderheaders,befor init ctxData
-	headers, err := option.initHeaders()
+	headers, orderHeaders, err := option.initHeaders()
 	if err != nil {
 		return response, tools.WrapError(err, errors.New("tempRequest init headers error"), err)
 	}
@@ -295,6 +294,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	if err != nil {
 		return response, tools.WrapError(err, " reqCtxData init error")
 	}
+	ctxData.orderHeaders = orderHeaders
 	//init ctx,cnl
 	if option.Timeout > 0 { //超时
 		response.ctx, response.cnl = context.WithTimeout(CreateReqCtx(ctx, ctxData), option.Timeout)

@@ -16,27 +16,26 @@ import (
 
 // Connection Management Options
 type ClientOption struct {
-	OrderHeaders          []string                                                                        //order headers with http1
-	Ja3Spec               ja3.Ja3Spec                                                                     //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
-	H2Ja3Spec             ja3.H2Ja3Spec                                                                   //h2 fingerprint
-	Proxy                 string                                                                          //proxy,support https,http,socks5
-	ForceHttp1            bool                                                                            //force  use http1 send requests
-	Ja3                   bool                                                                            //enable ja3 fingerprint
-	DisCookie             bool                                                                            //disable cookies
-	DisDecode             bool                                                                            //disable auto decode
-	DisUnZip              bool                                                                            //disable auto zip decode
-	DisAlive              bool                                                                            //disable  keepalive
-	Bar                   bool                                                                            ////enable bar display
-	OptionCallBack        func(ctx context.Context, client *Client, option *RequestOption) error          //option callback,if error is returnd, break request
-	ResultCallBack        func(ctx context.Context, client *Client, response *Response) error             //result callback,if error is returnd,next errCallback
-	ErrCallBack           func(ctx context.Context, client *Client, response *Response, err error) error  //error callback,if error is returnd,break request
-	RequestCallBack       func(ctx context.Context, request *http.Request, response *http.Response) error //request and response callback,if error is returnd,reponse is error
-	MaxRetries            int                                                                             //try num
-	MaxRedirect           int                                                                             //redirect num ,<0 no redirect,==0 no limit
-	Headers               any                                                                             //default headers
-	Timeout               time.Duration                                                                   //request timeout
-	ResponseHeaderTimeout time.Duration                                                                   //ResponseHeaderTimeout ,default:30
-	TlsHandshakeTimeout   time.Duration                                                                   //tls timeout,default:15
+	Ja3Spec               ja3.Ja3Spec                                                                           //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
+	H2Ja3Spec             ja3.H2Ja3Spec                                                                         //h2 fingerprint
+	Proxy                 string                                                                                //proxy,support https,http,socks5
+	ForceHttp1            bool                                                                                  //force  use http1 send requests
+	Ja3                   bool                                                                                  //enable ja3 fingerprint
+	DisCookie             bool                                                                                  //disable cookies
+	DisDecode             bool                                                                                  //disable auto decode
+	DisUnZip              bool                                                                                  //disable auto zip decode
+	DisAlive              bool                                                                                  //disable  keepalive
+	Bar                   bool                                                                                  ////enable bar display
+	OptionCallBack        func(ctx context.Context, option *RequestOption) error                                //option callback,if error is returnd, break request
+	ResultCallBack        func(ctx context.Context, option *RequestOption, response *Response) error            //result callback,if error is returnd,next errCallback
+	ErrCallBack           func(ctx context.Context, option *RequestOption, response *Response, err error) error //error callback,if error is returnd,break request
+	RequestCallBack       func(ctx context.Context, request *http.Request, response *http.Response) error       //request and response callback,if error is returnd,reponse is error
+	MaxRetries            int                                                                                   //try num
+	MaxRedirect           int                                                                                   //redirect num ,<0 no redirect,==0 no limit
+	Headers               any                                                                                   //default headers
+	Timeout               time.Duration                                                                         //request timeout
+	ResponseHeaderTimeout time.Duration                                                                         //ResponseHeaderTimeout ,default:30
+	TlsHandshakeTimeout   time.Duration                                                                         //tls timeout,default:15
 
 	//network card ip
 	DialTimeout time.Duration //dial tcp timeout,default:15
@@ -53,21 +52,20 @@ type ClientOption struct {
 
 // Options for sending requests
 type RequestOption struct {
-	OrderHeaders    []string                                                                        //order headers with http1
-	Ja3Spec         ja3.Ja3Spec                                                                     //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
-	H2Ja3Spec       ja3.H2Ja3Spec                                                                   //custom h2 fingerprint
-	Proxy           string                                                                          //proxy,support http,https,socks5,example：http://127.0.0.1:7005
-	ForceHttp1      bool                                                                            //force  use http1 send requests
-	Ja3             bool                                                                            //enable ja3 fingerprint
-	DisCookie       bool                                                                            //disable cookies,not use cookies
-	DisDecode       bool                                                                            //disable auto decode
-	DisUnZip        bool                                                                            //disable auto zip decode
-	DisAlive        bool                                                                            //disable  keepalive
-	Bar             bool                                                                            //enable bar display
-	OptionCallBack  func(ctx context.Context, client *Client, option *RequestOption) error          //option callback,if error is returnd, break request
-	ResultCallBack  func(ctx context.Context, client *Client, response *Response) error             //result callback,if error is returnd,next errCallback
-	ErrCallBack     func(ctx context.Context, client *Client, response *Response, err error) error  //error callback,if error is returnd,break request
-	RequestCallBack func(ctx context.Context, request *http.Request, response *http.Response) error //request and response callback,if error is returnd,reponse is error
+	Ja3Spec         ja3.Ja3Spec                                                                           //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
+	H2Ja3Spec       ja3.H2Ja3Spec                                                                         //custom h2 fingerprint
+	Proxy           string                                                                                //proxy,support http,https,socks5,example：http://127.0.0.1:7005
+	ForceHttp1      bool                                                                                  //force  use http1 send requests
+	Ja3             bool                                                                                  //enable ja3 fingerprint
+	DisCookie       bool                                                                                  //disable cookies,not use cookies
+	DisDecode       bool                                                                                  //disable auto decode
+	DisUnZip        bool                                                                                  //disable auto zip decode
+	DisAlive        bool                                                                                  //disable  keepalive
+	Bar             bool                                                                                  //enable bar display
+	OptionCallBack  func(ctx context.Context, option *RequestOption) error                                //option callback,if error is returnd, break request
+	ResultCallBack  func(ctx context.Context, option *RequestOption, response *Response) error            //result callback,if error is returnd,next errCallback
+	ErrCallBack     func(ctx context.Context, option *RequestOption, response *Response, err error) error //error callback,if error is returnd,break request
+	RequestCallBack func(ctx context.Context, request *http.Request, response *http.Response) error       //request and response callback,if error is returnd,reponse is error
 
 	MaxRetries            int           //try num
 	MaxRedirect           int           //redirect num ,<0 no redirect,==0 no limit
@@ -103,6 +101,11 @@ type RequestOption struct {
 	WsOption websocket.Option //websocket option
 	DisProxy bool             //force disable proxy
 	once     bool
+	client   *Client
+}
+
+func (obj *RequestOption) Client() *Client {
+	return obj.client
 }
 
 // Upload files with form-data,
@@ -210,9 +213,6 @@ func (obj *RequestOption) initParams() (*url.URL, error) {
 }
 func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	// start
-	if option.OrderHeaders == nil {
-		option.OrderHeaders = obj.option.OrderHeaders
-	}
 	if !option.Ja3Spec.IsSet() {
 		option.Ja3Spec = obj.option.Ja3Spec
 	}
@@ -300,6 +300,9 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	}
 	if option.DisCookie {
 		option.Jar = nil
+	}
+	if option.DisProxy {
+		option.Proxy = ""
 	}
 	return option
 }

@@ -24,23 +24,22 @@ func defaultHeaders() http.Header {
 	}
 }
 
-func (obj *RequestOption) initHeaders() (http.Header, error) {
+func (obj *RequestOption) initHeaders() (http.Header, []string, error) {
 	if obj.Headers == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 	switch headers := obj.Headers.(type) {
 	case http.Header:
-		return headers.Clone(), nil
+		return headers.Clone(), nil, nil
 	default:
 		_, dataMap, _, err := obj.newBody(headers, mapType)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if dataMap == nil {
-			return nil, nil
+			return nil, nil, nil
 		}
 		head, order := dataMap.parseHeaders()
-		obj.OrderHeaders = order
-		return head, err
+		return head, order, err
 	}
 }

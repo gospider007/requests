@@ -10,18 +10,17 @@ import (
 )
 
 func TestOrderHeaders(t *testing.T) {
-	orderHeaders := []string{
-		"Accept-Encoding",
-		"Accept",
-		"Sec-Ch-Ua",
-		"Sec-Ch-Ua-Platform",
-		"Sec-Ch-Ua-Mobile",
-		"Accept-Language",
-		"User-Agent",
-	}
+	headers := requests.NewOrderMap()
+	headers.Set("Accept-Encoding", "gzip, deflate, br")
+	headers.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
+	headers.Set("User-Agent", requests.UserAgent)
+	headers.Set("Accept-Language", requests.AcceptLanguage)
+	headers.Set("Sec-Ch-Ua", requests.SecChUa)
+	headers.Set("Sec-Ch-Ua-Mobile", "?0")
+	headers.Set("Sec-Ch-Ua-Platform", `"Windows"`)
 	resp, err := requests.Get(nil, "https://tools.scrapfly.io/api/fp/anything", requests.RequestOption{
-		OrderHeaders: orderHeaders, //set http1.1 order headers
-		ForceHttp1:   true,
+		Headers:    headers,
+		ForceHttp1: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -33,7 +32,7 @@ func TestOrderHeaders(t *testing.T) {
 	}
 	i := -1
 	for _, key := range header_order.Array() {
-		i2 := slices.Index(orderHeaders, textproto.CanonicalMIMEHeaderKey(key.String()))
+		i2 := slices.Index(headers.Keys(), textproto.CanonicalMIMEHeaderKey(key.String()))
 		if i2 < i {
 			log.Print(header_order)
 			t.Fatal("not equal")

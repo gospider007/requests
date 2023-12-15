@@ -12,7 +12,8 @@ func TestMaxRetries(t *testing.T) {
 	n := 0
 	resp, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{
 		MaxRetries: 3,
-		ResultCallBack: func(ctx context.Context, client *requests.Client, response *requests.Response) error {
+		ResultCallBack: func(ctx context.Context, option *requests.RequestOption, response *requests.Response) error {
+
 			if n == 0 {
 				n++
 				return errors.New("try")

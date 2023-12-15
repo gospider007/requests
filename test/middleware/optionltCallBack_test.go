@@ -9,7 +9,7 @@ import (
 
 func TestOptionCallBack(t *testing.T) {
 	resp, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{
-		OptionCallBack: func(ctx context.Context, client *requests.Client, option *requests.RequestOption) error {
+		OptionCallBack: func(ctx context.Context, option *requests.RequestOption) error {
 			option.Params = map[string]string{"name": "test"}
 			return nil
 		},
