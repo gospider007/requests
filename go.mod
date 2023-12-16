@@ -3,16 +3,16 @@ module github.com/gospider007/requests
 go 1.21.3
 
 require (
-	github.com/gospider007/bar v0.0.0-20231201075546-252b6e7b6a54
-	github.com/gospider007/bs4 v0.0.0-20231123090151-001db0b91941
-	github.com/gospider007/gson v0.0.0-20231119141525-66095080057d
-	github.com/gospider007/gtls v0.0.0-20231120122450-e763299259db
-	github.com/gospider007/ja3 v0.0.0-20231215081451-4f0f2494ca9f
+	github.com/gospider007/bar v0.0.0-20231215084215-956cfa59ce61
+	github.com/gospider007/bs4 v0.0.0-20231215085603-439260f5a702
+	github.com/gospider007/gson v0.0.0-20231215083934-e7762897c4db
+	github.com/gospider007/gtls v0.0.0-20231215082710-ea089e961bcc
+	github.com/gospider007/ja3 v0.0.0-20231216073617-0c1a87228845
 	github.com/gospider007/net v0.0.0-20231215081728-064725ce355a
 	github.com/gospider007/re v0.0.0-20231024115818-adfd03636256
 	github.com/gospider007/tools v0.0.0-20231202084937-8b2bc66f8198
-	github.com/gospider007/websocket v0.0.0-20231128065110-6296f87425c4
-	github.com/refraction-networking/utls v1.5.4
+	github.com/gospider007/websocket v0.0.0-20231215083826-2227da2a2a13
+	github.com/refraction-networking/utls v1.5.5-0.20231216063210-c4ba3ff3af8d
 	golang.org/x/exp v0.0.0-20231214170342-aacd6d4b4611
 	golang.org/x/net v0.19.0
 )
@@ -23,7 +23,6 @@ require (
 	github.com/andybalholm/cascadia v1.3.2 // indirect
 	github.com/caddyserver/certmagic v0.20.0 // indirect
 	github.com/cloudflare/circl v1.3.6 // indirect
-	github.com/gaukas/godicttls v0.0.4 // indirect
 	github.com/gospider007/blog v0.0.0-20231121084103-59a004dafccf // indirect
 	github.com/gospider007/kinds v0.0.0-20231024093643-7a4424f2d30e // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
