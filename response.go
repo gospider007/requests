@@ -249,19 +249,12 @@ func (obj *Response) defaultDecode() bool {
 	return strings.Contains(obj.ContentType(), "html")
 }
 
-func (obj *Response) Read(con []byte) (i int, err error) {
-	done := make(chan struct{})
-	go func() {
-		i, err = obj.response.Body.Read(con)
-		close(done)
-	}()
-	select {
-	case <-obj.response.Request.Context().Done():
-		obj.ForceCloseConn()
-		err = obj.response.Request.Context().Err()
-	case <-done:
+// must stream=true
+func (obj *Response) Conn() *connecotr {
+	if obj.IsStream() {
+		return obj.rawConn.Conn()
 	}
-	return
+	return nil
 }
 
 // return true if response is stream
@@ -284,12 +277,17 @@ func (obj *Response) ReadBody() (err error) {
 		bufferPool.Put(bBody)
 	}()
 	if obj.bar && obj.ContentLength() > 0 {
-		err = tools.CopyWitchContext(obj.response.Request.Context(), &barBody{
+		_, err = io.Copy(&barBody{
 			bar:  bar.NewClient(obj.response.ContentLength),
 			body: bBody,
 		}, obj.response.Body)
+		// err = tools.CopyWitchContext(obj.response.Request.Context(), &barBody{
+		// 	bar:  bar.NewClient(obj.response.ContentLength),
+		// 	body: bBody,
+		// }, obj.response.Body)
 	} else {
-		err = tools.CopyWitchContext(obj.ctx, bBody, obj.response.Body)
+		_, err = io.Copy(bBody, obj.response.Body)
+		// err = tools.CopyWitchContext(obj.ctx, bBody, obj.response.Body)
 	}
 	if err != nil {
 		obj.ForceCloseConn()
