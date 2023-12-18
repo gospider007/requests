@@ -35,6 +35,8 @@ github.com/gospider007/gtls v0.0.0-20231215082710-ea089e961bcc h1:69I4vx/fPY5A0E
 github.com/gospider007/gtls v0.0.0-20231215082710-ea089e961bcc/go.mod h1:QoA/cKZfGzg2uNG6SqE/alXi1ONl5l17jOUn0+p/aQc=
 github.com/gospider007/ja3 v0.0.0-20231216073617-0c1a87228845 h1:lVoHp1YqpwoZJgBnzj8VupzNBqWVS4lggTWoFAIx03I=
 github.com/gospider007/ja3 v0.0.0-20231216073617-0c1a87228845/go.mod h1:wqFAnfFI26Dc8nM4vSFUuP3Lylf4OHSEztUCdhRb4A0=
+github.com/gospider007/ja3 v0.0.0-20231218052956-f5775dfbd8c3 h1:XAUW+PhkTPwpFZKkQ9/Hf8u4KPTlRKaZL7/bhc5foko=
+github.com/gospider007/ja3 v0.0.0-20231218052956-f5775dfbd8c3/go.mod h1:dZtxNhm9/A5fhukvXfVZY3ZN+TCjQt1ObzsWQp/zLQQ=
 github.com/gospider007/kinds v0.0.0-20231024093643-7a4424f2d30e h1:lmX6IQKkrNDbXfHsvrv1Uz0MoG2v5+4VC6Gdh9irUNY=
 github.com/gospider007/kinds v0.0.0-20231024093643-7a4424f2d30e/go.mod h1:nB4OMmd8Ji92yEmgjbHcqLcBHTAhSSmlGNb2JpTYK9A=
 github.com/gospider007/net v0.0.0-20231215081728-064725ce355a h1:ZQFHnC3rVqKCVud2nhWLbwrz81PGQAiqnYH8h0a0QMY=
@@ -75,6 +77,8 @@ github.com/quic-go/quic-go v0.40.1 h1:X3AGzUNFs0jVuO3esAGnTfvdgvL4fq655WaOi1snv1
 github.com/quic-go/quic-go v0.40.1/go.mod h1:PeN7kuVJ4xZbxSv/4OX6S1USOX8MJvydwpTx31vx60c=
 github.com/refraction-networking/utls v1.5.5-0.20231216063210-c4ba3ff3af8d h1:dcwi0PDpFqcZ+PgPvQjcz7VNZM3yMeGvv2L162fn3IQ=
 github.com/refraction-networking/utls v1.5.5-0.20231216063210-c4ba3ff3af8d/go.mod h1:kHJ6R9DFFA0WsRgBM35iiDku4O7AqPR6y79iuzW7b10=
+github.com/refraction-networking/utls v1.6.0 h1:X5vQMqVx7dY7ehxxqkFER/W6DSjy8TMqSItXm8hRDYQ=
+github.com/refraction-networking/utls v1.6.0/go.mod h1:kHJ6R9DFFA0WsRgBM35iiDku4O7AqPR6y79iuzW7b10=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=
