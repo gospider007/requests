@@ -143,7 +143,7 @@ func (obj *connecotr) taskMain(task *reqTask, waitBody bool) (retry bool) {
 			return false
 		}
 		if task.res == nil {
-			task.err = errors.New("response is nil")
+			task.err = task.ctx.Err()
 			obj.Close()
 			return false
 		}

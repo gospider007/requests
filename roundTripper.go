@@ -213,6 +213,9 @@ func (obj *roundTripper) poolRoundTrip(ctxData *reqCtxData, task *reqTask, key s
 		case <-task.emptyPool:
 			return true
 		case <-task.ctx.Done():
+			if task.err==nil{
+				task.err=task.ctx.Err()
+			}
 			return false
 		}
 	default:
