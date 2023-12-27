@@ -307,6 +307,9 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		err = tools.WrapError(err, "url init error")
 		return
 	}
+	if href.User != nil {
+		headers.Set("Authorization", "Basic "+tools.Base64Encode(href.User.String()))
+	}
 	//init body
 	body, err := option.initBody(response.ctx)
 	if err != nil {
