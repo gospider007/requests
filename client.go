@@ -116,7 +116,11 @@ func (obj *Client) do(req *http.Request, option *RequestOption) (resp *http.Resp
 		if err != nil {
 			return resp, err
 		}
-		ireq.Method, _, _ = redirectBehavior(req.Method, resp, ireq)
+		var shouldRedirect bool
+		ireq.Method, shouldRedirect, _ = redirectBehavior(req.Method, resp, ireq)
+		if !shouldRedirect {
+			return resp, nil
+		}
 		ireq.Response = resp
 		ireq.Header = defaultHeaders()
 		ireq.Header.Set("Referer", req.URL.String())
