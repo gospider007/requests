@@ -92,6 +92,9 @@ func shouldSendContentLength(t *http.Request) bool
 //go:linkname removeEmptyPort net/http.removeEmptyPort
 func removeEmptyPort(host string) string
 
+//go:linkname redirectBehavior net/http.redirectBehavior
+func redirectBehavior(reqMethod string, resp *http.Response, ireq *http.Request) (redirectMethod string, shouldRedirect, includeBody bool)
+
 //go:linkname readTransfer net/http.readTransfer
 func readTransfer(msg any, r *bufio.Reader) (err error)
 

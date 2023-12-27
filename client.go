@@ -116,11 +116,18 @@ func (obj *Client) do(req *http.Request, option *RequestOption) (resp *http.Resp
 		if err != nil {
 			return resp, err
 		}
+		ireq.Method, _, _ = redirectBehavior(req.Method, resp, ireq)
 		ireq.Response = resp
 		ireq.Header = defaultHeaders()
 		ireq.Header.Set("Referer", req.URL.String())
 		if getDomain(u) == getDomain(req.URL) {
-			ireq.Header.Set("Cookie", Cookies(req.Cookies()).String())
+			if Authorization := req.Header.Get("Authorization"); Authorization != "" {
+				ireq.Header.Set("Authorization", Authorization)
+			}
+			cookies := Cookies(req.Cookies()).String()
+			if cookies != "" {
+				ireq.Header.Set("Cookie", cookies)
+			}
 			addCookie(ireq, resp.Cookies())
 		}
 		io.Copy(io.Discard, resp.Body)

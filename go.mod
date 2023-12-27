@@ -13,7 +13,7 @@ require (
 	github.com/gospider007/tools v0.0.0-20231202084937-8b2bc66f8198
 	github.com/gospider007/websocket v0.0.0-20231215083826-2227da2a2a13
 	github.com/refraction-networking/utls v1.6.0
-	golang.org/x/exp v0.0.0-20231214170342-aacd6d4b4611
+	golang.org/x/exp v0.0.0-20231226003508-02704c960a9b
 	golang.org/x/net v0.19.0
 )
 
@@ -41,7 +41,7 @@ require (
 	go.mongodb.org/mongo-driver v1.13.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
-	golang.org/x/crypto v0.16.0 // indirect
+	golang.org/x/crypto v0.17.0 // indirect
 	golang.org/x/image v0.14.0 // indirect
 	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
