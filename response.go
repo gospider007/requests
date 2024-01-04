@@ -281,13 +281,8 @@ func (obj *Response) ReadBody() (err error) {
 			bar:  bar.NewClient(obj.response.ContentLength),
 			body: bBody,
 		}, obj.response.Body)
-		// err = tools.CopyWitchContext(obj.response.Request.Context(), &barBody{
-		// 	bar:  bar.NewClient(obj.response.ContentLength),
-		// 	body: bBody,
-		// }, obj.response.Body)
 	} else {
 		_, err = io.Copy(bBody, obj.response.Body)
-		// err = tools.CopyWitchContext(obj.ctx, bBody, obj.response.Body)
 	}
 	if err != nil {
 		obj.ForceCloseConn()
