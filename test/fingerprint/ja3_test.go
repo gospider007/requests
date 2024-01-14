@@ -21,7 +21,7 @@ func TestJa3(t *testing.T) {
 		t.Fatal(err)
 	}
 	jsonData, err := resp.Json()   //parse json
-	ja3 := jsonData.Get("ja3.ja3") //get ja3 value
+	ja3 := jsonData.Get("tls.ja3") //get ja3 value
 	if ja3 == nil {
 		t.Fatal("not found ja3")
 	}
@@ -32,7 +32,8 @@ func TestJa3(t *testing.T) {
 	}
 }
 func TestJa3Psk(t *testing.T) {
-	j := "772,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,5-27-13-35-16-18-43-17513-65281-51-45-11-0-10-23-41,12092-29-23-24,0"
+	// j := "772,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,5-27-13-35-16-18-43-17513-65281-51-45-11-0-10-23-41,12092-29-23-24,0"
+	j := "772,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,5-27-13-35-16-18-43-17513-65281-51-45-11-0-10-23,12092-29-23-24,0"
 	j2 := "772,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,5-27-13-35-16-18-43-17513-65281-51-45-11-0-10-23,12092-29-23-24,0"
 	ja3Spec, err := ja3.CreateSpecWithStr(j) //create ja3 spec with string
 	if err != nil {
@@ -47,7 +48,7 @@ func TestJa3Psk(t *testing.T) {
 			t.Fatal(err)
 		}
 		jsonData, err := resp.Json()
-		ja3 := jsonData.Get("ja3.ja3")
+		ja3 := jsonData.Get("tls.ja3")
 		if ja3 == nil {
 			t.Fatal("not found ja3")
 		}
@@ -78,7 +79,7 @@ func TestJa3ClientHello(t *testing.T) {
 		t.Fatal(err)
 	}
 	jsonData, err := resp.Json()   //parse json
-	ja3 := jsonData.Get("ja3.ja3") //get ja3 value
+	ja3 := jsonData.Get("tls.ja3") //get ja3 value
 	if ja3 == nil {
 		t.Fatal("not found ja3")
 	}

@@ -100,6 +100,9 @@ func formWrite(writer *multipart.Writer, key string, val any) (err error) {
 				return err
 			}
 			_, err = wp.Write(con)
+			if err != nil {
+				return err
+			}
 		}
 	case []byte:
 		err = writer.WriteField(key, tools.BytesToString(value))
@@ -111,6 +114,9 @@ func formWrite(writer *multipart.Writer, key string, val any) (err error) {
 			return err
 		}
 		err = writer.WriteField(key, tools.BytesToString(con))
+		if err != nil {
+			return err
+		}
 	}
 	return
 }

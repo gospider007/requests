@@ -19,14 +19,14 @@ func TestOrderHeaders(t *testing.T) {
 	headers.Set("Sec-Ch-Ua-Mobile", "?0")
 	headers.Set("Sec-Ch-Ua-Platform", `"Windows"`)
 	resp, err := requests.Get(nil, "https://tools.scrapfly.io/api/fp/anything", requests.RequestOption{
-		Headers:    headers,
-		ForceHttp1: true,
+		Headers: headers,
+		// ForceHttp1: true,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	jsonData, err := resp.Json()
-	header_order := jsonData.Get("http.header_order")
+	header_order := jsonData.Get("headers.headers")
 	if header_order == nil {
 		t.Fatal("not found akamai")
 	}

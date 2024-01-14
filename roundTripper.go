@@ -33,13 +33,8 @@ func (obj *reqTask) inPool() bool {
 	return obj.err == nil && obj.res != nil && obj.res.StatusCode != 101 && obj.res.Header.Get("Content-Type") != "text/event-stream"
 }
 
-type connKey struct {
-	proxy string
-	addr  string
-}
-
 func getKey(ctxData *reqCtxData, req *http.Request) (key string) {
-	b := builderPool.Get().(strings.Builder)
+	b := builderPool.Get().(*strings.Builder)
 	b.WriteString(getAddr(ctxData.proxy))
 	b.WriteString("@")
 	b.WriteString(getAddr(req.URL))
@@ -57,16 +52,6 @@ type roundTripper struct {
 	tlsConfig  *tls.Config
 	utlsConfig *utls.Config
 	getProxy   func(ctx context.Context, url *url.URL) (string, error)
-}
-
-type roundTripperOption struct {
-	DialTimeout time.Duration
-	KeepAlive   time.Duration
-	LocalAddr   *net.TCPAddr  //network card ip
-	AddrType    gtls.AddrType //first ip type
-	GetAddrType func(host string) gtls.AddrType
-	Dns         *net.UDPAddr
-	GetProxy    func(ctx context.Context, url *url.URL) (string, error)
 }
 
 func newRoundTripper(preCtx context.Context, option ClientOption) *roundTripper {
@@ -213,8 +198,8 @@ func (obj *roundTripper) poolRoundTrip(ctxData *reqCtxData, task *reqTask, key s
 		case <-task.emptyPool:
 			return true
 		case <-task.ctx.Done():
-			if task.err==nil && task.res==nil {
-				task.err=task.ctx.Err()
+			if task.err == nil && task.res == nil {
+				task.err = task.ctx.Err()
 			}
 			return false
 		}

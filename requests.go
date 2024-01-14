@@ -26,7 +26,7 @@ type contextKey string
 
 const gospiderContextKey contextKey = "GospiderContextKey"
 
-var errFatal = errors.New("Fatal error")
+var errFatal = errors.New("ErrFatal")
 
 type reqCtxData struct {
 	isWs                  bool
@@ -326,7 +326,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		if option.Referer != "" {
 			reqs.Header.Set("Referer", option.Referer)
 		} else if reqs.URL.Scheme != "" && reqs.URL.Host != "" {
-			referBuild := builderPool.Get().(strings.Builder)
+			referBuild := builderPool.Get().(*strings.Builder)
 			referBuild.WriteString(reqs.URL.Scheme)
 			referBuild.WriteString("://")
 			referBuild.WriteString(reqs.URL.Host)

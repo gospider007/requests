@@ -124,7 +124,7 @@ func (obj *RequestOption) initBody(ctx context.Context) (io.Reader, error) {
 		return body, err
 	} else if obj.Form != nil {
 		var orderMap *orderMap
-		body, orderMap, _, err := obj.newBody(obj.Form, mapType)
+		_, orderMap, _, err := obj.newBody(obj.Form, mapType)
 		if err != nil {
 			return nil, err
 		}
@@ -132,6 +132,9 @@ func (obj *RequestOption) initBody(ctx context.Context) (io.Reader, error) {
 			return nil, nil
 		}
 		body, contentType, once, err := orderMap.parseForm(ctx)
+		if err != nil {
+			return nil, err
+		}
 		obj.once = once
 		if obj.ContentType == "" {
 			obj.ContentType = contentType
@@ -192,8 +195,9 @@ func (obj *RequestOption) initBody(ctx context.Context) (io.Reader, error) {
 	}
 }
 func (obj *RequestOption) initParams() (*url.URL, error) {
+	baseUrl := cloneUrl(obj.Url)
 	if obj.Params == nil {
-		return obj.Url, nil
+		return baseUrl, nil
 	}
 	_, dataMap, _, err := obj.newBody(obj.Params, mapType)
 	if err != nil {
@@ -201,15 +205,15 @@ func (obj *RequestOption) initParams() (*url.URL, error) {
 	}
 	query := dataMap.parseParams().String()
 	if query == "" {
-		return obj.Url, nil
+		return baseUrl, nil
 	}
-	pquery := obj.Url.Query().Encode()
+	pquery := baseUrl.Query().Encode()
 	if pquery == "" {
-		obj.Url.RawQuery = query
+		baseUrl.RawQuery = query
 	} else {
-		obj.Url.RawQuery = pquery + "&" + query
+		baseUrl.RawQuery = pquery + "&" + query
 	}
-	return obj.Url, nil
+	return baseUrl, nil
 }
 func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	// start

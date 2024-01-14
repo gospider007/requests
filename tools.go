@@ -42,7 +42,7 @@ func getAddr(uurl *url.URL) (addr string) {
 	}
 	_, port, _ := net.SplitHostPort(uurl.Host)
 	if port == "" {
-		bs := builderPool.Get().(strings.Builder)
+		bs := builderPool.Get().(*strings.Builder)
 		bs.WriteString(uurl.Host)
 		bs.WriteString(":")
 		if uurl.Scheme == "https" {
@@ -125,7 +125,7 @@ func httpWrite(r *http.Request, w *bufio.Writer, orderHeaders []string) (err err
 	if r.Header.Get("Content-Length") == "" && shouldSendContentLength(r) {
 		r.Header.Set("Content-Length", fmt.Sprint(r.ContentLength))
 	}
-	bs := builderPool.Get().(strings.Builder)
+	bs := builderPool.Get().(*strings.Builder)
 	defer func() {
 		bs.Reset()
 		builderPool.Put(bs)
@@ -192,7 +192,7 @@ func init() {
 		return bytes.NewBuffer(nil)
 	}
 	builderPool.New = func() interface{} {
-		return strings.Builder{}
+		return &strings.Builder{}
 	}
 }
 

@@ -108,7 +108,7 @@ func (obj *connecotr) http2Req(task *reqTask) {
 func (obj *connecotr) waitBodyClose() error {
 	select {
 	case <-obj.bodyCtx.Done(): //wait body close
-		if err := context.Cause(obj.bodyCtx); errors.Is(err, gospiderBodyCloseErr) {
+		if err := context.Cause(obj.bodyCtx); errors.Is(err, ErrgospiderBodyClose) {
 			return nil
 		} else {
 			return err

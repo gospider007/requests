@@ -20,7 +20,7 @@ type Client struct {
 	closed    bool
 }
 
-var defaultClient, _ = NewClient(nil)
+var defaultClient, _ = NewClient(context.TODO())
 
 // New Connection Management
 func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error) {
@@ -79,13 +79,13 @@ func (obj *Client) Close() {
 	obj.cnl()
 }
 
-func checkRedirect(req *http.Request, via []*http.Request) error {
-	ctxData := GetReqCtxData(req.Context())
-	if ctxData.maxRedirect == 0 || ctxData.maxRedirect >= len(via) {
-		return nil
-	}
-	return http.ErrUseLastResponse
-}
+// func checkRedirect(req *http.Request, via []*http.Request) error {
+// 	ctxData := GetReqCtxData(req.Context())
+// 	if ctxData.maxRedirect == 0 || ctxData.maxRedirect >= len(via) {
+// 		return nil
+// 	}
+// 	return http.ErrUseLastResponse
+// }
 
 func (obj *Client) do(req *http.Request, option *RequestOption) (resp *http.Response, err error) {
 	var redirectNum int
