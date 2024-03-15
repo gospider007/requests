@@ -1,7 +1,6 @@
 package requests
 
 import (
-	"bytes"
 	"context"
 	"io"
 	"net"
@@ -163,21 +162,17 @@ func (obj *RequestOption) initBody(ctx context.Context) (io.Reader, error) {
 		}
 		return body2, nil
 	} else if obj.Json != nil {
-		_, orderMap, _, err := obj.newBody(obj.Json, mapType)
+		body, _, _, err := obj.newBody(obj.Json, readType)
 		if err != nil {
 			return nil, err
 		}
 		if obj.ContentType == "" {
 			obj.ContentType = "application/json"
 		}
-		body, err := orderMap.MarshalJSON()
-		if err != nil {
-			return nil, err
-		}
 		if body == nil {
 			return nil, nil
 		}
-		return bytes.NewReader(body), nil
+		return body, nil
 	} else if obj.Text != nil {
 		body, _, _, err := obj.newBody(obj.Text, readType)
 		if err != nil {

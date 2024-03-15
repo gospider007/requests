@@ -96,7 +96,7 @@ func (obj *DialClient) DialContext(ctx context.Context, ctxData *reqCtxData, net
 			if err != nil {
 				return nil, err
 			}
-			if host, err = obj.addrToIp(ctx, host, ips, addrType); err != nil {
+			if host, err = obj.addrToIp(host, ips, addrType); err != nil {
 				return nil, err
 			}
 			addr = net.JoinHostPort(host, port)
@@ -145,15 +145,15 @@ func (obj *DialClient) loadHost(host string) (string, bool) {
 	}
 	return host, false
 }
-func (obj *DialClient) addrToIp(ctx context.Context, host string, ips []net.IPAddr, addrType gtls.AddrType) (string, error) {
-	ip, err := obj.lookupIPAddr(ctx, host, ips, addrType)
+func (obj *DialClient) addrToIp(host string, ips []net.IPAddr, addrType gtls.AddrType) (string, error) {
+	ip, err := obj.lookupIPAddr(ips, addrType)
 	if err != nil {
 		return host, tools.WrapError(err, "addrToIp error,lookupIPAddr")
 	}
 	obj.dnsIpData.Store(host, msgClient{time: time.Now(), host: ip.String()})
 	return ip.String(), nil
 }
-func (obj *DialClient) clientVerifySocks5(ctx context.Context, proxyUrl *url.URL, addr string, conn net.Conn) (err error) {
+func (obj *DialClient) clientVerifySocks5(proxyUrl *url.URL, addr string, conn net.Conn) (err error) {
 	if _, err = conn.Write([]byte{5, 2, 0, 2}); err != nil {
 		return
 	}
@@ -270,7 +270,7 @@ func (obj *DialClient) clientVerifySocks5(ctx context.Context, proxyUrl *url.URL
 	_, err = io.ReadFull(conn, readCon[:2])
 	return
 }
-func (obj *DialClient) lookupIPAddr(ctx context.Context, host string, ips []net.IPAddr, addrType gtls.AddrType) (net.IP, error) {
+func (obj *DialClient) lookupIPAddr(ips []net.IPAddr, addrType gtls.AddrType) (net.IP, error) {
 	for _, ipAddr := range ips {
 		ip := ipAddr.IP
 		if ipType := gtls.ParseIp(ip); ipType == 4 || ipType == 6 {
@@ -359,7 +359,7 @@ func (obj *DialClient) socks5Proxy(ctx context.Context, ctxData *reqCtxData, net
 	}
 	didVerify := make(chan struct{})
 	go func() {
-		if err = obj.clientVerifySocks5(ctx, proxyUrl, addr, conn); err != nil {
+		if err = obj.clientVerifySocks5(proxyUrl, addr, conn); err != nil {
 			conn.Close()
 		}
 		close(didVerify)

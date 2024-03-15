@@ -272,6 +272,16 @@ func any2Map(val any) map[string]any {
 }
 
 func (obj *RequestOption) newBody(val any, valType int) (reader io.Reader, parseOrderMap *orderMap, orderKey []string, err error) {
+	var isOrderMap bool
+	parseOrderMap, isOrderMap = val.(*orderMap)
+	if isOrderMap {
+		if valType == readType {
+			readCon, err := parseOrderMap.MarshalJSON()
+			return bytes.NewReader(readCon), nil, nil, err
+		} else {
+			return nil, parseOrderMap, parseOrderMap.Keys(), nil
+		}
+	}
 	if valType == readType {
 		switch value := val.(type) {
 		case io.Reader:
