@@ -72,7 +72,6 @@ package main
 import (
 	"log"
 	"time"
-
 	"github.com/gospider007/requests"
 )
 
