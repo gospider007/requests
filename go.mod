@@ -8,7 +8,7 @@ require (
 	github.com/gospider007/gson v0.0.0-20231215083934-e7762897c4db
 	github.com/gospider007/gtls v0.0.0-20240104034426-5073ca328e04
 	github.com/gospider007/ja3 v0.0.0-20240114072950-a58a93a771b9
-	github.com/gospider007/net v0.0.0-20240315152546-17cb68981c12
+	github.com/gospider007/net v0.0.0-20240316025234-66d7c24a31b6
 	github.com/gospider007/re v0.0.0-20240227100911-e27255e48eff
 	github.com/gospider007/tools v0.0.0-20231202084937-8b2bc66f8198
 	github.com/gospider007/websocket v0.0.0-20240104034652-af938aeed446
