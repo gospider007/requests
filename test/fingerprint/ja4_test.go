@@ -32,7 +32,8 @@ func TestOrderHeaders(t *testing.T) {
 		t.Fatal("not found akamai")
 	}
 	i := -1
-	// log.Print(jsonData)
+	// log.Print(header_order)
+	// log.Print(headers.Keys())
 	kks := []string{}
 	for _, kk := range headers.Keys() {
 		kks = append(kks, textproto.CanonicalMIMEHeaderKey(kk))

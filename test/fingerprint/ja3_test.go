@@ -25,7 +25,7 @@ func TestJa3(t *testing.T) {
 		t.Fatal(err)
 	}
 	jsonData, err := resp.Json() //parse json
-	// log.Print(jsonData.Find("scrapfly_fp"))
+	log.Print(jsonData.Find("scrapfly_fp"))
 	ja3 := jsonData.Get("tls.ja3") //get ja3 value
 	if ja3 == nil {
 		t.Fatal("not found ja3")
