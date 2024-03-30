@@ -31,6 +31,9 @@ func (obj *RequestOption) initHeaders() (http.Header, []string, error) {
 	switch headers := obj.Headers.(type) {
 	case http.Header:
 		return headers.Clone(), nil, nil
+	case *orderMap:
+		head, order := headers.parseHeaders()
+		return head, order, nil
 	default:
 		_, dataMap, _, err := obj.newBody(headers, mapType)
 		if err != nil {
@@ -39,7 +42,7 @@ func (obj *RequestOption) initHeaders() (http.Header, []string, error) {
 		if dataMap == nil {
 			return nil, nil, nil
 		}
-		head, order := dataMap.parseHeaders()
-		return head, order, err
+		head, _ := dataMap.parseHeaders()
+		return head, nil, err
 	}
 }

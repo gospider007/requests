@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"net/textproto"
 	"net/url"
 	"os"
 
@@ -19,7 +18,6 @@ import (
 	"github.com/gospider007/re"
 	"github.com/gospider007/tools"
 	"github.com/gospider007/websocket"
-	"golang.org/x/exp/slices"
 )
 
 type contextKey string
@@ -82,25 +80,6 @@ func NewReqCtxData(ctx context.Context, option *RequestOption) (*reqCtxData, err
 	//init tls timeout
 	if option.TlsHandshakeTimeout == 0 {
 		ctxData.tlsHandshakeTimeout = time.Second * 15
-	}
-
-	//init orderHeaders,this must after init headers
-	if ctxData.orderHeaders == nil {
-		ctxData.orderHeaders = ja3.DefaultH1OrderHeaders()
-	} else {
-		orderHeaders := []string{}
-		for _, key := range ctxData.orderHeaders {
-			key = textproto.CanonicalMIMEHeaderKey(key)
-			if !slices.Contains(orderHeaders, key) {
-				orderHeaders = append(orderHeaders, key)
-			}
-		}
-		for _, key := range ja3.DefaultH1OrderHeaders() {
-			if !slices.Contains(orderHeaders, key) {
-				orderHeaders = append(orderHeaders, key)
-			}
-		}
-		ctxData.orderHeaders = orderHeaders
 	}
 	//init proxy
 	if option.Proxy != "" {
@@ -286,15 +265,29 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	if err != nil {
 		return response, tools.WrapError(err, errors.New("tempRequest init headers error"), err)
 	}
-	if headers == nil {
-		headers = defaultHeaders()
+	//设置 h2 请求头顺序
+	if orderHeaders != nil {
+		if !option.H2Ja3Spec.IsSet() {
+			option.H2Ja3Spec = ja3.DefaultH2Ja3Spec()
+			option.H2Ja3Spec.OrderHeaders = orderHeaders
+		} else if option.H2Ja3Spec.OrderHeaders == nil {
+			option.H2Ja3Spec.OrderHeaders = orderHeaders
+		}
 	}
 	//init ctxData
 	ctxData, err := NewReqCtxData(ctx, option)
 	if err != nil {
 		return response, tools.WrapError(err, " reqCtxData init error")
 	}
-	ctxData.orderHeaders = orderHeaders
+	if headers == nil {
+		headers = defaultHeaders()
+	}
+	//设置 h1 请求头顺序
+	if orderHeaders != nil {
+		ctxData.orderHeaders = orderHeaders
+	} else {
+		ctxData.orderHeaders = ja3.DefaultOrderHeaders()
+	}
 	//init ctx,cnl
 	if option.Timeout > 0 { //超时
 		response.ctx, response.cnl = context.WithTimeout(CreateReqCtx(ctx, ctxData), option.Timeout)

@@ -16,6 +16,7 @@ import (
 	"sync"
 	_ "unsafe"
 
+	"github.com/gospider007/ja3"
 	"golang.org/x/exp/slices"
 	"golang.org/x/net/http/httpguts"
 )
@@ -98,6 +99,8 @@ func redirectBehavior(reqMethod string, resp *http.Response, ireq *http.Request)
 //go:linkname readTransfer net/http.readTransfer
 func readTransfer(msg any, r *bufio.Reader) (err error)
 
+var filterHeaderKeys = ja3.DefaultOrderHeadersWithH2()
+
 func httpWrite(r *http.Request, w *bufio.Writer, orderHeaders []string) (err error) {
 	host := r.Host
 	if host == "" {
@@ -144,6 +147,9 @@ func httpWrite(r *http.Request, w *bufio.Writer, orderHeaders []string) (err err
 			if k2, ok := replaceMap[k]; ok {
 				k = k2
 			}
+			if slices.Contains(filterHeaderKeys, k) {
+				continue
+			}
 			for _, v := range vs {
 				bs.Reset()
 				bs.WriteString(k)
@@ -161,7 +167,11 @@ func httpWrite(r *http.Request, w *bufio.Writer, orderHeaders []string) (err err
 			if k2, ok := replaceMap[k]; ok {
 				k = k2
 			}
+			if slices.Contains(filterHeaderKeys, k) {
+				continue
+			}
 			for _, v := range vs {
+
 				bs.Reset()
 				bs.WriteString(k)
 				bs.WriteString(": ")

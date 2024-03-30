@@ -10,6 +10,7 @@ import (
 )
 
 func TestOrderHeaders(t *testing.T) {
+
 	headers := requests.NewOrderMap()
 	headers.Set("Accept-Encoding", "gzip, deflate, br")
 	headers.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
@@ -26,17 +27,25 @@ func TestOrderHeaders(t *testing.T) {
 		t.Fatal(err)
 	}
 	jsonData, err := resp.Json()
-	header_order := jsonData.Get("headers.headers")
-	if header_order == nil {
+	header_order := jsonData.Find("ordered_headers_key")
+	if !header_order.Exists() {
 		t.Fatal("not found akamai")
 	}
 	i := -1
+	// log.Print(jsonData)
+	kks := []string{}
+	for _, kk := range headers.Keys() {
+		kks = append(kks, textproto.CanonicalMIMEHeaderKey(kk))
+	}
 	for _, key := range header_order.Array() {
-		i2 := slices.Index(headers.Keys(), textproto.CanonicalMIMEHeaderKey(key.String()))
-		if i2 < i {
-			log.Print(header_order)
-			t.Fatal("not equal")
+		kk := textproto.CanonicalMIMEHeaderKey(key.String())
+		if slices.Contains(kks, kk) {
+			i2 := slices.Index(kks, textproto.CanonicalMIMEHeaderKey(kk))
+			if i2 < i {
+				log.Print(header_order)
+				t.Fatal("not equal")
+			}
+			i = i2
 		}
-		i = i2
 	}
 }

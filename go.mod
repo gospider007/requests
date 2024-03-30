@@ -7,13 +7,13 @@ require (
 	github.com/gospider007/bs4 v0.0.0-20240315012430-de09bacaf4da
 	github.com/gospider007/gson v0.0.0-20240320040553-de4a050b30c2
 	github.com/gospider007/gtls v0.0.0-20240104034426-5073ca328e04
-	github.com/gospider007/ja3 v0.0.0-20240114072950-a58a93a771b9
-	github.com/gospider007/net v0.0.0-20240316034257-6f87aa86fa27
+	github.com/gospider007/ja3 v0.0.0-20240330100920-8fe999a5a4e8
+	github.com/gospider007/net v0.0.0-20240330101015-7f9e64d8d506
 	github.com/gospider007/re v0.0.0-20240227100911-e27255e48eff
 	github.com/gospider007/tools v0.0.0-20231202084937-8b2bc66f8198
 	github.com/gospider007/websocket v0.0.0-20240104034652-af938aeed446
 	github.com/refraction-networking/utls v1.6.3
-	golang.org/x/exp v0.0.0-20240318143956-a85f2c67cd81
+	golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8
 	golang.org/x/net v0.22.0
 )
 
