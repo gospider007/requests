@@ -39,8 +39,8 @@ type Response struct {
 }
 
 type Sse struct {
-	reader    *bufio.Reader
-	closeFunc func()
+	reader *bufio.Reader
+	raw    io.ReadCloser
 }
 type Event struct {
 	Data    string //data
@@ -50,8 +50,8 @@ type Event struct {
 	Comment string //comment info
 }
 
-func newSse(rd io.Reader, closeFunc func()) *Sse {
-	return &Sse{closeFunc: closeFunc, reader: bufio.NewReader(rd)}
+func newSse(rd io.ReadCloser) *Sse {
+	return &Sse{raw: rd, reader: bufio.NewReader(rd)}
 }
 
 // recv sse envent data
@@ -95,8 +95,8 @@ func (obj *Sse) Recv() (Event, error) {
 }
 
 // close sse
-func (obj *Sse) Close() {
-	obj.closeFunc()
+func (obj *Sse) Close() error {
+	return obj.raw.Close()
 }
 
 // return websocket client

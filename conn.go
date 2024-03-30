@@ -9,6 +9,7 @@ import (
 	"net/textproto"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/gospider007/net/http2"
 	"github.com/gospider007/tools"
@@ -67,6 +68,21 @@ func (obj *connecotr) Read(b []byte) (i int, err error) {
 }
 func (obj *connecotr) Write(b []byte) (int, error) {
 	return obj.rawConn.Write(b)
+}
+func (obj *connecotr) LocalAddr() net.Addr {
+	return obj.rawConn.LocalAddr()
+}
+func (obj *connecotr) RemoteAddr() net.Addr {
+	return obj.rawConn.RemoteAddr()
+}
+func (obj *connecotr) SetDeadline(t time.Time) error {
+	return obj.rawConn.SetDeadline(t)
+}
+func (obj *connecotr) SetReadDeadline(t time.Time) error {
+	return obj.rawConn.SetReadDeadline(t)
+}
+func (obj *connecotr) SetWriteDeadline(t time.Time) error {
+	return obj.rawConn.SetWriteDeadline(t)
 }
 
 func (obj *connecotr) h2Closed() bool {

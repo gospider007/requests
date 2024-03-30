@@ -17,14 +17,14 @@ func TestWebSocket(t *testing.T) {
 	defer response.CloseBody()
 	wsCli := response.WebSocket()
 	defer wsCli.Close()
-	if err = wsCli.Send(nil, websocket.MessageText, "test"); err != nil { // Send text message
+	if err = wsCli.WriteMessage(websocket.TextMessage, "test"); err != nil { // Send text message
 		t.Error(err)
 	}
-	msgType, con, err := wsCli.Recv(nil) // Receive message
+	msgType, con, err := wsCli.ReadMessage() // Receive message
 	if err != nil {
 		t.Error(err)
 	}
-	if msgType != websocket.MessageText {
+	if msgType != websocket.TextMessage {
 		t.Error("Message type is not text")
 	}
 	if string(con) != "test" {

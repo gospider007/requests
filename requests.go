@@ -336,7 +336,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 
 	//init ws
 	if ctxData.isWs {
-		websocket.SetClientHeadersOption(reqs.Header, option.WsOption)
+		websocket.SetClientHeadersWithOption(reqs.Header, option.WsOption)
 	}
 
 	if reqs.URL.Scheme == "file" {
@@ -382,9 +382,9 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		response.disUnzip = response.response.Uncompressed
 	}
 	if response.response.StatusCode == 101 {
-		response.webSocket, err = websocket.NewClientConn(response.rawConn.Conn(), response.response.Header, response.ForceCloseConn)
+		response.webSocket = websocket.NewClientConn(response.rawConn.Conn(), websocket.GetResponseHeaderOption(response.response.Header))
 	} else if response.response.Header.Get("Content-Type") == "text/event-stream" {
-		response.sse = newSse(response.response.Body, response.ForceCloseConn)
+		response.sse = newSse(response.response.Body)
 	} else if !response.disUnzip {
 		var unCompressionBody io.ReadCloser
 		unCompressionBody, err = tools.CompressionDecode(response.response.Body, response.ContentEncoding())

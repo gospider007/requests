@@ -11,7 +11,7 @@ require (
 	github.com/gospider007/net v0.0.0-20240330101015-7f9e64d8d506
 	github.com/gospider007/re v0.0.0-20240227100911-e27255e48eff
 	github.com/gospider007/tools v0.0.0-20231202084937-8b2bc66f8198
-	github.com/gospider007/websocket v0.0.0-20240104034652-af938aeed446
+	github.com/gospider007/websocket v0.0.0-20240330145931-87c1d168b7df
 	github.com/refraction-networking/utls v1.6.3
 	golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8
 	golang.org/x/net v0.22.0
@@ -47,5 +47,4 @@ require (
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/tools v0.19.0 // indirect
-	nhooyr.io/websocket v1.8.10 // indirect
 )
