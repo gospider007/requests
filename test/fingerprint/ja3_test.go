@@ -12,8 +12,8 @@ func TestJa3(t *testing.T) {
 	// j := "772,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,13-45-5-35-18-23-0-65281-10-65037-51-16-11-27-43-17513,12092-29-23-24,0"
 	j := "772,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,35-51-27-5-0-65281-13-65037-23-10-16-45-18-17513-43-11,29-23-24,0"
 	// j := "772,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,43-16-27-18-5-45-0-23-11-17513-10-65281-65037-35-13-51,29-23-24,0"
-	// ja3Spec, err := ja3.CreateSpecWithStr(j) //create ja3 spec with string
-	ja3Spec, err := ja3.CreateSpecWithId(ja3.HelloChrome_100)
+	ja3Spec, err := ja3.CreateSpecWithStr(j) //create ja3 spec with string
+	// ja3Spec, err := ja3.CreateSpecWithId(ja3.HelloChrome_100)
 
 	if err != nil {
 		t.Fatal(err)
@@ -25,7 +25,7 @@ func TestJa3(t *testing.T) {
 		t.Fatal(err)
 	}
 	jsonData, err := resp.Json() //parse json
-	log.Print(jsonData.Find("scrapfly_fp"))
+	// log.Print(jsonData.Find("scrapfly_fp"))
 	ja3 := jsonData.Get("tls.ja3") //get ja3 value
 	if ja3 == nil {
 		t.Fatal("not found ja3")
