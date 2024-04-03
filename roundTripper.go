@@ -240,7 +240,7 @@ func (obj *roundTripper) forceCloseConns() {
 }
 func (obj *roundTripper) newReqTask(req *http.Request, ctxData *reqCtxData) *reqTask {
 	if ctxData.responseHeaderTimeout == 0 {
-		ctxData.responseHeaderTimeout = time.Second * 30
+		ctxData.responseHeaderTimeout = time.Second * 300
 	}
 	task := new(reqTask)
 	task.req = req

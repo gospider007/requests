@@ -33,7 +33,7 @@ type ClientOption struct {
 	MaxRedirect           int                                                                                   //redirect num ,<0 no redirect,==0 no limit
 	Headers               any                                                                                   //default headers
 	Timeout               time.Duration                                                                         //request timeout
-	ResponseHeaderTimeout time.Duration                                                                         //ResponseHeaderTimeout ,default:30
+	ResponseHeaderTimeout time.Duration                                                                         //ResponseHeaderTimeout ,default:300
 	TlsHandshakeTimeout   time.Duration                                                                         //tls timeout,default:15
 
 	//network card ip
@@ -70,7 +70,7 @@ type RequestOption struct {
 	MaxRedirect           int           //redirect num ,<0 no redirect,==0 no limit
 	Headers               any           //request headers：json,map，header
 	Timeout               time.Duration //request timeout
-	ResponseHeaderTimeout time.Duration //ResponseHeaderTimeout ,default:30
+	ResponseHeaderTimeout time.Duration //ResponseHeaderTimeout ,default:300
 	TlsHandshakeTimeout   time.Duration
 
 	//network card ip
