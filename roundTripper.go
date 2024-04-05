@@ -30,7 +30,7 @@ type reqTask struct {
 }
 
 func (obj *reqTask) inPool() bool {
-	return obj.err == nil && obj.res != nil && obj.res.StatusCode != 101 && obj.res.Header.Get("Content-Type") != "text/event-stream"
+	return obj.err == nil && obj.res != nil && obj.res.StatusCode != 101 && !strings.Contains(obj.res.Header.Get("Content-Type"), "text/event-stream")
 }
 
 func getKey(ctxData *reqCtxData, req *http.Request) (key string) {
