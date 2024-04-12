@@ -31,7 +31,7 @@ func (obj *RequestOption) initHeaders() (http.Header, []string, error) {
 	switch headers := obj.Headers.(type) {
 	case http.Header:
 		return headers.Clone(), nil, nil
-	case *orderMap:
+	case *OrderMap:
 		head, order := headers.parseHeaders()
 		return head, order, nil
 	default:

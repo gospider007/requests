@@ -122,7 +122,7 @@ func (obj *RequestOption) initBody(ctx context.Context) (io.Reader, error) {
 		}
 		return body, err
 	} else if obj.Form != nil {
-		var orderMap *orderMap
+		var orderMap *OrderMap
 		_, orderMap, _, err := obj.newBody(obj.Form, mapType)
 		if err != nil {
 			return nil, err

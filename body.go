@@ -22,31 +22,31 @@ const (
 	mapType
 )
 
-type orderMap struct {
+type OrderMap struct {
 	data map[string]any
 	keys []string
 }
 
-func NewOrderMap() *orderMap {
-	return &orderMap{
+func NewOrderMap() *OrderMap {
+	return &OrderMap{
 		data: make(map[string]any),
 		keys: []string{},
 	}
 }
 
-func (obj *orderMap) Set(key string, val any) {
+func (obj *OrderMap) Set(key string, val any) {
 	obj.Del(key)
 	obj.data[key] = val
 	obj.keys = append(obj.keys, key)
 }
-func (obj *orderMap) Del(key string) {
+func (obj *OrderMap) Del(key string) {
 	delete(obj.data, key)
 	obj.keys = tools.DelSliceVals(obj.keys, key)
 }
-func (obj *orderMap) Keys() []string {
+func (obj *OrderMap) Keys() []string {
 	return obj.keys
 }
-func (obj *orderMap) parseHeaders() (map[string][]string, []string) {
+func (obj *OrderMap) parseHeaders() (map[string][]string, []string) {
 	head := make(http.Header)
 	for _, kk := range obj.keys {
 		if vvs, ok := obj.data[kk].([]any); ok {
@@ -120,7 +120,7 @@ func formWrite(writer *multipart.Writer, key string, val any) (err error) {
 	}
 	return
 }
-func (obj *orderMap) parseForm(ctx context.Context) (io.Reader, string, bool, error) {
+func (obj *OrderMap) parseForm(ctx context.Context) (io.Reader, string, bool, error) {
 	if len(obj.keys) == 0 || len(obj.data) == 0 {
 		return nil, "", false, nil
 	}
@@ -145,7 +145,7 @@ func (obj *orderMap) parseForm(ctx context.Context) (io.Reader, string, bool, er
 	}
 	return body, writer.FormDataContentType(), false, err
 }
-func (obj *orderMap) isformPip() bool {
+func (obj *OrderMap) isformPip() bool {
 	if len(obj.keys) == 0 || len(obj.data) == 0 {
 		return false
 	}
@@ -168,7 +168,7 @@ func (obj *orderMap) isformPip() bool {
 	}
 	return false
 }
-func (obj *orderMap) formWriteMain(writer *multipart.Writer) (err error) {
+func (obj *OrderMap) formWriteMain(writer *multipart.Writer) (err error) {
 	for _, key := range obj.keys {
 		if vals, ok := obj.data[key].([]any); ok {
 			for _, val := range vals {
@@ -193,7 +193,7 @@ func paramsWrite(buf *bytes.Buffer, key string, val any) {
 	buf.WriteByte('=')
 	buf.WriteString(url.QueryEscape(fmt.Sprint(val)))
 }
-func (obj *orderMap) parseParams() *bytes.Buffer {
+func (obj *OrderMap) parseParams() *bytes.Buffer {
 	buf := bytes.NewBuffer(nil)
 	for _, k := range obj.keys {
 		if vals, ok := obj.data[k].([]any); ok {
@@ -206,14 +206,14 @@ func (obj *orderMap) parseParams() *bytes.Buffer {
 	}
 	return buf
 }
-func (obj *orderMap) parseData() *bytes.Reader {
+func (obj *OrderMap) parseData() *bytes.Reader {
 	val := obj.parseParams().Bytes()
 	if val == nil {
 		return nil
 	}
 	return bytes.NewReader(val)
 }
-func (obj *orderMap) MarshalJSON() ([]byte, error) {
+func (obj *OrderMap) MarshalJSON() ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
 	err := buf.WriteByte('{')
 	if err != nil {
@@ -271,9 +271,9 @@ func any2Map(val any) map[string]any {
 	return result
 }
 
-func (obj *RequestOption) newBody(val any, valType int) (reader io.Reader, parseOrderMap *orderMap, orderKey []string, err error) {
+func (obj *RequestOption) newBody(val any, valType int) (reader io.Reader, parseOrderMap *OrderMap, orderKey []string, err error) {
 	var isOrderMap bool
-	parseOrderMap, isOrderMap = val.(*orderMap)
+	parseOrderMap, isOrderMap = val.(*OrderMap)
 	if isOrderMap {
 		if valType == readType {
 			readCon, err := parseOrderMap.MarshalJSON()
@@ -321,7 +321,7 @@ mapL:
 			}
 		}
 		return nil, orderMap, nil, nil
-	case *orderMap:
+	case *OrderMap:
 		if mapData := any2Map(value.data); mapData != nil {
 			value.data = mapData
 		}
