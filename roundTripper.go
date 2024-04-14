@@ -20,13 +20,14 @@ import (
 )
 
 type reqTask struct {
-	ctx          context.Context
-	cnl          context.CancelFunc
-	req          *http.Request
-	res          *http.Response
-	emptyPool    chan struct{}
-	err          error
-	orderHeaders []string
+	ctx           context.Context
+	cnl           context.CancelFunc
+	req           *http.Request
+	res           *http.Response
+	emptyPool     chan struct{}
+	err           error
+	orderHeaders  []string
+	orderHeaders2 []string
 }
 
 func (obj *reqTask) inPool() bool {
@@ -246,6 +247,11 @@ func (obj *roundTripper) newReqTask(req *http.Request, ctxData *reqCtxData) *req
 	task.req = req
 	task.emptyPool = make(chan struct{})
 	task.orderHeaders = ctxData.orderHeaders
+	if ctxData.h2Ja3Spec.OrderHeaders != nil {
+		task.orderHeaders2 = ctxData.h2Ja3Spec.OrderHeaders
+	} else {
+		task.orderHeaders2 = ctxData.orderHeaders
+	}
 	return task
 }
 func (obj *roundTripper) RoundTrip(req *http.Request) (response *http.Response, err error) {

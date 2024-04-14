@@ -114,7 +114,7 @@ func (obj *connecotr) http1Req(task *reqTask) {
 }
 
 func (obj *connecotr) http2Req(task *reqTask) {
-	if task.res, task.err = obj.h2RawConn.RoundTripWithOrderHeaders(task.req, task.orderHeaders); task.res != nil && task.err == nil {
+	if task.res, task.err = obj.h2RawConn.RoundTripWithOrderHeaders(task.req, task.orderHeaders2); task.res != nil && task.err == nil {
 		obj.wrapBody(task)
 	} else if task.err != nil {
 		task.err = tools.WrapError(task.err, "http2 roundTrip error")
