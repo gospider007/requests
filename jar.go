@@ -9,14 +9,14 @@ import (
 )
 
 // cookies jar
-type jar struct {
+type Jar struct {
 	jar *cookiejar.Jar
 }
 
 // new cookies jar
-func NewJar() *jar {
+func NewJar() *Jar {
 	j, _ := cookiejar.New(nil)
-	return &jar{
+	return &Jar{
 		jar: j,
 	}
 }
@@ -46,7 +46,7 @@ func (obj *Client) ClearCookies() {
 }
 
 // Get cookies
-func (obj *jar) GetCookies(u *url.URL) Cookies {
+func (obj *Jar) GetCookies(u *url.URL) Cookies {
 	return obj.jar.Cookies(u)
 }
 func getDomain(u *url.URL) string {
@@ -60,7 +60,7 @@ func getDomain(u *url.URL) string {
 }
 
 // Set cookies
-func (obj *jar) SetCookies(u *url.URL, cookies ...any) error {
+func (obj *Jar) SetCookies(u *url.URL, cookies ...any) error {
 	domain := getDomain(u)
 	for _, cookie := range cookies {
 		cooks, err := ReadCookies(cookie)
@@ -81,7 +81,7 @@ func (obj *jar) SetCookies(u *url.URL, cookies ...any) error {
 }
 
 // Clear cookies
-func (obj *jar) ClearCookies() {
+func (obj *Jar) ClearCookies() {
 	jar, _ := cookiejar.New(nil)
 	obj.jar = jar
 }

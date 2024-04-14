@@ -245,10 +245,7 @@ func (obj *roundTripper) newReqTask(req *http.Request, ctxData *reqCtxData) *req
 	task := new(reqTask)
 	task.req = req
 	task.emptyPool = make(chan struct{})
-	task.orderHeaders = make([]string, len(ctxData.orderHeaders))
-	for i, h := range ctxData.orderHeaders {
-		task.orderHeaders[i] = textproto.CanonicalMIMEHeaderKey(h)
-	}
+	task.orderHeaders = ctxData.orderHeaders
 	return task
 }
 func (obj *roundTripper) RoundTrip(req *http.Request) (response *http.Response, err error) {

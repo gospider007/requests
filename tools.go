@@ -102,6 +102,9 @@ func readTransfer(msg any, r *bufio.Reader) (err error)
 var filterHeaderKeys = ja3.DefaultOrderHeadersWithH2()
 
 func httpWrite(r *http.Request, w *bufio.Writer, orderHeaders []string) (err error) {
+	for i := range orderHeaders {
+		orderHeaders[i] = textproto.CanonicalMIMEHeaderKey(orderHeaders[i])
+	}
 	host := r.Host
 	if host == "" {
 		host = r.URL.Host
