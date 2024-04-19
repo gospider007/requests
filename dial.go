@@ -77,6 +77,9 @@ func NewDail(option DialOption) *DialClient {
 	}
 }
 func (obj *DialClient) DialContext(ctx context.Context, ctxData *reqCtxData, network string, addr string) (net.Conn, error) {
+	if ctxData == nil {
+		ctxData = &reqCtxData{}
+	}
 	host, port, err := net.SplitHostPort(addr)
 	if err != nil {
 		return nil, tools.WrapError(err, "addrToIp error,SplitHostPort")
@@ -108,6 +111,9 @@ func (obj *DialClient) DialContext(ctx context.Context, ctxData *reqCtxData, net
 	return dialer.DialContext(ctx, network, addr)
 }
 func (obj *DialClient) DialContextWithProxy(ctx context.Context, ctxData *reqCtxData, network string, scheme string, addr string, host string, proxyUrl *url.URL, tlsConfig *tls.Config) (net.Conn, error) {
+	if ctxData == nil {
+		ctxData = &reqCtxData{}
+	}
 	if proxyUrl == nil {
 		return obj.DialContext(ctx, ctxData, network, addr)
 	}
@@ -130,7 +136,7 @@ func (obj *DialClient) DialContextWithProxy(ctx context.Context, ctxData *reqCtx
 		}
 		return conn, obj.clientVerifyHttps(ctx, scheme, proxyUrl, addr, host, conn)
 	case "socks5":
-		return obj.socks5Proxy(ctx, ctxData, network, addr, proxyUrl)
+		return obj.Socks5Proxy(ctx, ctxData, network, addr, proxyUrl)
 	default:
 		return nil, errors.New("proxyUrl Scheme error")
 	}
@@ -290,7 +296,6 @@ func (obj *DialClient) lookupIPAddr(ips []net.IPAddr, addrType gtls.AddrType) (n
 func (obj *DialClient) getDialer(ctxData *reqCtxData, parseDns bool) *net.Dialer {
 	var dialOption DialOption
 	var isNew bool
-
 	if ctxData.dialTimeout == 0 {
 		dialOption.DialTimeout = obj.dialer.Timeout
 	} else {
@@ -353,7 +358,7 @@ func (obj *DialClient) addJa3Tls(ctx context.Context, conn net.Conn, host string
 	}
 	return ja3.NewClient(ctx, conn, ja3Spec, disHttp2, tlsConfig)
 }
-func (obj *DialClient) socks5Proxy(ctx context.Context, ctxData *reqCtxData, network string, addr string, proxyUrl *url.URL) (conn net.Conn, err error) {
+func (obj *DialClient) Socks5Proxy(ctx context.Context, ctxData *reqCtxData, network string, addr string, proxyUrl *url.URL) (conn net.Conn, err error) {
 	if conn, err = obj.DialContext(ctx, ctxData, network, net.JoinHostPort(proxyUrl.Hostname(), proxyUrl.Port())); err != nil {
 		return
 	}
