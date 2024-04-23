@@ -2,7 +2,6 @@ package requests
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -13,7 +12,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"sync"
 	_ "unsafe"
 
 	"github.com/gospider007/ja3"
@@ -43,18 +41,12 @@ func getAddr(uurl *url.URL) (addr string) {
 	}
 	_, port, _ := net.SplitHostPort(uurl.Host)
 	if port == "" {
-		bs := builderPool.Get().(*strings.Builder)
-		bs.WriteString(uurl.Host)
-		bs.WriteString(":")
 		if uurl.Scheme == "https" {
-			bs.WriteString("443")
+			port = "443"
 		} else {
-			bs.WriteString("80")
+			port = "80"
 		}
-		addr = bs.String()
-		bs.Reset()
-		builderPool.Put(bs)
-		return
+		return fmt.Sprintf("%s:%s", uurl.Host, port)
 	}
 	return uurl.Host
 }
@@ -131,18 +123,7 @@ func httpWrite(r *http.Request, w *bufio.Writer, orderHeaders []string) (err err
 	if r.Header.Get("Content-Length") == "" && shouldSendContentLength(r) {
 		r.Header.Set("Content-Length", fmt.Sprint(r.ContentLength))
 	}
-	bs := builderPool.Get().(*strings.Builder)
-	defer func() {
-		bs.Reset()
-		builderPool.Put(bs)
-	}()
-	bs.WriteString(r.Method)
-	bs.WriteString(" ")
-	bs.WriteString(ruri)
-	bs.WriteString(" ")
-	bs.WriteString(r.Proto)
-	bs.WriteString("\r\n")
-	if _, err = w.WriteString(bs.String()); err != nil {
+	if _, err = w.WriteString(fmt.Sprintf("%s %s %s\r\n", r.Method, ruri, r.Proto)); err != nil {
 		return err
 	}
 	for _, k := range orderHeaders {
@@ -154,12 +135,7 @@ func httpWrite(r *http.Request, w *bufio.Writer, orderHeaders []string) (err err
 				continue
 			}
 			for _, v := range vs {
-				bs.Reset()
-				bs.WriteString(k)
-				bs.WriteString(": ")
-				bs.WriteString(v)
-				bs.WriteString("\r\n")
-				if _, err = w.WriteString(bs.String()); err != nil {
+				if _, err = w.WriteString(fmt.Sprintf("%s: %s\r\n", k, v)); err != nil {
 					return err
 				}
 			}
@@ -174,13 +150,7 @@ func httpWrite(r *http.Request, w *bufio.Writer, orderHeaders []string) (err err
 				continue
 			}
 			for _, v := range vs {
-
-				bs.Reset()
-				bs.WriteString(k)
-				bs.WriteString(": ")
-				bs.WriteString(v)
-				bs.WriteString("\r\n")
-				if _, err = w.WriteString(bs.String()); err != nil {
+				if _, err = w.WriteString(fmt.Sprintf("%s: %s\r\n", k, v)); err != nil {
 					return err
 				}
 			}
@@ -195,18 +165,6 @@ func httpWrite(r *http.Request, w *bufio.Writer, orderHeaders []string) (err err
 		}
 	}
 	return w.Flush()
-}
-
-var bufferPool sync.Pool
-var builderPool sync.Pool
-
-func init() {
-	bufferPool.New = func() interface{} {
-		return bytes.NewBuffer(nil)
-	}
-	builderPool.New = func() interface{} {
-		return &strings.Builder{}
-	}
 }
 
 func newRequestWithContext(ctx context.Context, method string, u *url.URL, body io.Reader) (*http.Request, error) {

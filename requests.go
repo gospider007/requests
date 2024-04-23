@@ -3,6 +3,7 @@ package requests
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"strings"
@@ -319,13 +320,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		if option.Referer != "" {
 			reqs.Header.Set("Referer", option.Referer)
 		} else if reqs.URL.Scheme != "" && reqs.URL.Host != "" {
-			referBuild := builderPool.Get().(*strings.Builder)
-			referBuild.WriteString(reqs.URL.Scheme)
-			referBuild.WriteString("://")
-			referBuild.WriteString(reqs.URL.Host)
-			reqs.Header.Set("Referer", referBuild.String())
-			referBuild.Reset()
-			builderPool.Put(referBuild)
+			reqs.Header.Set("Referer", fmt.Sprintf("%s://%s", reqs.URL.Scheme, reqs.URL.Host))
 		}
 	}
 

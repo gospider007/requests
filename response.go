@@ -271,11 +271,7 @@ func (obj *Response) ReadBody() (err error) {
 		return errors.New("already read body")
 	}
 	obj.readBody = true
-	bBody := bufferPool.Get().(*bytes.Buffer)
-	defer func() {
-		bBody.Reset()
-		bufferPool.Put(bBody)
-	}()
+	bBody := bytes.NewBuffer(nil)
 	if obj.bar && obj.ContentLength() > 0 {
 		_, err = io.Copy(&barBody{
 			bar:  bar.NewClient(obj.response.ContentLength),

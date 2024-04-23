@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"net"
 	"net/textproto"
 	"net/url"
@@ -35,14 +36,7 @@ func (obj *reqTask) inPool() bool {
 }
 
 func getKey(ctxData *reqCtxData, req *http.Request) (key string) {
-	b := builderPool.Get().(*strings.Builder)
-	b.WriteString(getAddr(ctxData.proxy))
-	b.WriteString("@")
-	b.WriteString(getAddr(req.URL))
-	key = b.String()
-	b.Reset()
-	builderPool.Put(b)
-	return
+	return fmt.Sprintf("%s@%s", getAddr(ctxData.proxy), getAddr(req.URL))
 }
 
 type roundTripper struct {
