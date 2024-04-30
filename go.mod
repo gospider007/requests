@@ -7,7 +7,7 @@ require (
 	github.com/gospider007/bs4 v0.0.0-20240408033320-806c486ddce6
 	github.com/gospider007/gson v0.0.0-20240320040553-de4a050b30c2
 	github.com/gospider007/gtls v0.0.0-20240104034426-5073ca328e04
-	github.com/gospider007/ja3 v0.0.0-20240416033442-0049752596ae
+	github.com/gospider007/ja3 v0.0.0-20240430034715-7cdc877a8bb4
 	github.com/gospider007/net v0.0.0-20240414111018-b6269c96a78a
 	github.com/gospider007/re v0.0.0-20240227100911-e27255e48eff
 	github.com/gospider007/tools v0.0.0-20231202084937-8b2bc66f8198
@@ -18,11 +18,11 @@ require (
 )
 
 require (
-	github.com/PuerkitoBio/goquery v1.9.1 // indirect
+	github.com/PuerkitoBio/goquery v1.9.2 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/andybalholm/cascadia v1.3.2 // indirect
 	github.com/caddyserver/certmagic v0.20.0 // indirect
-	github.com/cloudflare/circl v1.3.7 // indirect
+	github.com/cloudflare/circl v1.3.8 // indirect
 	github.com/gospider007/blog v0.0.0-20231121084103-59a004dafccf // indirect
 	github.com/gospider007/kinds v0.0.0-20231024093643-7a4424f2d30e // indirect
 	github.com/json-iterator/go v1.1.12 // indirect

@@ -135,17 +135,18 @@ func (obj *connecotr) waitBodyClose() error {
 }
 
 func (obj *connecotr) taskMain(task *reqTask, waitBody bool) (retry bool) {
+	defer func() {
+		if retry || task.err != nil {
+			obj.Close()
+		}
+	}()
 	if obj.h2Closed() {
-		obj.Close()
 		return true
 	}
-	if !waitBody {
-		select {
-		case <-obj.closeCtx.Done():
-			obj.Close()
-			return true
-		default:
-		}
+	select {
+	case <-obj.closeCtx.Done():
+		return true
+	default:
 	}
 	if obj.h2RawConn != nil {
 		go obj.http2Req(task)
@@ -155,12 +156,13 @@ func (obj *connecotr) taskMain(task *reqTask, waitBody bool) (retry bool) {
 	select {
 	case <-task.ctx.Done():
 		if task.err != nil {
-			obj.Close()
 			return false
 		}
 		if task.res == nil {
 			task.err = task.ctx.Err()
-			obj.Close()
+			if task.err == nil {
+				task.err = errors.New("response is nil")
+			}
 			return false
 		}
 		if waitBody {
@@ -170,7 +172,6 @@ func (obj *connecotr) taskMain(task *reqTask, waitBody bool) (retry bool) {
 	case <-obj.deleteCtx.Done(): //force conn close
 		task.err = tools.WrapError(obj.deleteCtx.Err(), "delete ctx error: ")
 		task.cnl()
-		obj.Close()
 		return false
 	}
 }
