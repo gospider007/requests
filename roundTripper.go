@@ -36,7 +36,11 @@ func (obj *reqTask) inPool() bool {
 }
 
 func getKey(ctxData *reqCtxData, req *http.Request) (key string) {
-	return fmt.Sprintf("%s@%s", getAddr(ctxData.proxy), getAddr(req.URL))
+	var proxyUser string
+	if ctxData.proxy != nil {
+		proxyUser = ctxData.proxy.User.String()
+	}
+	return fmt.Sprintf("%s@%s@%s", proxyUser, getAddr(ctxData.proxy), getAddr(req.URL))
 }
 
 type roundTripper struct {

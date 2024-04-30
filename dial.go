@@ -7,8 +7,8 @@ import (
 	"errors"
 	"io"
 	"net"
+	"net/textproto"
 	"net/url"
-	"strings"
 	"sync"
 	"time"
 
@@ -398,36 +398,21 @@ func (obj *DialClient) clientVerifyHttps(ctx context.Context, scheme string, pro
 			return errors.New("clientVerifyHttps not found port")
 		}
 	}
-
-	var resp *http.Response
-	didReadResponse := make(chan struct{}) // closed after CONNECT write+read is done or fails
-	go func() {
-		connectReq := &http.Request{
-			Method: http.MethodConnect,
-			URL:    &url.URL{Opaque: addr},
-			Host:   cHost,
-			Header: hdr,
-		}
-		if err = connectReq.Write(conn); err != nil {
-			return
-		}
-		resp, err = http.ReadResponse(bufio.NewReader(conn), connectReq)
-		close(didReadResponse)
-	}()
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-didReadResponse:
-	}
+	connectReq, err := newRequestWithContext(ctx, http.MethodConnect, &url.URL{Opaque: addr}, nil)
 	if err != nil {
-		return
+		return err
+	}
+	connectReq.Header = hdr
+	connectReq.Host = cHost
+	if err = connectReq.Write(conn); err != nil {
+		return err
+	}
+	resp, err := readResponse(textproto.NewReader(bufio.NewReader(conn)), connectReq)
+	if err != nil {
+		return err
 	}
 	if resp.StatusCode != 200 {
-		_, text, ok := strings.Cut(resp.Status, " ")
-		if !ok {
-			return errors.New("unknown status code")
-		}
-		return errors.New(text)
+		return errors.New(resp.Status)
 	}
 	return
 }

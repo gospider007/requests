@@ -166,7 +166,6 @@ func httpWrite(r *http.Request, w *bufio.Writer, orderHeaders []string) (err err
 	}
 	return w.Flush()
 }
-
 func newRequestWithContext(ctx context.Context, method string, u *url.URL, body io.Reader) (*http.Request, error) {
 	req := (&http.Request{}).WithContext(ctx)
 	if method == "" {
