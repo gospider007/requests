@@ -117,10 +117,13 @@ func httpWrite(r *http.Request, w *bufio.Writer, orderHeaders []string) (err err
 	if r.Header.Get("Host") == "" {
 		r.Header.Set("Host", host)
 	}
+	if r.Header.Get("Connection") == "" {
+		r.Header.Set("Connection", "keep-alive")
+	}
 	if r.Header.Get("User-Agent") == "" {
 		r.Header.Set("User-Agent", UserAgent)
 	}
-	if r.Header.Get("Content-Length") == "" && shouldSendContentLength(r) {
+	if r.Header.Get("Content-Length") == "" && r.ContentLength != 0 && shouldSendContentLength(r) {
 		r.Header.Set("Content-Length", fmt.Sprint(r.ContentLength))
 	}
 	if _, err = w.WriteString(fmt.Sprintf("%s %s %s\r\n", r.Method, ruri, r.Proto)); err != nil {
