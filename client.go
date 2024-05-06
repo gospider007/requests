@@ -112,7 +112,7 @@ func (obj *Client) do(req *http.Request, option *RequestOption) (resp *http.Resp
 		if err != nil {
 			return resp, fmt.Errorf("failed to parse Location header %q: %v", loc, err)
 		}
-		ireq, err := newRequestWithContext(req.Context(), http.MethodGet, u, nil)
+		ireq, err := NewRequestWithContext(req.Context(), http.MethodGet, u, nil)
 		if err != nil {
 			return resp, err
 		}

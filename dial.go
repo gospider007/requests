@@ -398,7 +398,7 @@ func (obj *DialClient) clientVerifyHttps(ctx context.Context, scheme string, pro
 			return errors.New("clientVerifyHttps not found port")
 		}
 	}
-	connectReq, err := newRequestWithContext(ctx, http.MethodConnect, &url.URL{Opaque: addr}, nil)
+	connectReq, err := NewRequestWithContext(ctx, http.MethodConnect, &url.URL{Opaque: addr}, nil)
 	if err != nil {
 		return err
 	}

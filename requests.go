@@ -310,7 +310,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		return response, tools.WrapError(err, errors.New("tempRequest init body error"), err)
 	}
 	//create request
-	reqs, err := newRequestWithContext(response.ctx, option.Method, href, body)
+	reqs, err := NewRequestWithContext(response.ctx, option.Method, href, body)
 	if err != nil {
 		return response, tools.WrapError(errFatal, errors.New("tempRequest 构造request失败"), err)
 	}
@@ -363,7 +363,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	response.response, err = obj.do(reqs, option)
 	response.isNewConn = ctxData.isNewConn
 	if err != nil {
-		err = tools.WrapError(err, "roundTripper error")
+		err = tools.WrapError(err, "client do error")
 		return
 	}
 	if response.response == nil {
