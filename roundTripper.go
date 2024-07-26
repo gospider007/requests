@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"net/textproto"
 	"net/url"
 	"strings"
 	"time"
@@ -177,7 +176,7 @@ func (obj *roundTripper) dial(ctxData *reqCtxData, req *http.Request) (conn *con
 			return conne, err
 		}
 	} else {
-		conne.r, conne.w = textproto.NewReader(bufio.NewReader(conne)), bufio.NewWriter(conne)
+		conne.r, conne.w = bufio.NewReader(conne), bufio.NewWriter(conne)
 	}
 	return conne, err
 }

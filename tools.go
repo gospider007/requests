@@ -3,14 +3,12 @@ package requests
 import (
 	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/textproto"
 	"net/url"
-	"strconv"
 	"strings"
 	_ "unsafe"
 
@@ -63,9 +61,11 @@ var replaceMap = map[string]string{
 	"Sec-Ch-Ua-Mobile":   "sec-ch-ua-mobile",
 	"Sec-Ch-Ua-Platform": "sec-ch-ua-platform",
 }
+var quoteEscaper = strings.NewReplacer("\\", "\\\\", `"`, "\\\"")
 
-//go:linkname escapeQuotes mime/multipart.escapeQuotes
-func escapeQuotes(string) string
+func escapeQuotes(s string) string {
+	return quoteEscaper.Replace(s)
+}
 
 //go:linkname readCookies net/http.readCookies
 func readCookies(h http.Header, filter string) []*http.Cookie
@@ -73,23 +73,96 @@ func readCookies(h http.Header, filter string) []*http.Cookie
 //go:linkname readSetCookies net/http.readSetCookies
 func readSetCookies(h http.Header) []*http.Cookie
 
-//go:linkname ReadRequest net/http.readRequest
-func ReadRequest(b *bufio.Reader) (*http.Request, error)
+func removeZone(host string) string {
+	if !strings.HasPrefix(host, "[") {
+		return host
+	}
+	i := strings.LastIndex(host, "]")
+	if i < 0 {
+		return host
+	}
+	j := strings.LastIndex(host[:i], "%")
+	if j < 0 {
+		return host
+	}
+	return host[:j] + host[i:]
+}
 
-//go:linkname removeZone net/http.removeZone
-func removeZone(host string) string
+func chunked(te []string) bool    { return len(te) > 0 && te[0] == "chunked" }
+func isIdentity(te []string) bool { return len(te) == 1 && te[0] == "identity" }
+func shouldSendContentLength(t *http.Request) bool {
+	if chunked(t.TransferEncoding) {
+		return false
+	}
+	if t.ContentLength > 0 {
+		return true
+	}
+	if t.ContentLength < 0 {
+		return false
+	}
+	// Many servers expect a Content-Length for these methods
+	if t.Method == "POST" || t.Method == "PUT" || t.Method == "PATCH" {
+		return true
+	}
+	if t.ContentLength == 0 && isIdentity(t.TransferEncoding) {
+		if t.Method == "GET" || t.Method == "HEAD" {
+			return false
+		}
+		return true
+	}
 
-//go:linkname shouldSendContentLength net/http.(*transferWriter).shouldSendContentLength
-func shouldSendContentLength(t *http.Request) bool
+	return false
+}
 
-//go:linkname removeEmptyPort net/http.removeEmptyPort
-func removeEmptyPort(host string) string
+func hasPort(s string) bool { return strings.LastIndex(s, ":") > strings.LastIndex(s, "]") }
 
-//go:linkname redirectBehavior net/http.redirectBehavior
-func redirectBehavior(reqMethod string, resp *http.Response, ireq *http.Request) (redirectMethod string, shouldRedirect, includeBody bool)
+// removeEmptyPort strips the empty port in ":port" to ""
+// as mandated by RFC 3986 Section 6.2.3.
+func removeEmptyPort(host string) string {
+	if hasPort(host) {
+		return strings.TrimSuffix(host, ":")
+	}
+	return host
+}
 
-//go:linkname readTransfer net/http.readTransfer
-func readTransfer(msg any, r *bufio.Reader) (err error)
+func outgoingLength(r *http.Request) int64 {
+	if r.Body == nil || r.Body == http.NoBody {
+		return 0
+	}
+	if r.ContentLength != 0 {
+		return r.ContentLength
+	}
+	return -1
+}
+func redirectBehavior(reqMethod string, resp *http.Response, ireq *http.Request) (redirectMethod string, shouldRedirect, includeBody bool) {
+	switch resp.StatusCode {
+	case 301, 302, 303:
+		redirectMethod = reqMethod
+		shouldRedirect = true
+		includeBody = false
+
+		// RFC 2616 allowed automatic redirection only with GET and
+		// HEAD requests. RFC 7231 lifts this restriction, but we still
+		// restrict other methods to GET to maintain compatibility.
+		// See Issue 18570.
+		if reqMethod != "GET" && reqMethod != "HEAD" {
+			redirectMethod = "GET"
+		}
+	case 307, 308:
+		redirectMethod = reqMethod
+		shouldRedirect = true
+		includeBody = true
+
+		if ireq.GetBody == nil && outgoingLength(ireq) != 0 {
+			// We had a request body, and 307/308 require
+			// re-sending it, but GetBody is not defined. So just
+			// return this response to the user instead of an
+			// error, like we did in Go 1.7 and earlier.
+			shouldRedirect = false
+		}
+	}
+	return redirectMethod, shouldRedirect, includeBody
+}
 
 var filterHeaderKeys = ja3.DefaultOrderHeadersWithH2()
 
@@ -193,43 +266,6 @@ func NewRequestWithContext(ctx context.Context, method string, u *url.URL, body 
 		req.Body = rc
 	}
 	return req, nil
-}
-
-func readResponse(tp *textproto.Reader, req *http.Request) (*http.Response, error) {
-	resp := &http.Response{
-		Request: req,
-	}
-	// Parse the first line of the response.
-	line, err := tp.ReadLine()
-	if err != nil {
-		if err == io.EOF {
-			err = io.ErrUnexpectedEOF
-		}
-		return nil, err
-	}
-	proto, status, ok := strings.Cut(line, " ")
-	if !ok {
-		return nil, errors.New("malformed HTTP response")
-	}
-	resp.Proto = proto
-	resp.Status = strings.TrimLeft(status, " ")
-	statusCode, _, _ := strings.Cut(resp.Status, " ")
-	if resp.StatusCode, err = strconv.Atoi(statusCode); err != nil {
-		return nil, errors.New("malformed HTTP status code")
-	}
-	if resp.ProtoMajor, resp.ProtoMinor, ok = http.ParseHTTPVersion(resp.Proto); !ok {
-		return nil, errors.New("malformed HTTP version")
-	}
-	// Parse the response headers.
-	mimeHeader, err := tp.ReadMIMEHeader()
-	if err != nil {
-		if err == io.EOF {
-			err = io.ErrUnexpectedEOF
-		}
-		return nil, err
-	}
-	resp.Header = http.Header(mimeHeader)
-	return resp, readTransfer(resp, tp.R)
 }
 
 func addCookie(req *http.Request, cookies Cookies) {

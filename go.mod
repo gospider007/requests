@@ -1,6 +1,6 @@
 module github.com/gospider007/requests
 
-go 1.21.3
+go 1.22.5
 
 require (
 	github.com/gospider007/bar v0.0.0-20231215084215-956cfa59ce61
@@ -34,6 +34,7 @@ require (
 	github.com/miekg/dns v1.1.61 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/stretchr/testify v1.9.0 // indirect
 	github.com/tidwall/gjson v1.17.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect

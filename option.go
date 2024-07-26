@@ -15,6 +15,7 @@ import (
 
 // Connection Management Options
 type ClientOption struct {
+	OrderHeaders          []string                                                                              //order headers
 	Ja3Spec               ja3.Ja3Spec                                                                           //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
 	H2Ja3Spec             ja3.H2Ja3Spec                                                                         //h2 fingerprint
 	Proxy                 string                                                                                //proxy,support https,http,socks5
@@ -51,6 +52,7 @@ type ClientOption struct {
 
 // Options for sending requests
 type RequestOption struct {
+	OrderHeaders    []string                                                                              //order headers
 	Ja3Spec         ja3.Ja3Spec                                                                           //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
 	H2Ja3Spec       ja3.H2Ja3Spec                                                                         //custom h2 fingerprint
 	Proxy           string                                                                                //proxy,support http,https,socks5,example：http://127.0.0.1:7005
@@ -241,6 +243,9 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	}
 	if !option.Bar {
 		option.Bar = obj.option.Bar
+	}
+	if option.OrderHeaders == nil {
+		option.OrderHeaders = obj.option.OrderHeaders
 	}
 	if option.OptionCallBack == nil {
 		option.OptionCallBack = obj.option.OptionCallBack

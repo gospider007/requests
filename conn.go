@@ -6,7 +6,7 @@ import (
 	"errors"
 	"io"
 	"net"
-	"net/textproto"
+	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -27,7 +27,7 @@ type connecotr struct {
 	rawConn   net.Conn
 	h2RawConn *http2.ClientConn
 	proxy     string
-	r         *textproto.Reader
+	r         *bufio.Reader
 	w         *bufio.Writer
 	pr        *pipCon
 	inPool    bool
@@ -101,7 +101,7 @@ func (obj *connecotr) wrapBody(task *reqTask) {
 }
 func (obj *connecotr) http1Req(task *reqTask) {
 	if task.err = httpWrite(task.req, obj.w, task.orderHeaders); task.err == nil {
-		task.res, task.err = readResponse(obj.r, task.req)
+		task.res, task.err = http.ReadResponse(obj.r, task.req)
 		if task.err != nil {
 			task.err = tools.WrapError(task.err, "http1 read error")
 		} else if task.res == nil {

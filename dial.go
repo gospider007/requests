@@ -7,7 +7,6 @@ import (
 	"errors"
 	"io"
 	"net"
-	"net/textproto"
 	"net/url"
 	"sync"
 	"time"
@@ -407,7 +406,7 @@ func (obj *DialClient) clientVerifyHttps(ctx context.Context, scheme string, pro
 	if err = connectReq.Write(conn); err != nil {
 		return err
 	}
-	resp, err := readResponse(textproto.NewReader(bufio.NewReader(conn)), connectReq)
+	resp, err := http.ReadResponse(bufio.NewReader(conn), connectReq)
 	if err != nil {
 		return err
 	}

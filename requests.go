@@ -266,6 +266,9 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	if err != nil {
 		return response, tools.WrapError(err, errors.New("tempRequest init headers error"), err)
 	}
+	if orderHeaders == nil {
+		orderHeaders = option.OrderHeaders
+	}
 	//设置 h2 请求头顺序
 	if orderHeaders != nil {
 		if !option.H2Ja3Spec.IsSet() {
