@@ -46,6 +46,10 @@ func (obj *OrderMap) Del(key string) {
 func (obj *OrderMap) Keys() []string {
 	return obj.keys
 }
+func (obj *OrderMap) AddKey(key string) {
+	obj.Del(key)
+	obj.keys = append(obj.keys, key)
+}
 func (obj *OrderMap) parseHeaders() (map[string][]string, []string) {
 	head := make(http.Header)
 	for _, kk := range obj.keys {
