@@ -67,12 +67,6 @@ func escapeQuotes(s string) string {
 	return quoteEscaper.Replace(s)
 }
 
-//go:linkname readCookies net/http.readCookies
-func readCookies(h http.Header, filter string) []*http.Cookie
-
-//go:linkname readSetCookies net/http.readSetCookies
-func readSetCookies(h http.Header) []*http.Cookie
-
 func removeZone(host string) string {
 	if !strings.HasPrefix(host, "[") {
 		return host
@@ -269,7 +263,8 @@ func NewRequestWithContext(ctx context.Context, method string, u *url.URL, body 
 }
 
 func addCookie(req *http.Request, cookies Cookies) {
-	cooks := Cookies(readCookies(req.Header, ""))
+	result, _ := http.ParseCookie(req.Header.Get("Cookie"))
+	cooks := Cookies(result)
 	for _, cook := range cookies {
 		if val := cooks.Get(cook.Name); val == nil {
 			cooks = cooks.append(cook)

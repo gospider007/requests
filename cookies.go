@@ -82,33 +82,35 @@ func ReadCookies(val any) (Cookies, error) {
 	case []*http.Cookie:
 		return Cookies(cook), nil
 	case string:
-		return readCookies(http.Header{"Cookie": []string{cook}}, ""), nil
+		return http.ParseCookie(cook)
 	case http.Header:
-		return readCookies(cook, ""), nil
+		return nil, errors.New("cookies not support type")
 	case []string:
-		return readCookies(http.Header{"Cookie": cook}, ""), nil
+		return nil, errors.New("cookies not support type")
 	default:
 		return any2Cookies(cook)
 	}
 }
 
 // read set cookies or parse set cookies,support json,map,[]string,http.Header,string
-func ReadSetCookies(val any) (Cookies, error) {
-	switch cook := val.(type) {
-	case Cookies:
-		return cook, nil
-	case []*http.Cookie:
-		return Cookies(cook), nil
-	case string:
-		return readSetCookies(http.Header{"Set-Cookie": []string{cook}}), nil
-	case http.Header:
-		return readSetCookies(cook), nil
-	case []string:
-		return readSetCookies(http.Header{"Set-Cookie": cook}), nil
-	default:
-		return any2Cookies(cook)
-	}
-}
+//
+//	func ReadSetCookies(val any) (Cookies, error) {
+//		switch cook := val.(type) {
+//		case Cookies:
+//			return cook, nil
+//		case []*http.Cookie:
+//			return Cookies(cook), nil
+//		case string:
+//			http.ParseCookie()
+//			return http.ParseSetCookie(cook)
+//		case http.Header:
+//			return readSetCookies(cook), nil
+//		case []string:
+//			return readSetCookies(http.Header{"Set-Cookie": cook}), nil
+//		default:
+//			return any2Cookies(cook)
+//		}
+//	}
 func any2Cookies(val any) (Cookies, error) {
 	switch cooks := val.(type) {
 	case map[string]string:
