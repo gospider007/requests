@@ -2,6 +2,7 @@ package requests
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -19,6 +20,7 @@ import (
 	"github.com/gospider007/re"
 	"github.com/gospider007/tools"
 	"github.com/gospider007/websocket"
+	utls "github.com/refraction-networking/utls"
 )
 
 type contextKey string
@@ -37,6 +39,8 @@ type reqCtxData struct {
 	orderHeaders          []string
 	responseHeaderTimeout time.Duration
 	tlsHandshakeTimeout   time.Duration
+	tlsConfig             *tls.Config
+	utlsConfig            *utls.Config
 
 	requestCallBack func(context.Context, *http.Request, *http.Response) error
 
@@ -54,6 +58,8 @@ type reqCtxData struct {
 func NewReqCtxData(ctx context.Context, option *RequestOption) (*reqCtxData, error) {
 	//init ctxData
 	ctxData := new(reqCtxData)
+	ctxData.tlsConfig = option.TlsConfig
+	ctxData.utlsConfig = option.UtlsConfig
 	ctxData.ja3Spec = option.Ja3Spec
 	ctxData.h2Ja3Spec = option.H2Ja3Spec
 	ctxData.forceHttp1 = option.ForceHttp1

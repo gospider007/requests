@@ -13,7 +13,7 @@ require (
 	github.com/gospider007/tools v0.0.0-20240719012751-bf77d80d4792
 	github.com/gospider007/websocket v0.0.0-20240331132617-8217ca7a8439
 	github.com/refraction-networking/utls v1.6.7
-	golang.org/x/exp v0.0.0-20240808152545-0cdaa3abc0fa
+	golang.org/x/exp v0.0.0-20240823005443-9b4947da3948
 	golang.org/x/net v0.28.0
 )
 
@@ -23,7 +23,7 @@ require (
 	github.com/andybalholm/cascadia v1.3.2 // indirect
 	github.com/caddyserver/certmagic v0.21.3 // indirect
 	github.com/caddyserver/zerossl v0.1.3 // indirect
-	github.com/cloudflare/circl v1.3.9 // indirect
+	github.com/cloudflare/circl v1.4.0 // indirect
 	github.com/gospider007/blog v0.0.0-20231121084103-59a004dafccf // indirect
 	github.com/gospider007/kinds v0.0.0-20231024093643-7a4424f2d30e // indirect
 	github.com/json-iterator/go v1.1.12 // indirect

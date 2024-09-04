@@ -2,6 +2,7 @@ package requests
 
 import (
 	"context"
+	"crypto/tls"
 	"io"
 	"net"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"github.com/gospider007/gtls"
 	"github.com/gospider007/ja3"
 	"github.com/gospider007/websocket"
+	utls "github.com/refraction-networking/utls"
 )
 
 // Connection Management Options
@@ -44,6 +46,8 @@ type ClientOption struct {
 	Dns         *net.UDPAddr  //dns
 	AddrType    gtls.AddrType //dns parse addr type
 	Jar         *Jar          //custom cookies
+	TlsConfig   *tls.Config
+	UtlsConfig  *utls.Config
 
 	//other option
 	GetProxy    func(ctx context.Context, url *url.URL) (string, error) //proxy callback:support https,http,socks5 proxy
@@ -82,6 +86,8 @@ type RequestOption struct {
 	Dns         *net.UDPAddr  //dns
 	AddrType    gtls.AddrType //dns parse addr type                                             //tls timeout,default:15
 	Jar         *Jar          //custom cookies
+	TlsConfig   *tls.Config
+	UtlsConfig  *utls.Config
 
 	// other option
 	Method      string //method
@@ -243,6 +249,12 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	}
 	if !option.Bar {
 		option.Bar = obj.option.Bar
+	}
+	if option.TlsConfig == nil {
+		option.TlsConfig = obj.option.TlsConfig
+	}
+	if option.UtlsConfig == nil {
+		option.UtlsConfig = obj.option.UtlsConfig
 	}
 	if option.OrderHeaders == nil {
 		option.OrderHeaders = obj.option.OrderHeaders

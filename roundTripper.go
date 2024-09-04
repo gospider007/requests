@@ -112,10 +112,16 @@ func (obj *roundTripper) putConnPool(key string, conn *connecotr) {
 		obj.connPools.set(key, obj.newConnPool(conn, key))
 	}
 }
-func (obj *roundTripper) tlsConfigClone() *tls.Config {
+func (obj *roundTripper) tlsConfigClone(ctxData *reqCtxData) *tls.Config {
+	if ctxData.tlsConfig != nil {
+		return ctxData.tlsConfig.Clone()
+	}
 	return obj.tlsConfig.Clone()
 }
-func (obj *roundTripper) utlsConfigClone() *utls.Config {
+func (obj *roundTripper) utlsConfigClone(ctxData *reqCtxData) *utls.Config {
+	if ctxData.utlsConfig != nil {
+		return ctxData.utlsConfig.Clone()
+	}
 	return obj.utlsConfig.Clone()
 }
 func (obj *roundTripper) newConnecotr(netConn net.Conn) *connecotr {
@@ -137,7 +143,7 @@ func (obj *roundTripper) dial(ctxData *reqCtxData, req *http.Request) (conn *con
 			}
 		}
 	}
-	netConn, err := obj.dialer.DialContextWithProxy(req.Context(), ctxData, "tcp", req.URL.Scheme, getAddr(req.URL), getHost(req), proxy, obj.tlsConfigClone())
+	netConn, err := obj.dialer.DialContextWithProxy(req.Context(), ctxData, "tcp", req.URL.Scheme, getAddr(req.URL), getHost(req), proxy, obj.tlsConfigClone(ctxData))
 	if err != nil {
 		return conn, err
 	}
@@ -146,7 +152,7 @@ func (obj *roundTripper) dial(ctxData *reqCtxData, req *http.Request) (conn *con
 		ctx, cnl := context.WithTimeout(req.Context(), ctxData.tlsHandshakeTimeout)
 		defer cnl()
 		if ctxData.ja3Spec.IsSet() {
-			tlsConfig := obj.utlsConfigClone()
+			tlsConfig := obj.utlsConfigClone(ctxData)
 			if ctxData.forceHttp1 {
 				tlsConfig.NextProtos = []string{"http/1.1"}
 			}
@@ -157,7 +163,7 @@ func (obj *roundTripper) dial(ctxData *reqCtxData, req *http.Request) (conn *con
 			h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
 			netConn = tlsConn
 		} else {
-			tlsConn, err := obj.dialer.addTls(ctx, netConn, getHost(req), ctxData.isWs || ctxData.forceHttp1, obj.tlsConfigClone())
+			tlsConn, err := obj.dialer.addTls(ctx, netConn, getHost(req), ctxData.isWs || ctxData.forceHttp1, obj.tlsConfigClone(ctxData))
 			if err != nil {
 				return conn, tools.WrapError(err, "add tls error")
 			}

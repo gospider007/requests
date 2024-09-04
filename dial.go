@@ -41,15 +41,22 @@ type DialOption struct {
 
 func NewDialer(option DialOption) *net.Dialer {
 	if option.KeepAlive == 0 {
-		option.KeepAlive = time.Second * 30
+		option.KeepAlive = time.Second * 5
 	}
 	if option.DialTimeout == 0 {
-		option.DialTimeout = time.Second * 15
+		option.DialTimeout = time.Second * 5
 	}
 	dialer := &net.Dialer{
-		Timeout:   option.DialTimeout,
-		KeepAlive: option.KeepAlive,
-		LocalAddr: option.LocalAddr,
+		Timeout:       option.DialTimeout,
+		KeepAlive:     option.KeepAlive,
+		LocalAddr:     option.LocalAddr,
+		FallbackDelay: time.Nanosecond,
+		KeepAliveConfig: net.KeepAliveConfig{
+			Enable:   true,
+			Idle:     time.Second * 5,
+			Interval: time.Second * 5,
+			Count:    3,
+		},
 	}
 	if option.LocalAddr != nil {
 		dialer.LocalAddr = option.LocalAddr
