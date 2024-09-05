@@ -47,5 +47,5 @@ func (obj *readWriteCloser) CloseConn() {
 
 // force close conn
 func (obj *readWriteCloser) ForceCloseConn() {
-	obj.conn.Close()
+	obj.conn.CloseWithError(errors.New("readWriterCloser force close conn"))
 }

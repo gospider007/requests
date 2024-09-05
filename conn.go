@@ -38,9 +38,17 @@ func (obj *connecotr) withCancel(deleteCtx context.Context, closeCtx context.Con
 	obj.closeCtx, obj.closeCnl = context.WithCancelCause(closeCtx)
 }
 func (obj *connecotr) Close() error {
-	obj.deleteCnl(errors.New("connecotr close"))
+	return obj.CloseWithError(nil)
+}
+func (obj *connecotr) CloseWithError(err error) error {
+	if err == nil {
+		err = errors.New("connecotr close")
+	} else {
+		err = tools.WrapError(err, "connecotr close")
+	}
+	obj.deleteCnl(err)
 	if obj.pr != nil {
-		obj.pr.Close(errors.New("connecotr close"))
+		obj.pr.Close(err)
 	}
 	if obj.h2RawConn != nil {
 		obj.h2RawConn.Close()
@@ -57,7 +65,7 @@ func (obj *connecotr) read() (err error) {
 		err = io.EOF
 	}
 	pw.Close(err)
-	obj.Close()
+	obj.CloseWithError(err)
 	return
 }
 func (obj *connecotr) Read(b []byte) (i int, err error) {
@@ -137,7 +145,7 @@ func (obj *connecotr) waitBodyClose() error {
 func (obj *connecotr) taskMain(task *reqTask, waitBody bool) (retry bool) {
 	defer func() {
 		if retry || task.err != nil {
-			obj.Close()
+			obj.CloseWithError(task.err)
 		}
 	}()
 	if obj.h2Closed() {
@@ -145,6 +153,8 @@ func (obj *connecotr) taskMain(task *reqTask, waitBody bool) (retry bool) {
 	}
 	select {
 	case <-obj.closeCtx.Done():
+		return true
+	case <-obj.deleteCtx.Done(): //force conn close
 		return true
 	default:
 	}
@@ -170,7 +180,7 @@ func (obj *connecotr) taskMain(task *reqTask, waitBody bool) (retry bool) {
 		}
 		return false
 	case <-obj.deleteCtx.Done(): //force conn close
-		task.err = tools.WrapError(obj.deleteCtx.Err(), "delete ctx error: ")
+		task.err = tools.WrapError(obj.deleteCtx.Err(), "taskMain delete ctx error: ")
 		task.cnl()
 		return false
 	}
@@ -227,7 +237,7 @@ func (obj *connPool) notice(task *reqTask) {
 func (obj *connPool) rwMain(conn *connecotr) {
 	conn.withCancel(obj.deleteCtx, obj.closeCtx)
 	defer func() {
-		conn.Close()
+		conn.CloseWithError(errors.New("connPool rwMain close"))
 		obj.total.Add(-1)
 		if obj.total.Load() <= 0 {
 			obj.close()
@@ -239,6 +249,8 @@ func (obj *connPool) rwMain(conn *connecotr) {
 	for {
 		select {
 		case <-conn.closeCtx.Done(): //safe close conn
+			return
+		case <-conn.deleteCtx.Done(): //force close conn
 			return
 		case task := <-obj.tasks: //recv task
 			if task == nil {
