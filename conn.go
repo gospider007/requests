@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"sync"
@@ -146,6 +147,15 @@ func (obj *connecotr) taskMain(task *reqTask, waitBody bool) (retry bool) {
 	defer func() {
 		if retry || task.err != nil {
 			obj.CloseWithError(task.err)
+		}
+		if !retry {
+			if task.req.Body == nil {
+				retry = true
+				log.Print("监测到没有请求体，重新请求")
+			} else if body, ok := task.req.Body.(*requestBody); ok && !body.ok {
+				log.Print("监测到请求体未被修改，重新请求")
+				retry = true
+			}
 		}
 	}()
 	if obj.h2Closed() {

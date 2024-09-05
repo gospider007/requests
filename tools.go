@@ -236,6 +236,21 @@ func httpWrite(r *http.Request, w *bufio.Writer, orderHeaders []string) (err err
 	}
 	return w.Flush()
 }
+
+type requestBody struct {
+	r  io.ReadCloser
+	ok bool
+}
+
+func (obj *requestBody) Read(p []byte) (n int, err error) {
+	obj.ok = true
+	return obj.r.Read(p)
+}
+func (obj *requestBody) Close() (err error) {
+	obj.ok = true
+	return obj.r.Close()
+}
+
 func NewRequestWithContext(ctx context.Context, method string, u *url.URL, body io.Reader) (*http.Request, error) {
 	req := (&http.Request{}).WithContext(ctx)
 	if method == "" {
@@ -257,7 +272,7 @@ func NewRequestWithContext(ctx context.Context, method string, u *url.URL, body 
 		if !ok {
 			rc = io.NopCloser(body)
 		}
-		req.Body = rc
+		req.Body = &requestBody{r: rc}
 	}
 	return req, nil
 }
