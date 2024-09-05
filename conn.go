@@ -145,13 +145,10 @@ func (obj *connecotr) waitBodyClose() error {
 
 func (obj *connecotr) taskMain(task *reqTask, waitBody bool) (retry bool) {
 	defer func() {
-		if retry || task.err != nil {
+		if retry {
+			task.err = nil
 			obj.CloseWithError(task.err)
-			if task.err != nil {
-				log.Print(task.err, "  = ", retry, "  开始检测")
-			}
-		}
-		if !retry {
+		} else if task.err != nil {
 			if task.req.Body == nil {
 				retry = true
 				log.Print("监测到没有请求体，重新请求")
@@ -159,6 +156,7 @@ func (obj *connecotr) taskMain(task *reqTask, waitBody bool) (retry bool) {
 				log.Print("监测到请求体未被修改，重新请求")
 				retry = true
 			}
+			obj.CloseWithError(task.err)
 		}
 	}()
 	if obj.h2Closed() {
