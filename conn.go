@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"sync"
@@ -65,7 +64,6 @@ func (obj *connecotr) read() (err error) {
 	if _, err = io.Copy(pw, obj.rawConn); err == nil {
 		err = io.EOF
 	}
-	log.Print(err, " conn read")
 	pw.Close(err)
 	obj.CloseWithError(err)
 	return
@@ -152,9 +150,7 @@ func (obj *connecotr) taskMain(task *reqTask, waitBody bool) (retry bool) {
 		} else if task.err != nil {
 			if task.req.Body == nil {
 				retry = true
-				log.Print("监测到没有请求体，重新请求")
 			} else if body, ok := task.req.Body.(*requestBody); ok && !body.ok {
-				log.Print("监测到请求体未被修改，重新请求")
 				retry = true
 			}
 			obj.CloseWithError(task.err)
