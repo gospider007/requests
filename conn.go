@@ -147,6 +147,9 @@ func (obj *connecotr) taskMain(task *reqTask, waitBody bool) (retry bool) {
 	defer func() {
 		if retry || task.err != nil {
 			obj.CloseWithError(task.err)
+			if task.err != nil {
+				log.Print(task.err, "  = ", retry, "  开始检测")
+			}
 		}
 		if !retry {
 			if task.req.Body == nil {
