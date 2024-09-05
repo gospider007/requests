@@ -65,6 +65,7 @@ func (obj *connecotr) read() (err error) {
 	if _, err = io.Copy(pw, obj.rawConn); err == nil {
 		err = io.EOF
 	}
+	log.Print(err, " conn read")
 	pw.Close(err)
 	obj.CloseWithError(err)
 	return
