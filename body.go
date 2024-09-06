@@ -109,11 +109,8 @@ func formWrite(writer *multipart.Writer, key string, val any) (err error) {
 	case string:
 		err = writer.WriteField(key, value)
 	default:
-		con, err := gson.Encode(val)
-		if err != nil {
-			return err
-		}
-		err = writer.WriteField(key, tools.BytesToString(con))
+		con, _ := gson.Decode(val)
+		err = writer.WriteField(key, con.Raw())
 		if err != nil {
 			return err
 		}
@@ -191,7 +188,8 @@ func paramsWrite(buf *bytes.Buffer, key string, val any) {
 	}
 	buf.WriteString(url.QueryEscape(key))
 	buf.WriteByte('=')
-	buf.WriteString(url.QueryEscape(fmt.Sprint(val)))
+	v, _ := gson.Decode(val)
+	buf.WriteString(url.QueryEscape(v.Raw()))
 }
 func (obj *OrderMap) parseParams() *bytes.Buffer {
 	buf := bytes.NewBuffer(nil)
