@@ -188,8 +188,11 @@ func paramsWrite(buf *bytes.Buffer, key string, val any) {
 	}
 	buf.WriteString(url.QueryEscape(key))
 	buf.WriteByte('=')
-	v, _ := gson.Decode(val)
-	buf.WriteString(url.QueryEscape(v.Raw()))
+	if v, _ := gson.Decode(val); v.Raw() == "" {
+		buf.WriteString(url.QueryEscape(fmt.Sprintf("%v", val)))
+	} else {
+		buf.WriteString(url.QueryEscape(v.Raw()))
+	}
 }
 func (obj *OrderMap) parseParams() *bytes.Buffer {
 	buf := bytes.NewBuffer(nil)
