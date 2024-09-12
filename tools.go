@@ -238,17 +238,38 @@ func httpWrite(r *http.Request, w *bufio.Writer, orderHeaders []string) (err err
 }
 
 type requestBody struct {
-	r  io.ReadCloser
-	ok bool
+	r      io.Reader
+	readed bool
+	closed bool
 }
 
 func (obj *requestBody) Read(p []byte) (n int, err error) {
-	obj.ok = true
+	obj.readed = true
 	return obj.r.Read(p)
 }
 func (obj *requestBody) Close() (err error) {
-	obj.ok = true
-	return obj.r.Close()
+	obj.closed = true
+	obj.readed = true
+	if closer, ok := obj.r.(io.Closer); ok {
+		return closer.Close()
+	}
+	return nil
+}
+func (obj *requestBody) Seek(offset int64, whence int) (int64, error) {
+	if obj.closed {
+		return 0, fmt.Errorf("unsupported operation: closed")
+	}
+	if !obj.readed {
+		return 0, nil
+	}
+	if seeker, ok := obj.r.(io.Seeker); ok {
+		i, err := seeker.Seek(offset, whence)
+		if i == 0 && err == nil {
+			obj.readed = false
+		}
+		return i, err
+	}
+	return 0, fmt.Errorf("unsupported operation: seeker")
 }
 
 func NewRequestWithContext(ctx context.Context, method string, u *url.URL, body io.Reader) (*http.Request, error) {
@@ -268,11 +289,7 @@ func NewRequestWithContext(ctx context.Context, method string, u *url.URL, body 
 		if v, ok := body.(interface{ Len() int }); ok {
 			req.ContentLength = int64(v.Len())
 		}
-		rc, ok := body.(io.ReadCloser)
-		if !ok {
-			rc = io.NopCloser(body)
-		}
-		req.Body = &requestBody{r: rc}
+		req.Body = &requestBody{r: body}
 	}
 	return req, nil
 }

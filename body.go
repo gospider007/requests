@@ -140,7 +140,7 @@ func (obj *OrderMap) parseForm(ctx context.Context) (io.Reader, string, bool, er
 	if err != nil {
 		return nil, writer.FormDataContentType(), false, err
 	}
-	return body, writer.FormDataContentType(), false, err
+	return bytes.NewReader(body.Bytes()), writer.FormDataContentType(), false, err
 }
 func (obj *OrderMap) isformPip() bool {
 	if len(obj.keys) == 0 || len(obj.data) == 0 {

@@ -150,8 +150,10 @@ func (obj *connecotr) taskMain(task *reqTask, waitBody bool) (retry bool) {
 		} else if task.err != nil {
 			if task.req.Body == nil {
 				retry = true
-			} else if body, ok := task.req.Body.(*requestBody); ok && !body.ok {
-				retry = true
+			} else if body, ok := task.req.Body.(*requestBody); ok {
+				if body.Seek(0, io.SeekStart); !body.readed {
+					retry = true
+				}
 			}
 			obj.CloseWithError(task.err)
 		}
