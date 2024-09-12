@@ -84,7 +84,7 @@ func ReadCookies(val any) (Cookies, error) {
 	case string:
 		return http.ParseCookie(cook)
 	case http.Header:
-		return nil, errors.New("cookies not support type")
+		return http.ParseCookie(cook.Get("Cookie"))
 	case []string:
 		return nil, errors.New("cookies not support type")
 	default:
