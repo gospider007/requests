@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/gospider007/http3"
 	"github.com/gospider007/net/http2"
 	"github.com/gospider007/tools"
 )
@@ -26,6 +27,7 @@ type connecotr struct {
 
 	rawConn   net.Conn
 	h2RawConn *http2.ClientConn
+	h3RawConn http3.RoundTripper
 	proxy     string
 	r         *bufio.Reader
 	w         *bufio.Writer
@@ -47,11 +49,18 @@ func (obj *connecotr) CloseWithError(err error) error {
 		err = tools.WrapError(err, "connecotr close")
 	}
 	obj.deleteCnl(err)
+
+	// return obj.conn.Close(err)
+
 	if obj.pr != nil {
 		obj.pr.Close(err)
 	}
 	if obj.h2RawConn != nil {
 		obj.h2RawConn.Close()
+	}
+	if obj.h3RawConn != nil {
+		return obj.h3RawConn.Close(err.Error())
+		// return obj.h3RawConn.Connection.CloseWithError(0, err.Error())
 	}
 	return obj.rawConn.Close()
 }
@@ -129,6 +138,14 @@ func (obj *connecotr) http2Req(task *reqTask) {
 	}
 	task.cnl()
 }
+func (obj *connecotr) http3Req(task *reqTask) {
+	if task.res, task.err = obj.h3RawConn.RoundTrip(task.req); task.res != nil && task.err == nil {
+		obj.wrapBody(task)
+	} else if task.err != nil {
+		task.err = tools.WrapError(task.err, "http2 roundTrip error")
+	}
+	task.cnl()
+}
 func (obj *connecotr) waitBodyClose() error {
 	select {
 	case <-obj.bodyCtx.Done(): //wait body close
@@ -168,7 +185,9 @@ func (obj *connecotr) taskMain(task *reqTask, waitBody bool) (retry bool) {
 		return true
 	default:
 	}
-	if obj.h2RawConn != nil {
+	if obj.h3RawConn != nil {
+		go obj.http3Req(task)
+	} else if obj.h2RawConn != nil {
 		go obj.http2Req(task)
 	} else {
 		go obj.http1Req(task)

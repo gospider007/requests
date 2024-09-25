@@ -14,7 +14,7 @@
 </a>
 </p>
 
-Requests is a fully featured HTTP client library for Golang. Network requests can be completed with just a few lines of code
+Requests is a fully featured HTTP client library for Golang. Network requests can be completed with just a few lines of code. Unified support for http1, http2, http3, websocket, sse protocols
 ---
 ## Features
   * [Simple for settings and Request](https://github.com/gospider007/requests#quickly-send-requests)
@@ -39,6 +39,7 @@ Requests is a fully featured HTTP client library for Golang. Network requests ca
   * [Protocol](https://github.com/gospider007/requests/tree/master/test/protocol)
     * [HTTP1](https://github.com/gospider007/requests/blob/master/test/protocol/http1_test.go)
     * [HTTP2](https://github.com/gospider007/requests/blob/master/test/protocol/http2_test.go)
+    * [HTTP3](https://github.com/gospider007/requests/blob/master/test/protocol/http3_test.go)
     * [WebSocket](https://github.com/gospider007/requests/blob/master/test/protocol/websocket_test.go)
     * [SSE](https://github.com/gospider007/requests/blob/master/test/protocol/sse_test.go)
   * [Fingerprint](https://github.com/gospider007/requests/tree/master/test/fingerprint)

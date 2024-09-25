@@ -31,6 +31,7 @@ var errFatal = errors.New("ErrFatal")
 
 type reqCtxData struct {
 	isWs                  bool
+	h3                    bool
 	forceHttp1            bool
 	maxRedirect           int
 	proxy                 *url.URL
@@ -58,6 +59,7 @@ type reqCtxData struct {
 func NewReqCtxData(ctx context.Context, option *RequestOption) (*reqCtxData, error) {
 	//init ctxData
 	ctxData := new(reqCtxData)
+	ctxData.h3 = option.H3
 	ctxData.tlsConfig = option.TlsConfig
 	ctxData.utlsConfig = option.UtlsConfig
 	ctxData.ja3Spec = option.Ja3Spec

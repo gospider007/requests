@@ -14,8 +14,10 @@ import (
 	"net/http"
 
 	"github.com/gospider007/gtls"
+	"github.com/gospider007/http3"
 	"github.com/gospider007/net/http2"
 	"github.com/gospider007/tools"
+	"github.com/quic-go/quic-go"
 	utls "github.com/refraction-networking/utls"
 )
 
@@ -67,13 +69,13 @@ func newRoundTripper(preCtx context.Context, option ClientOption) *roundTripper 
 	})
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: true,
-		SessionTicketKey:   [32]byte{},
+		// SessionTicketKey:   [32]byte{},
 		ClientSessionCache: tls.NewLRUClientSessionCache(0),
 	}
 	utlsConfig := &utls.Config{
-		InsecureSkipVerify:                 true,
-		InsecureSkipTimeVerify:             true,
-		SessionTicketKey:                   [32]byte{},
+		InsecureSkipVerify:     true,
+		InsecureSkipTimeVerify: true,
+		// SessionTicketKey:                   [32]byte{},
 		ClientSessionCache:                 utls.NewLRUClientSessionCache(0),
 		OmitEmptyPsk:                       true,
 		PreferSkipResumptionOnNilExtension: true,
@@ -101,7 +103,7 @@ func (obj *roundTripper) newConnPool(conn *connecotr, key string) *connPool {
 }
 func (obj *roundTripper) putConnPool(key string, conn *connecotr) {
 	conn.inPool = true
-	if conn.h2RawConn == nil {
+	if conn.h2RawConn == nil && conn.h3RawConn == nil {
 		go conn.read()
 	}
 	pool := obj.connPools.get(key)
@@ -130,7 +132,24 @@ func (obj *roundTripper) newConnecotr(netConn net.Conn) *connecotr {
 	conne.rawConn = netConn
 	return conne
 }
+
+func (obj *roundTripper) http3Dial(ctxData *reqCtxData, req *http.Request) (conn *connecotr, err error) {
+	var netConn quic.EarlyConnection
+	tlsConfig := obj.tlsConfigClone(ctxData)
+	tlsConfig.NextProtos = []string{http3.NextProtoH3}
+	tlsConfig.ServerName = req.Host
+	netConn, err = http3.DialEarly(req.Context(), getAddr(req.URL), tlsConfig, nil)
+	if err != nil {
+		return
+	}
+	conn = obj.newConnecotr(nil)
+	conn.h3RawConn = http3.NewClient(netConn)
+	return
+}
 func (obj *roundTripper) dial(ctxData *reqCtxData, req *http.Request) (conn *connecotr, err error) {
+	if ctxData.h3 {
+		return obj.http3Dial(ctxData, req)
+	}
 	var proxy *url.URL
 	if !ctxData.disProxy {
 		if proxy = cloneUrl(ctxData.proxy); proxy == nil && obj.getProxy != nil {

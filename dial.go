@@ -384,7 +384,7 @@ func (obj *DialClient) Socks5Proxy(ctx context.Context, ctxData *reqCtxData, net
 }
 func (obj *DialClient) clientVerifyHttps(ctx context.Context, scheme string, proxyUrl *url.URL, addr string, host string, conn net.Conn) (err error) {
 	hdr := make(http.Header)
-	hdr.Set("User-Agent", UserAgent)
+	hdr.Set("User-Agent", tools.UserAgent)
 	if proxyUrl.User != nil {
 		if password, ok := proxyUrl.User.Password(); ok {
 			hdr.Set("Proxy-Authorization", "Basic "+tools.Base64Encode(proxyUrl.User.Username()+":"+password))

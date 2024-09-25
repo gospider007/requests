@@ -13,6 +13,7 @@ import (
 	_ "unsafe"
 
 	"github.com/gospider007/ja3"
+	"github.com/gospider007/tools"
 	"golang.org/x/exp/slices"
 	"golang.org/x/net/http/httpguts"
 )
@@ -188,7 +189,7 @@ func httpWrite(r *http.Request, w *bufio.Writer, orderHeaders []string) (err err
 		r.Header.Set("Connection", "keep-alive")
 	}
 	if r.Header.Get("User-Agent") == "" {
-		r.Header.Set("User-Agent", UserAgent)
+		r.Header.Set("User-Agent", tools.UserAgent)
 	}
 	if r.Header.Get("Content-Length") == "" && r.ContentLength != 0 && shouldSendContentLength(r) {
 		r.Header.Set("Content-Length", fmt.Sprint(r.ContentLength))

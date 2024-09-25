@@ -17,6 +17,7 @@ import (
 
 // Connection Management Options
 type ClientOption struct {
+	H3                    bool                                                                                  //开启http3
 	OrderHeaders          []string                                                                              //order headers
 	Ja3Spec               ja3.Ja3Spec                                                                           //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
 	H2Ja3Spec             ja3.H2Ja3Spec                                                                         //h2 fingerprint
@@ -56,6 +57,7 @@ type ClientOption struct {
 
 // Options for sending requests
 type RequestOption struct {
+	H3              bool                                                                                  //开启http3
 	OrderHeaders    []string                                                                              //order headers
 	Ja3Spec         ja3.Ja3Spec                                                                           //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
 	H2Ja3Spec       ja3.H2Ja3Spec                                                                         //custom h2 fingerprint
@@ -249,6 +251,9 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	}
 	if !option.Bar {
 		option.Bar = obj.option.Bar
+	}
+	if !option.H3 {
+		option.H3 = obj.option.H3
 	}
 	if option.TlsConfig == nil {
 		option.TlsConfig = obj.option.TlsConfig

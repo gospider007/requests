@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/gospider007/requests"
+	"github.com/gospider007/tools"
 )
 
 func TestOrderHeaders(t *testing.T) {
@@ -14,9 +15,9 @@ func TestOrderHeaders(t *testing.T) {
 	headers := requests.NewOrderMap()
 	headers.Set("Accept-Encoding", "gzip, deflate, br")
 	headers.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
-	headers.Set("User-Agent", requests.UserAgent)
-	headers.Set("Accept-Language", requests.AcceptLanguage)
-	headers.Set("Sec-Ch-Ua", requests.SecChUa)
+	headers.Set("User-Agent", tools.UserAgent)
+	headers.Set("Accept-Language", tools.AcceptLanguage)
+	headers.Set("Sec-Ch-Ua", tools.SecChUa)
 	headers.Set("Sec-Ch-Ua-Mobile", "?0")
 	headers.Set("Sec-Ch-Ua-Platform", `"Windows"`)
 	resp, err := requests.Get(nil, "https://tools.scrapfly.io/api/fp/anything", requests.RequestOption{
@@ -55,9 +56,9 @@ func TestOrderHeaders2(t *testing.T) {
 	headers := map[string]any{
 		"Accept-Encoding":    "gzip, deflate, br",
 		"Accept":             "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-		"User-Agent":         requests.UserAgent,
-		"Accept-Language":    requests.AcceptLanguage,
-		"Sec-Ch-Ua":          requests.SecChUa,
+		"User-Agent":         tools.UserAgent,
+		"Accept-Language":    tools.AcceptLanguage,
+		"Sec-Ch-Ua":          tools.SecChUa,
 		"Sec-Ch-Ua-Mobile":   "?0",
 		"Sec-Ch-Ua-Platform": `"Windows"`,
 	}
