@@ -52,6 +52,7 @@ github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1/go.mod h1:vR7hzQXu2zJy9
 github.com/go-gl/glfw/v3.3/glfw v0.0.0-20191125211704-12ad95a8df72/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=
 github.com/go-logr/logr v1.4.2 h1:6pFjapn8bFcIbiKo3XT4j/BhANplGihG6tvd+8rYgrY=
 github.com/go-logr/logr v1.4.2/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
+github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 h1:tfuBGBXKqDEevZMzYi5KSi8KkcZtzBcTgAUUtapy0OI=
 github.com/go-task/slim-sprig/v3 v3.0.0 h1:sUs3vkvUymDpBKi3qH1YSqBQk9+9D/8M2mN1vB6EwHI=
 github.com/go-task/slim-sprig/v3 v3.0.0/go.mod h1:W848ghGpv3Qj3dhTPRyJypKRiqCdHZiAzKg9hl15HA8=
 github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b/go.mod h1:SBH7ygxi8pfUlaOkMMuAQtPIUF8ecWP5IEl/CR7VP2Q=
@@ -100,6 +101,8 @@ github.com/gospider007/gtls v0.0.0-20240527084326-e580531eb89e h1:3bTAtZx+JstbWb
 github.com/gospider007/gtls v0.0.0-20240527084326-e580531eb89e/go.mod h1:pUD3WKesQAdqD1W8O3v03qRYyq760iPNE8IPEILf52Y=
 github.com/gospider007/http3 v0.0.0-20240925090901-0b8ef7285550 h1:i+rnbmT70Z4CV5m+SseU9Tsn5rM9rA4/IQnQ6SeZGnc=
 github.com/gospider007/http3 v0.0.0-20240925090901-0b8ef7285550/go.mod h1:ypu2W38mKOS757LzsBHbs/qqaBFnEdOUwqK30rtPCgE=
+github.com/gospider007/http3 v0.0.0-20240925091819-2e960e23b259 h1:2UBbFJLn+B6sjHXnQxSwjOwvLQr40x45tCHdOegS0JM=
+github.com/gospider007/http3 v0.0.0-20240925091819-2e960e23b259/go.mod h1:ypu2W38mKOS757LzsBHbs/qqaBFnEdOUwqK30rtPCgE=
 github.com/gospider007/ja3 v0.0.0-20240620005139-f0602f169903 h1:elWGt/rRpoPLc7dsnC8axzXnzAAyNdrtOzOgJ3OxisY=
 github.com/gospider007/ja3 v0.0.0-20240620005139-f0602f169903/go.mod h1:coutudbhlLqA/xpGB+IFKUGKkzivbYO/Ghl4e0N6hmI=
 github.com/gospider007/kinds v0.0.0-20231024093643-7a4424f2d30e h1:lmX6IQKkrNDbXfHsvrv1Uz0MoG2v5+4VC6Gdh9irUNY=
