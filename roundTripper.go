@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/url"
 	"strings"
@@ -35,7 +36,16 @@ type reqTask struct {
 func (obj *reqTask) inPool() bool {
 	return obj.err == nil && obj.res != nil && obj.res.StatusCode != 101 && !strings.Contains(obj.res.Header.Get("Content-Type"), "text/event-stream")
 }
-
+func (obj *reqTask) suppertRetry() bool {
+	if obj.req.Body == nil {
+		return true
+	} else if body, ok := obj.req.Body.(*requestBody); ok {
+		if body.Seek(0, io.SeekStart); !body.readed {
+			return true
+		}
+	}
+	return false
+}
 func getKey(ctxData *reqCtxData, req *http.Request) (key string) {
 	var proxyUser string
 	if ctxData.proxy != nil {
@@ -93,8 +103,8 @@ func newRoundTripper(preCtx context.Context, option ClientOption) *roundTripper 
 func (obj *roundTripper) newConnPool(conn *connecotr, key string) *connPool {
 	pool := new(connPool)
 	pool.connKey = key
-	pool.deleteCtx, pool.deleteCnl = context.WithCancelCause(obj.ctx)
-	pool.closeCtx, pool.closeCnl = context.WithCancelCause(pool.deleteCtx)
+	pool.forceCtx, pool.forceCnl = context.WithCancelCause(obj.ctx)
+	pool.safeCtx, pool.safeCnl = context.WithCancelCause(pool.forceCtx)
 	pool.tasks = make(chan *reqTask)
 	pool.connPools = obj.connPools
 	pool.total.Add(1)
@@ -196,7 +206,7 @@ func (obj *roundTripper) dial(ctxData *reqCtxData, req *http.Request) (conn *con
 	}
 	if h2 {
 		if conne.h2RawConn, err = http2.NewClientConn(func() {
-			conne.closeCnl(errors.New("http2 client close"))
+			conne.safeCnl(errors.New("http2 client close"))
 		}, netConn, ctxData.h2Ja3Spec); err != nil {
 			return conne, err
 		}
@@ -209,11 +219,7 @@ func (obj *roundTripper) setGetProxy(getProxy func(ctx context.Context, url *url
 	obj.getProxy = getProxy
 }
 
-func (obj *roundTripper) poolRoundTrip(ctxData *reqCtxData, task *reqTask, key string) (newConn bool) {
-	pool := obj.connPools.get(key)
-	if pool == nil {
-		return true
-	}
+func (obj *roundTripper) poolRoundTrip(ctxData *reqCtxData, pool *connPool, task *reqTask) (isTry bool) {
 	task.ctx, task.cnl = context.WithTimeout(task.req.Context(), ctxData.responseHeaderTimeout)
 	select {
 	case pool.tasks <- task:
@@ -222,7 +228,7 @@ func (obj *roundTripper) poolRoundTrip(ctxData *reqCtxData, task *reqTask, key s
 			return true
 		case <-task.ctx.Done():
 			if task.err == nil && task.res == nil {
-				task.err = task.ctx.Err()
+				task.err = context.Cause(task.ctx)
 			}
 			return false
 		}
@@ -230,7 +236,15 @@ func (obj *roundTripper) poolRoundTrip(ctxData *reqCtxData, task *reqTask, key s
 		return true
 	}
 }
+func (obj *roundTripper) connRoundTripMain(ctxData *reqCtxData, task *reqTask, key string) {
+	for {
+		if !obj.connRoundTrip(ctxData, task, key) {
+			return
+		}
+	}
+}
 func (obj *roundTripper) connRoundTrip(ctxData *reqCtxData, task *reqTask, key string) (retry bool) {
+	ctxData.isNewConn = true
 	conn, err := obj.dial(ctxData, task.req)
 	if err != nil {
 		task.err = err
@@ -249,7 +263,7 @@ func (obj *roundTripper) connRoundTrip(ctxData *reqCtxData, task *reqTask, key s
 
 func (obj *roundTripper) closeConns() {
 	obj.connPools.iter(func(key string, pool *connPool) bool {
-		pool.close()
+		pool.safeClose()
 		obj.connPools.del(key)
 		return true
 	})
@@ -292,16 +306,16 @@ func (obj *roundTripper) RoundTrip(req *http.Request) (response *http.Response, 
 	}
 	key := getKey(ctxData, req) //pool key
 	task := obj.newReqTask(req, ctxData)
-	//get pool conn
-	var isNewConn bool
-	if !ctxData.disAlive {
-		isNewConn = obj.poolRoundTrip(ctxData, task, key)
-	}
-	if ctxData.disAlive || isNewConn {
-		ctxData.isNewConn = true
+	if ctxData.disAlive {
+		obj.connRoundTripMain(ctxData, task, key)
+	} else {
 		for {
-			retry := obj.connRoundTrip(ctxData, task, key)
-			if !retry {
+			pool := obj.connPools.get(key)
+			if pool == nil {
+				obj.connRoundTripMain(ctxData, task, key)
+				break
+			}
+			if !obj.poolRoundTrip(ctxData, pool, task) {
 				break
 			}
 		}

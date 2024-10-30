@@ -41,11 +41,11 @@ func (obj *readWriteCloser) CloseConn() {
 		obj.ForceCloseConn()
 	} else {
 		obj.conn.bodyCnl(errors.New("readWriterCloser close conn"))
-		obj.conn.closeCnl(errors.New("readWriterCloser close conn"))
+		obj.conn.safeCnl(errors.New("readWriterCloser close conn"))
 	}
 }
 
 // force close conn
 func (obj *readWriteCloser) ForceCloseConn() {
-	obj.conn.CloseWithError(errors.New("readWriterCloser force close conn"))
+	obj.conn.closeWithError(errConnectionForceClosed)
 }

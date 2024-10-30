@@ -377,7 +377,7 @@ func (obj *DialClient) Socks5Proxy(ctx context.Context, ctxData *reqCtxData, net
 	}()
 	select {
 	case <-ctx.Done():
-		return conn, ctx.Err()
+		return conn, context.Cause(ctx)
 	case <-didVerify:
 		return
 	}
