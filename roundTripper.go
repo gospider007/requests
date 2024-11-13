@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/url"
 	"strings"
@@ -224,7 +223,6 @@ func (obj *roundTripper) poolRoundTrip(ctxData *reqCtxData, pool *connPool, task
 	task.ctx, task.cnl = context.WithTimeout(task.req.Context(), ctxData.responseHeaderTimeout)
 	select {
 	case pool.tasks <- task:
-		log.Print("复用连接池")
 		select {
 		case <-task.emptyPool:
 			return true
@@ -235,7 +233,6 @@ func (obj *roundTripper) poolRoundTrip(ctxData *reqCtxData, pool *connPool, task
 			return false
 		}
 	default:
-		log.Print("okk2")
 		obj.connRoundTripMain(ctxData, task, key)
 		return false
 	}

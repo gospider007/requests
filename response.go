@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"log"
 	"net/url"
 	"strconv"
 	"strings"
@@ -198,12 +197,15 @@ func (obj *Response) SetContent(val []byte) {
 // return content with []byte
 func (obj *Response) Content() []byte {
 	if !obj.IsWebSocket() && !obj.IsSse() {
-		err := obj.ReadBody()
-		if err != nil {
-			log.Print(err, " Response Content read body error")
-			return nil
-		}
+		obj.ReadBody()
+		// err := obj.ReadBody()
+		// if err != nil {
+		// 	// log.Panic(err, " Response Content read body error")
+		// 	// log.Print(err, " Response Content read body error")
+		// 	// return nil
+		// }
 	}
+	// log.Print(len(obj.content))
 	return obj.content
 }
 
