@@ -240,14 +240,13 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	response = new(Response)
 	defer func() {
 		//read body
-		if err == nil && !response.IsStream() {
+		if err == nil && !response.IsWebSocket() && !response.IsSse() && !response.IsStream() {
 			err = response.ReadBody()
 		}
 		//result callback
 		if err == nil && option.ResultCallBack != nil {
 			err = option.ResultCallBack(ctx, option, response)
 		}
-
 		if err != nil { //err callback, must close body
 			response.CloseBody()
 			if option.ErrCallBack != nil {
@@ -255,8 +254,6 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 					err = tools.WrapError(errFatal, err2)
 				}
 			}
-		} else if !response.IsStream() { //is not is stream must close body
-			response.CloseBody()
 		}
 	}()
 	if option.OptionCallBack != nil {
@@ -381,8 +378,8 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		err = errors.New("response is nil")
 		return
 	}
-	if response.response.Body != nil {
-		response.rawConn = response.response.Body.(*readWriteCloser)
+	if response.Body() != nil {
+		response.rawConn = response.Body().(*readWriteCloser)
 	}
 	if !response.disUnzip {
 		response.disUnzip = response.response.Uncompressed
@@ -390,10 +387,10 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	if response.response.StatusCode == 101 {
 		response.webSocket = websocket.NewClientConn(response.rawConn.Conn(), websocket.GetResponseHeaderOption(response.response.Header))
 	} else if strings.Contains(response.response.Header.Get("Content-Type"), "text/event-stream") {
-		response.sse = newSse(response.response.Body)
+		response.sse = newSse(response.Body())
 	} else if !response.disUnzip {
 		var unCompressionBody io.ReadCloser
-		unCompressionBody, err = tools.CompressionDecode(response.response.Body, response.ContentEncoding())
+		unCompressionBody, err = tools.CompressionDecode(response.Body(), response.ContentEncoding())
 		if err != nil {
 			if err != io.ErrUnexpectedEOF && err != io.EOF {
 				return

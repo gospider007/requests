@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log"
 	"net/url"
 	"strconv"
 	"strings"
@@ -196,6 +197,13 @@ func (obj *Response) SetContent(val []byte) {
 
 // return content with []byte
 func (obj *Response) Content() []byte {
+	if !obj.IsWebSocket() && !obj.IsSse() {
+		err := obj.ReadBody()
+		if err != nil {
+			log.Print(err, " Response Content read body error")
+			return nil
+		}
+	}
 	return obj.content
 }
 
@@ -251,24 +259,36 @@ func (obj *Response) defaultDecode() bool {
 
 // must stream=true
 func (obj *Response) Conn() *connecotr {
-	if obj.IsStream() {
+	if obj.IsWebSocket() || obj.IsSse() || obj.IsStream() {
 		return obj.rawConn.Conn()
 	}
 	return nil
 }
 
+func (obj *Response) Body() io.ReadCloser {
+	return obj.response.Body
+}
+
 // return true if response is stream
 func (obj *Response) IsStream() bool {
-	return obj.webSocket != nil || obj.sse != nil || obj.stream
+	return obj.stream
+}
+
+// return true if response is other stream
+func (obj *Response) IsWebSocket() bool {
+	return obj.webSocket != nil
+}
+func (obj *Response) IsSse() bool {
+	return obj.sse != nil
 }
 
 // read body
 func (obj *Response) ReadBody() (err error) {
-	if obj.IsStream() {
-		return errors.New("can not read stream")
-	}
 	if obj.readBody {
 		return errors.New("already read body")
+	}
+	if obj.IsWebSocket() && obj.IsSse() {
+		return errors.New("can not read stream")
 	}
 	obj.readBody = true
 	bBody := bytes.NewBuffer(nil)
@@ -276,9 +296,9 @@ func (obj *Response) ReadBody() (err error) {
 		_, err = io.Copy(&barBody{
 			bar:  bar.NewClient(obj.response.ContentLength),
 			body: bBody,
-		}, obj.response.Body)
+		}, obj.Body())
 	} else {
-		_, err = io.Copy(bBody, obj.response.Body)
+		_, err = io.Copy(bBody, obj.Body())
 	}
 	if err != nil {
 		obj.ForceCloseConn()
@@ -289,6 +309,7 @@ func (obj *Response) ReadBody() (err error) {
 	} else {
 		obj.content = bBody.Bytes()
 	}
+	obj.CloseBody()
 	return
 }
 
@@ -331,7 +352,7 @@ func (obj *Response) close(closeConn bool) {
 	if obj.sse != nil {
 		obj.sse.Close()
 	}
-	if obj.IsStream() || !obj.readBody {
+	if obj.IsWebSocket() || obj.IsSse() || !obj.readBody {
 		obj.ForceCloseConn()
 	} else if obj.rawConn != nil {
 		if closeConn {

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/url"
 	"strings"
@@ -219,10 +220,11 @@ func (obj *roundTripper) setGetProxy(getProxy func(ctx context.Context, url *url
 	obj.getProxy = getProxy
 }
 
-func (obj *roundTripper) poolRoundTrip(ctxData *reqCtxData, pool *connPool, task *reqTask) (isTry bool) {
+func (obj *roundTripper) poolRoundTrip(ctxData *reqCtxData, pool *connPool, task *reqTask, key string) (isTry bool) {
 	task.ctx, task.cnl = context.WithTimeout(task.req.Context(), ctxData.responseHeaderTimeout)
 	select {
 	case pool.tasks <- task:
+		log.Print("复用连接池")
 		select {
 		case <-task.emptyPool:
 			return true
@@ -233,7 +235,9 @@ func (obj *roundTripper) poolRoundTrip(ctxData *reqCtxData, pool *connPool, task
 			return false
 		}
 	default:
-		return true
+		log.Print("okk2")
+		obj.connRoundTripMain(ctxData, task, key)
+		return false
 	}
 }
 func (obj *roundTripper) connRoundTripMain(ctxData *reqCtxData, task *reqTask, key string) {
@@ -315,7 +319,7 @@ func (obj *roundTripper) RoundTrip(req *http.Request) (response *http.Response, 
 				obj.connRoundTripMain(ctxData, task, key)
 				break
 			}
-			if !obj.poolRoundTrip(ctxData, pool, task) {
+			if !obj.poolRoundTrip(ctxData, pool, task, key) {
 				break
 			}
 		}
