@@ -202,7 +202,7 @@ func (obj *roundTripper) dial(ctxData *reqCtxData, req *http.Request) (conn *con
 	}
 	conne := obj.newConnecotr(netConn)
 	if proxy != nil {
-		conne.proxy = proxy.String()
+		conne.proxy = proxy
 	}
 	if h2 {
 		if conne.h2RawConn, err = http2.NewClientConn(func() {
@@ -244,6 +244,7 @@ func (obj *roundTripper) connRoundTripMain(ctxData *reqCtxData, task *reqTask, k
 		}
 	}
 }
+
 func (obj *roundTripper) connRoundTrip(ctxData *reqCtxData, task *reqTask, key string) (retry bool) {
 	ctxData.isNewConn = true
 	conn, err := obj.dial(ctxData, task.req)

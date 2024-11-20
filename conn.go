@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -29,7 +30,7 @@ type connecotr struct {
 	rawConn   net.Conn
 	h2RawConn *http2.ClientConn
 	h3RawConn http3.RoundTripper
-	proxy     string
+	proxy     *url.URL
 	r         *bufio.Reader
 	w         *bufio.Writer
 	pr        *pipCon
@@ -309,6 +310,7 @@ func (obj *connPool) forceClose() {
 	obj.safeClose()
 	obj.forceCnl(errors.New("connPool forceClose"))
 }
+
 func (obj *connPool) safeClose() {
 	obj.connPools.del(obj.connKey)
 	obj.safeCnl(errors.New("connPool close"))

@@ -321,11 +321,11 @@ func (obj *Response) IsNewConn() bool {
 }
 
 // conn proxy
-func (obj *Response) Proxy() string {
+func (obj *Response) Proxy() *url.URL {
 	if obj.rawConn != nil {
 		return obj.rawConn.Proxy()
 	}
-	return ""
+	return nil
 }
 
 // conn is in pool ?

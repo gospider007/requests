@@ -11,7 +11,7 @@ func TestUseProxy(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if resp.Proxy() != "" {
+	if resp.Proxy() != nil {
 		t.Error("proxy error")
 	}
 }

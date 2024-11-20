@@ -3,6 +3,7 @@ package requests
 import (
 	"errors"
 	"io"
+	"net/url"
 )
 
 type readWriteCloser struct {
@@ -19,8 +20,9 @@ func (obj *readWriteCloser) Read(p []byte) (n int, err error) {
 func (obj *readWriteCloser) InPool() bool {
 	return obj.conn.inPool
 }
-func (obj *readWriteCloser) Proxy() string {
-	return obj.conn.proxy
+func (obj *readWriteCloser) Proxy() *url.URL {
+	p := *obj.conn.proxy
+	return &p
 }
 
 var ErrgospiderBodyClose = errors.New("gospider body close error")
