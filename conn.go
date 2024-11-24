@@ -12,8 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/gospider007/http2"
 	"github.com/gospider007/http3"
-	"github.com/gospider007/net/http2"
 	"github.com/gospider007/tools"
 )
 
@@ -28,7 +28,7 @@ type connecotr struct {
 	bodyCnl context.CancelCauseFunc
 
 	rawConn   net.Conn
-	h2RawConn *http2.ClientConn
+	h2RawConn *http2.Http2ClientConn
 	h3RawConn http3.RoundTripper
 	proxy     *url.URL
 	r         *bufio.Reader
@@ -101,13 +101,6 @@ func (obj *connecotr) SetWriteDeadline(t time.Time) error {
 	return obj.rawConn.SetWriteDeadline(t)
 }
 
-func (obj *connecotr) h2Closed() bool {
-	if obj.h2RawConn == nil {
-		return false
-	}
-	state := obj.h2RawConn.State()
-	return state.Closed || state.Closing
-}
 func (obj *connecotr) wrapBody(task *reqTask) {
 	body := new(readWriteCloser)
 	obj.bodyCtx, obj.bodyCnl = context.WithCancelCause(task.req.Context())
@@ -130,7 +123,7 @@ func (obj *connecotr) http1Req(task *reqTask, done chan struct{}) {
 }
 
 func (obj *connecotr) http2Req(task *reqTask, done chan struct{}) {
-	if task.res, task.err = obj.h2RawConn.RoundTripWithOrderHeaders(task.req, task.orderHeaders2); task.res != nil && task.err == nil {
+	if task.res, task.err = obj.h2RawConn.DoRequest(task.req, task.orderHeaders2); task.res != nil && task.err == nil {
 		obj.wrapBody(task)
 	} else if task.err != nil {
 		task.err = tools.WrapError(task.err, "http2 roundTrip error")
@@ -160,7 +153,6 @@ func (obj *connecotr) waitBodyClose() error {
 
 func (obj *connecotr) taskMain(task *reqTask, waitBody bool) (retry bool) {
 	defer func() {
-		// log.Print("taskMain", retry, task.err)
 		if retry {
 			task.err = nil
 			obj.closeWithError(errors.New("taskMain retry close"))
@@ -175,9 +167,6 @@ func (obj *connecotr) taskMain(task *reqTask, waitBody bool) (retry bool) {
 			}
 		}
 	}()
-	if obj.h2Closed() {
-		return true
-	}
 	select {
 	case <-obj.safeCtx.Done():
 		return true
@@ -207,6 +196,14 @@ func (obj *connecotr) taskMain(task *reqTask, waitBody bool) (retry bool) {
 				task.err = errors.New("response is nil")
 			}
 			return task.suppertRetry()
+		}
+		if task.ctxData.logger != nil {
+			task.ctxData.logger(Log{
+				Id:   task.ctxData.requestId,
+				Time: time.Now(),
+				Type: LogType_ResponseHeader,
+				Msg:  "response header",
+			})
 		}
 		return false
 	case <-obj.forceCtx.Done(): //force conn close

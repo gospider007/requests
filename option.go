@@ -15,8 +15,38 @@ import (
 	utls "github.com/refraction-networking/utls"
 )
 
+type LogType string
+
+const (
+	LogType_DNSLookup LogType = "DNSLookup"
+
+	LogType_TCPConnect LogType = "TCPConnect"
+
+	LogType_TLSHandshake LogType = "TLSHandshake"
+
+	LogType_ProxyDNSLookup LogType = "ProxyDNSLookup"
+
+	LogType_ProxyTCPConnect LogType = "ProxyTCPConnect"
+
+	LogType_ProxyTLSHandshake LogType = "ProxyTLSHandshake"
+
+	LogType_ProxyConnectRemote LogType = "ProxyConnectRemote"
+
+	LogType_ResponseHeader LogType = "ResponseHeader"
+
+	LogType_ResponseBody LogType = "ResponseBody"
+)
+
+type Log struct {
+	Id   string  `json:"id"`
+	Type LogType `json:"type"`
+	Time time.Time
+	Msg  any `json:"msg"`
+}
+
 // Connection Management Options
 type ClientOption struct {
+	Logger                func(Log)                                                                             //debuggable
 	H3                    bool                                                                                  //开启http3
 	OrderHeaders          []string                                                                              //order headers
 	Ja3Spec               ja3.Ja3Spec                                                                           //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
@@ -57,6 +87,7 @@ type ClientOption struct {
 
 // Options for sending requests
 type RequestOption struct {
+	Logger          func(Log)                                                                             //debuggable
 	H3              bool                                                                                  //开启http3
 	OrderHeaders    []string                                                                              //order headers
 	Ja3Spec         ja3.Ja3Spec                                                                           //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
@@ -254,6 +285,30 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	}
 	if !option.H3 {
 		option.H3 = obj.option.H3
+	}
+	if option.Logger == nil {
+		option.Logger = obj.option.Logger
+	}
+	if option.Headers == nil {
+		option.Headers = obj.option.Headers
+	}
+	if option.Timeout == 0 {
+		option.Timeout = obj.option.Timeout
+	}
+	if option.ResponseHeaderTimeout == 0 {
+		option.ResponseHeaderTimeout = obj.option.ResponseHeaderTimeout
+	}
+	if option.TlsHandshakeTimeout == 0 {
+		option.TlsHandshakeTimeout = obj.option.TlsHandshakeTimeout
+	}
+	if option.DialTimeout == 0 {
+		option.DialTimeout = obj.option.DialTimeout
+	}
+	if option.KeepAlive == 0 {
+		option.KeepAlive = obj.option.KeepAlive
+	}
+	if option.LocalAddr == nil {
+		option.LocalAddr = obj.option.LocalAddr
 	}
 	if option.TlsConfig == nil {
 		option.TlsConfig = obj.option.TlsConfig

@@ -4,12 +4,12 @@ go 1.23.0
 
 require (
 	github.com/gospider007/bar v0.0.0-20231215084215-956cfa59ce61
-	github.com/gospider007/bs4 v0.0.0-20240531060354-fe6c0582dfd9
+	github.com/gospider007/bs4 v0.0.0-20241120020109-42eda1e01a18
 	github.com/gospider007/gson v0.0.0-20240912023741-2238f9748e4a
 	github.com/gospider007/gtls v0.0.0-20240527084326-e580531eb89e
+	github.com/gospider007/http2 v0.0.0-20241124010135-caaf1749745b
 	github.com/gospider007/http3 v0.0.0-20240925091819-2e960e23b259
 	github.com/gospider007/ja3 v0.0.0-20240620005139-f0602f169903
-	github.com/gospider007/net v0.0.0-20240620005014-93bab3eb6b6c
 	github.com/gospider007/re v0.0.0-20240227100911-e27255e48eff
 	github.com/gospider007/tools v0.0.0-20241120013952-ff42051bfc9f
 	github.com/gospider007/websocket v0.0.0-20240331132617-8217ca7a8439
@@ -32,7 +32,7 @@ require (
 	github.com/cloudflare/circl v1.5.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20230904184137-39efe44ab707 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
-	github.com/google/pprof v0.0.0-20241101162523-b92577c0c142 // indirect
+	github.com/google/pprof v0.0.0-20241122213907-cbe949e5a41b // indirect
 	github.com/gospider007/blog v0.0.0-20231121084103-59a004dafccf // indirect
 	github.com/gospider007/kinds v0.0.0-20240929092451-8f867acde255 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -44,12 +44,12 @@ require (
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/libdns/libdns v0.2.2 // indirect
 	github.com/mholt/acmez/v2 v2.0.3 // indirect
-	github.com/mholt/archives v0.0.0-20241119192853-c1ebc8406725 // indirect
+	github.com/mholt/archives v0.0.0-20241123153623-b85dd98f4298 // indirect
 	github.com/miekg/dns v1.1.62 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/nwaples/rardecode/v2 v2.0.0-beta.4.0.20241112120701-034e449c6e78 // indirect
-	github.com/onsi/ginkgo/v2 v2.21.0 // indirect
+	github.com/nwaples/rardecode/v2 v2.0.0 // indirect
+	github.com/onsi/ginkgo/v2 v2.22.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/quic-go/qpack v0.5.1 // indirect
 	github.com/sorairolake/lzip-go v0.3.5 // indirect

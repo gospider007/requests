@@ -82,7 +82,7 @@ func NewDail(option DialOption) *DialClient {
 		getAddrType: option.GetAddrType,
 	}
 }
-func (obj *DialClient) DialContext(ctx context.Context, ctxData *reqCtxData, network string, addr string) (net.Conn, error) {
+func (obj *DialClient) dialContext(ctx context.Context, ctxData *reqCtxData, network string, addr string, isProxy bool) (net.Conn, error) {
 	if ctxData == nil {
 		ctxData = &reqCtxData{}
 	}
@@ -108,13 +108,54 @@ func (obj *DialClient) DialContext(ctx context.Context, ctxData *reqCtxData, net
 			if host, err = obj.addrToIp(host, ips, addrType); err != nil {
 				return nil, err
 			}
+			if ctxData.logger != nil {
+				if isProxy {
+					ctxData.logger(Log{
+						Id:   ctxData.requestId,
+						Time: time.Now(),
+						Type: LogType_ProxyDNSLookup,
+						Msg:  host,
+					})
+				} else {
+					ctxData.logger(Log{
+						Id:   ctxData.requestId,
+						Time: time.Now(),
+						Type: LogType_DNSLookup,
+						Msg:  host,
+					})
+				}
+			}
 			addr = net.JoinHostPort(host, port)
 		}
 	}
 	if dialer == nil {
 		dialer = obj.getDialer(ctxData, false)
 	}
-	return dialer.DialContext(ctx, network, addr)
+	con, err := dialer.DialContext(ctx, network, addr)
+	if ctxData.logger != nil {
+		if isProxy {
+			ctxData.logger(Log{
+				Id:   ctxData.requestId,
+				Time: time.Now(),
+				Type: LogType_ProxyTCPConnect,
+				Msg:  addr,
+			})
+		} else {
+			ctxData.logger(Log{
+				Id:   ctxData.requestId,
+				Time: time.Now(),
+				Type: LogType_TCPConnect,
+				Msg:  addr,
+			})
+		}
+	}
+	return con, err
+}
+func (obj *DialClient) DialContext(ctx context.Context, ctxData *reqCtxData, network string, addr string) (net.Conn, error) {
+	return obj.dialContext(ctx, ctxData, network, addr, false)
+}
+func (obj *DialClient) ProxyDialContext(ctx context.Context, ctxData *reqCtxData, network string, addr string) (net.Conn, error) {
+	return obj.dialContext(ctx, ctxData, network, addr, true)
 }
 func (obj *DialClient) DialContextWithProxy(ctx context.Context, ctxData *reqCtxData, network string, scheme string, addr string, host string, proxyUrl *url.URL, tlsConfig *tls.Config) (net.Conn, error) {
 	if ctxData == nil {
@@ -132,17 +173,43 @@ func (obj *DialClient) DialContextWithProxy(ctx context.Context, ctxData *reqCtx
 	}
 	switch proxyUrl.Scheme {
 	case "http", "https":
-		conn, err := obj.DialContext(ctx, ctxData, network, net.JoinHostPort(proxyUrl.Hostname(), proxyUrl.Port()))
+		conn, err := obj.ProxyDialContext(ctx, ctxData, network, net.JoinHostPort(proxyUrl.Hostname(), proxyUrl.Port()))
 		if err != nil {
 			return conn, err
 		} else if proxyUrl.Scheme == "https" {
 			if conn, err = obj.addTls(ctx, conn, proxyUrl.Host, true, tlsConfig); err != nil {
 				return conn, err
 			}
+			if ctxData.logger != nil {
+				ctxData.logger(Log{
+					Id:   ctxData.requestId,
+					Time: time.Now(),
+					Type: LogType_ProxyTLSHandshake,
+					Msg:  addr,
+				})
+			}
 		}
-		return conn, obj.clientVerifyHttps(ctx, scheme, proxyUrl, addr, host, conn)
+		err = obj.clientVerifyHttps(ctx, scheme, proxyUrl, addr, host, conn)
+		if ctxData.logger != nil {
+			ctxData.logger(Log{
+				Id:   ctxData.requestId,
+				Time: time.Now(),
+				Type: LogType_ProxyConnectRemote,
+				Msg:  addr,
+			})
+		}
+		return conn, err
 	case "socks5":
-		return obj.Socks5Proxy(ctx, ctxData, network, addr, proxyUrl)
+		conn, err := obj.Socks5Proxy(ctx, ctxData, network, addr, proxyUrl)
+		if ctxData.logger != nil {
+			ctxData.logger(Log{
+				Id:   ctxData.requestId,
+				Time: time.Now(),
+				Type: LogType_ProxyTCPConnect,
+				Msg:  addr,
+			})
+		}
+		return conn, err
 	default:
 		return nil, errors.New("proxyUrl Scheme error")
 	}

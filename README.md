@@ -50,6 +50,7 @@ Requests is a fully featured HTTP client library for Golang. Network requests ca
   * [IPv4, IPv6 Address Control Parsing](https://github.com/gospider007/requests/blob/master/test/addType_test.go)
   * [DNS Settings](https://github.com/gospider007/requests/blob/master/test/dns_test.go)
   * [Proxy](https://github.com/gospider007/requests/blob/master/test/proxy_test.go)
+  * [Logger](https://github.com/gospider007/requests/blob/master/test/logger/logger_test.go)
   * [Well tested client library](https://github.com/gospider007/requests/tree/master/test)
 ## [Benchmark](https://github.com/gospider007/benchmark)
 [gospider007/requests](https://github.com/gospider007/requests) > [imroc/req](github.com/imroc/req) > [go-resty](github.com/go-resty/resty) > [wangluozhe/requests](github.com/wangluozhe/requests) > [curl_cffi](https://github.com/yifeikong/curl_cffi) > [httpx](https://github.com/encode/httpx) > [psf/requests](https://github.com/psf/requests)

@@ -54,11 +54,15 @@ type reqCtxData struct {
 	addrType    gtls.AddrType //first ip type
 	dns         *net.UDPAddr
 	isNewConn   bool
+	logger      func(Log)
+	requestId   string
 }
 
 func NewReqCtxData(ctx context.Context, option *RequestOption) (*reqCtxData, error) {
 	//init ctxData
 	ctxData := new(reqCtxData)
+	ctxData.requestId = tools.NaoId()
+	ctxData.logger = option.Logger
 	ctxData.h3 = option.H3
 	ctxData.tlsConfig = option.TlsConfig
 	ctxData.utlsConfig = option.UtlsConfig
@@ -261,11 +265,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 			return
 		}
 	}
-	response.bar = option.Bar
-	response.disUnzip = option.DisUnZip
-	response.disDecode = option.DisDecode
-	response.stream = option.Stream
-
+	response.requestOption = option
 	//init headers and orderheaders,befor init ctxData
 	headers, orderHeaders, err := option.initHeaders()
 	if err != nil {
@@ -284,7 +284,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		}
 	}
 	//init ctxData
-	ctxData, err := NewReqCtxData(ctx, option)
+	response.reqCtxData, err = NewReqCtxData(ctx, option)
 	if err != nil {
 		return response, tools.WrapError(err, " reqCtxData init error")
 	}
@@ -293,15 +293,15 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	}
 	//设置 h1 请求头顺序
 	if orderHeaders != nil {
-		ctxData.orderHeaders = orderHeaders
+		response.reqCtxData.orderHeaders = orderHeaders
 	} else {
-		ctxData.orderHeaders = ja3.DefaultOrderHeaders()
+		response.reqCtxData.orderHeaders = ja3.DefaultOrderHeaders()
 	}
 	//init ctx,cnl
 	if option.Timeout > 0 { //超时
-		response.ctx, response.cnl = context.WithTimeout(CreateReqCtx(ctx, ctxData), option.Timeout)
+		response.ctx, response.cnl = context.WithTimeout(CreateReqCtx(ctx, response.reqCtxData), option.Timeout)
 	} else {
-		response.ctx, response.cnl = context.WithCancel(CreateReqCtx(ctx, ctxData))
+		response.ctx, response.cnl = context.WithCancel(CreateReqCtx(ctx, response.reqCtxData))
 	}
 	//init url
 	href, err := option.initParams()
@@ -338,7 +338,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	}
 
 	//init ws
-	if ctxData.isWs {
+	if response.reqCtxData.isWs {
 		websocket.SetClientHeadersWithOption(reqs.Header, option.WsOption)
 	}
 
@@ -369,7 +369,6 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	}
 	//send req
 	response.response, err = obj.do(reqs, option)
-	response.isNewConn = ctxData.isNewConn
 	if err != nil {
 		err = tools.WrapError(err, "client do error")
 		return
@@ -381,14 +380,14 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	if response.Body() != nil {
 		response.rawConn = response.Body().(*readWriteCloser)
 	}
-	if !response.disUnzip {
-		response.disUnzip = response.response.Uncompressed
+	if !response.requestOption.DisUnZip {
+		response.requestOption.DisUnZip = response.response.Uncompressed
 	}
 	if response.response.StatusCode == 101 {
 		response.webSocket = websocket.NewClientConn(response.rawConn.Conn(), websocket.GetResponseHeaderOption(response.response.Header))
 	} else if strings.Contains(response.response.Header.Get("Content-Type"), "text/event-stream") {
 		response.sse = newSse(response.Body())
-	} else if !response.disUnzip {
+	} else if !response.requestOption.DisUnZip {
 		var unCompressionBody io.ReadCloser
 		unCompressionBody, err = tools.CompressionDecode(response.Body(), response.ContentEncoding())
 		if err != nil {

@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"net/http"
 
@@ -21,21 +22,24 @@ import (
 )
 
 type Response struct {
-	rawConn   *readWriteCloser
-	response  *http.Response
-	webSocket *websocket.Conn
-	sse       *Sse
-	ctx       context.Context
-	cnl       context.CancelFunc
-	content   []byte
-	encoding  string
-	stream    bool
-	disDecode bool
-	disUnzip  bool
-	filePath  string
-	bar       bool
-	isNewConn bool
-	readBody  bool
+	rawConn       *readWriteCloser
+	response      *http.Response
+	webSocket     *websocket.Conn
+	sse           *Sse
+	ctx           context.Context
+	cnl           context.CancelFunc
+	reqCtxData    *reqCtxData
+	requestOption *RequestOption
+
+	content  []byte
+	encoding string
+	// stream    bool
+	// disDecode bool
+	// disUnzip  bool
+	filePath string
+	// bar       bool
+	// isNewConn bool
+	readBody bool
 }
 
 type Sse struct {
@@ -273,7 +277,7 @@ func (obj *Response) Body() io.ReadCloser {
 
 // return true if response is stream
 func (obj *Response) IsStream() bool {
-	return obj.stream
+	return obj.requestOption.Stream
 }
 
 // return true if response is other stream
@@ -294,7 +298,7 @@ func (obj *Response) ReadBody() (err error) {
 	}
 	obj.readBody = true
 	bBody := bytes.NewBuffer(nil)
-	if obj.bar && obj.ContentLength() > 0 {
+	if obj.requestOption.Bar && obj.ContentLength() > 0 {
 		_, err = io.Copy(&barBody{
 			bar:  bar.NewClient(obj.response.ContentLength),
 			body: bBody,
@@ -302,11 +306,19 @@ func (obj *Response) ReadBody() (err error) {
 	} else {
 		_, err = io.Copy(bBody, obj.Body())
 	}
+	if obj.reqCtxData.logger != nil {
+		obj.reqCtxData.logger(Log{
+			Id:   obj.reqCtxData.requestId,
+			Time: time.Now(),
+			Type: LogType_ResponseBody,
+			Msg:  "response body",
+		})
+	}
 	if err != nil {
 		obj.ForceCloseConn()
 		return errors.New("response read content error: " + err.Error())
 	}
-	if !obj.disDecode && obj.defaultDecode() {
+	if !obj.requestOption.DisDecode && obj.defaultDecode() {
 		obj.content, obj.encoding, _ = tools.Charset(bBody.Bytes(), obj.ContentType())
 	} else {
 		obj.content = bBody.Bytes()
@@ -317,7 +329,7 @@ func (obj *Response) ReadBody() (err error) {
 
 // conn is new conn
 func (obj *Response) IsNewConn() bool {
-	return obj.isNewConn
+	return obj.reqCtxData.isNewConn
 }
 
 // conn proxy

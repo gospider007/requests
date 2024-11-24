@@ -15,14 +15,15 @@ import (
 	"net/http"
 
 	"github.com/gospider007/gtls"
+	"github.com/gospider007/http2"
 	"github.com/gospider007/http3"
-	"github.com/gospider007/net/http2"
 	"github.com/gospider007/tools"
 	"github.com/quic-go/quic-go"
 	utls "github.com/refraction-networking/utls"
 )
 
 type reqTask struct {
+	ctxData       *reqCtxData
 	ctx           context.Context
 	cnl           context.CancelFunc
 	req           *http.Request
@@ -106,6 +107,7 @@ func (obj *roundTripper) newConnPool(conn *connecotr, key string) *connPool {
 	pool.forceCtx, pool.forceCnl = context.WithCancelCause(obj.ctx)
 	pool.safeCtx, pool.safeCnl = context.WithCancelCause(pool.forceCtx)
 	pool.tasks = make(chan *reqTask)
+
 	pool.connPools = obj.connPools
 	pool.total.Add(1)
 	go pool.rwMain(conn)
@@ -172,7 +174,8 @@ func (obj *roundTripper) dial(ctxData *reqCtxData, req *http.Request) (conn *con
 			}
 		}
 	}
-	netConn, err := obj.dialer.DialContextWithProxy(req.Context(), ctxData, "tcp", req.URL.Scheme, getAddr(req.URL), getHost(req), proxy, obj.tlsConfigClone(ctxData))
+	host := getHost(req)
+	netConn, err := obj.dialer.DialContextWithProxy(req.Context(), ctxData, "tcp", req.URL.Scheme, getAddr(req.URL), host, proxy, obj.tlsConfigClone(ctxData))
 	if err != nil {
 		return conn, err
 	}
@@ -180,24 +183,29 @@ func (obj *roundTripper) dial(ctxData *reqCtxData, req *http.Request) (conn *con
 	if req.URL.Scheme == "https" {
 		ctx, cnl := context.WithTimeout(req.Context(), ctxData.tlsHandshakeTimeout)
 		defer cnl()
+		disHttp2 := ctxData.isWs || ctxData.forceHttp1
 		if ctxData.ja3Spec.IsSet() {
-			tlsConfig := obj.utlsConfigClone(ctxData)
-			if ctxData.forceHttp1 {
-				tlsConfig.NextProtos = []string{"http/1.1"}
-			}
-			tlsConn, err := obj.dialer.addJa3Tls(ctx, netConn, getHost(req), ctxData.isWs || ctxData.forceHttp1, ctxData.ja3Spec, tlsConfig)
-			if err != nil {
+			if tlsConn, err := obj.dialer.addJa3Tls(ctx, netConn, host, disHttp2, ctxData.ja3Spec, obj.utlsConfigClone(ctxData)); err != nil {
 				return conn, tools.WrapError(err, "add ja3 tls error")
+			} else {
+				h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
+				netConn = tlsConn
 			}
-			h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
-			netConn = tlsConn
 		} else {
-			tlsConn, err := obj.dialer.addTls(ctx, netConn, getHost(req), ctxData.isWs || ctxData.forceHttp1, obj.tlsConfigClone(ctxData))
-			if err != nil {
+			if tlsConn, err := obj.dialer.addTls(ctx, netConn, host, disHttp2, obj.tlsConfigClone(ctxData)); err != nil {
 				return conn, tools.WrapError(err, "add tls error")
+			} else {
+				h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
+				netConn = tlsConn
 			}
-			h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
-			netConn = tlsConn
+		}
+		if ctxData.logger != nil {
+			ctxData.logger(Log{
+				Id:   ctxData.requestId,
+				Time: time.Now(),
+				Type: LogType_TLSHandshake,
+				Msg:  host,
+			})
 		}
 	}
 	conne := obj.newConnecotr(netConn)
@@ -206,7 +214,7 @@ func (obj *roundTripper) dial(ctxData *reqCtxData, req *http.Request) (conn *con
 	}
 	if h2 {
 		if conne.h2RawConn, err = http2.NewClientConn(func() {
-			conne.safeCnl(errors.New("http2 client close"))
+			conne.forceCnl(errors.New("http2 client close"))
 		}, netConn, ctxData.h2Ja3Spec); err != nil {
 			return conne, err
 		}
@@ -283,6 +291,7 @@ func (obj *roundTripper) newReqTask(req *http.Request, ctxData *reqCtxData) *req
 	}
 	task := new(reqTask)
 	task.req = req
+	task.ctxData = ctxData
 	task.emptyPool = make(chan struct{})
 	task.orderHeaders = ctxData.orderHeaders
 	if ctxData.h2Ja3Spec.OrderHeaders != nil {
