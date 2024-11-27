@@ -8,12 +8,11 @@ require (
 	github.com/gospider007/gson v0.0.0-20240912023741-2238f9748e4a
 	github.com/gospider007/gtls v0.0.0-20240527084326-e580531eb89e
 	github.com/gospider007/http2 v0.0.0-20241124010135-caaf1749745b
-	github.com/gospider007/http3 v0.0.0-20240925091819-2e960e23b259
+	github.com/gospider007/http3 v0.0.0-20241127000428-49c74ea8f814
 	github.com/gospider007/ja3 v0.0.0-20240620005139-f0602f169903
 	github.com/gospider007/re v0.0.0-20240227100911-e27255e48eff
 	github.com/gospider007/tools v0.0.0-20241120013952-ff42051bfc9f
-	github.com/gospider007/websocket v0.0.0-20240331132617-8217ca7a8439
-	github.com/quic-go/quic-go v0.48.1
+	github.com/gospider007/websocket v0.0.0-20241124120236-8003dd5900c3
 	github.com/refraction-networking/utls v1.6.7
 	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f
 	golang.org/x/net v0.31.0
@@ -31,7 +30,10 @@ require (
 	github.com/caddyserver/zerossl v0.1.3 // indirect
 	github.com/cloudflare/circl v1.5.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20230904184137-39efe44ab707 // indirect
+	github.com/gaukas/clienthellod v0.4.2 // indirect
+	github.com/gaukas/godicttls v0.0.4 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
+	github.com/google/gopacket v1.1.19 // indirect
 	github.com/google/pprof v0.0.0-20241122213907-cbe949e5a41b // indirect
 	github.com/gospider007/blog v0.0.0-20231121084103-59a004dafccf // indirect
 	github.com/gospider007/kinds v0.0.0-20240929092451-8f867acde255 // indirect
@@ -52,6 +54,8 @@ require (
 	github.com/onsi/ginkgo/v2 v2.22.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/quic-go/qpack v0.5.1 // indirect
+	github.com/quic-go/quic-go v0.48.2 // indirect
+	github.com/refraction-networking/uquic v0.0.6 // indirect
 	github.com/sorairolake/lzip-go v0.3.5 // indirect
 	github.com/therootcompany/xz v1.0.1 // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect

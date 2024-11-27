@@ -18,7 +18,6 @@ import (
 	"github.com/gospider007/http2"
 	"github.com/gospider007/http3"
 	"github.com/gospider007/tools"
-	"github.com/quic-go/quic-go"
 	utls "github.com/refraction-networking/utls"
 )
 
@@ -146,11 +145,10 @@ func (obj *roundTripper) newConnecotr(netConn net.Conn) *connecotr {
 }
 
 func (obj *roundTripper) http3Dial(ctxData *reqCtxData, req *http.Request) (conn *connecotr, err error) {
-	var netConn quic.EarlyConnection
 	tlsConfig := obj.tlsConfigClone(ctxData)
 	tlsConfig.NextProtos = []string{http3.NextProtoH3}
 	tlsConfig.ServerName = req.Host
-	netConn, err = http3.DialEarly(req.Context(), getAddr(req.URL), tlsConfig, nil)
+	netConn, err := http3.Dial(req.Context(), getAddr(req.URL), tlsConfig, nil)
 	if err != nil {
 		return
 	}
@@ -158,9 +156,27 @@ func (obj *roundTripper) http3Dial(ctxData *reqCtxData, req *http.Request) (conn
 	conn.h3RawConn = http3.NewClient(netConn)
 	return
 }
+
+func (obj *roundTripper) ghttp3Dial(ctxData *reqCtxData, req *http.Request) (conn *connecotr, err error) {
+	tlsConfig := obj.utlsConfigClone(ctxData)
+	tlsConfig.NextProtos = []string{http3.NextProtoH3}
+	tlsConfig.ServerName = req.Host
+	netConn, err := http3.UDial(req.Context(), getAddr(req.URL), tlsConfig, nil)
+	if err != nil {
+		return
+	}
+	conn = obj.newConnecotr(nil)
+	conn.h3RawConn = http3.NewUClient(netConn)
+	return
+}
+
 func (obj *roundTripper) dial(ctxData *reqCtxData, req *http.Request) (conn *connecotr, err error) {
 	if ctxData.h3 {
-		return obj.http3Dial(ctxData, req)
+		if ctxData.ja3Spec.IsSet() {
+			return obj.ghttp3Dial(ctxData, req)
+		} else {
+			return obj.http3Dial(ctxData, req)
+		}
 	}
 	var proxy *url.URL
 	if !ctxData.disProxy {
