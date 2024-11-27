@@ -45,6 +45,7 @@ Requests is a fully featured HTTP client library for Golang. Network requests ca
   * [Fingerprint](https://github.com/gospider007/requests/tree/master/test/fingerprint)
     * [Ja3 Fingerprint](https://github.com/gospider007/requests/blob/master/test/fingerprint/ja3_test.go)
     * [Http2 Fingerprint](https://github.com/gospider007/requests/blob/master/test/fingerprint/http2_test.go)
+    * [Quic Fingerprint](https://github.com/gospider007/requests/blob/master/test/fingerprint/quic_test.go)
     * [Ja4 Fingerprint](https://github.com/gospider007/requests/blob/master/test/fingerprint/ja4_test.go)
   * [Session](https://github.com/gospider007/requests/blob/master/test/session_test.go)
   * [IPv4, IPv6 Address Control Parsing](https://github.com/gospider007/requests/blob/master/test/addType_test.go)
