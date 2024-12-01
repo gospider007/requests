@@ -91,26 +91,6 @@ func ReadCookies(val any) (Cookies, error) {
 		return any2Cookies(cook)
 	}
 }
-
-// read set cookies or parse set cookies,support json,map,[]string,http.Header,string
-//
-//	func ReadSetCookies(val any) (Cookies, error) {
-//		switch cook := val.(type) {
-//		case Cookies:
-//			return cook, nil
-//		case []*http.Cookie:
-//			return Cookies(cook), nil
-//		case string:
-//			http.ParseCookie()
-//			return http.ParseSetCookie(cook)
-//		case http.Header:
-//			return readSetCookies(cook), nil
-//		case []string:
-//			return readSetCookies(http.Header{"Set-Cookie": cook}), nil
-//		default:
-//			return any2Cookies(cook)
-//		}
-//	}
 func any2Cookies(val any) (Cookies, error) {
 	switch cooks := val.(type) {
 	case map[string]string:

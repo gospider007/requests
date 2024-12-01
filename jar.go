@@ -8,15 +8,21 @@ import (
 	"golang.org/x/net/publicsuffix"
 )
 
+type Jar interface { // size=8
+	ClearCookies()
+	GetCookies(u *url.URL) Cookies
+	SetCookies(*url.URL, Cookies)
+}
+
 // cookies jar
-type Jar struct {
+type jar struct {
 	jar *cookiejar.Jar
 }
 
 // new cookies jar
-func NewJar() *Jar {
+func NewJar() *jar {
 	j, _ := cookiejar.New(nil)
-	return &Jar{
+	return &jar{
 		jar: j,
 	}
 }
@@ -34,7 +40,12 @@ func (obj *Client) SetCookies(href *url.URL, cookies ...any) error {
 	if obj.option.Jar == nil {
 		return nil
 	}
-	return obj.option.Jar.SetCookies(href, cookies...)
+	cooks, err := any2cookies(href, cookies...)
+	if err != nil {
+		return err
+	}
+	obj.option.Jar.SetCookies(href, cooks)
+	return nil
 }
 
 // clear cookies
@@ -46,7 +57,7 @@ func (obj *Client) ClearCookies() {
 }
 
 // Get cookies
-func (obj *Jar) GetCookies(u *url.URL) Cookies {
+func (obj *jar) GetCookies(u *url.URL) Cookies {
 	return obj.jar.Cookies(u)
 }
 func getDomain(u *url.URL) string {
@@ -58,14 +69,13 @@ func getDomain(u *url.URL) string {
 	}
 	return domain
 }
-
-// Set cookies
-func (obj *Jar) SetCookies(u *url.URL, cookies ...any) error {
+func any2cookies(u *url.URL, cookies ...any) (Cookies, error) {
 	domain := getDomain(u)
+	var result Cookies
 	for _, cookie := range cookies {
 		cooks, err := ReadCookies(cookie)
 		if err != nil {
-			return err
+			return cooks, err
 		}
 		for _, cook := range cooks {
 			if cook.Path == "" {
@@ -75,13 +85,18 @@ func (obj *Jar) SetCookies(u *url.URL, cookies ...any) error {
 				cook.Domain = domain
 			}
 		}
-		obj.jar.SetCookies(u, cooks)
+		result = append(result, cooks...)
 	}
-	return nil
+	return result, nil
+}
+
+// Set cookies
+func (obj *jar) SetCookies(u *url.URL, cookies Cookies) {
+	obj.jar.SetCookies(u, cookies)
 }
 
 // Clear cookies
-func (obj *Jar) ClearCookies() {
+func (obj *jar) ClearCookies() {
 	jar, _ := cookiejar.New(nil)
 	obj.jar = jar
 }

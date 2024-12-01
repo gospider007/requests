@@ -76,11 +76,12 @@ type ClientOption struct {
 	LocalAddr   *net.TCPAddr
 	Dns         *net.UDPAddr  //dns
 	AddrType    gtls.AddrType //dns parse addr type
-	Jar         *Jar          //custom cookies
+	Jar         Jar           //custom cookies
 	TlsConfig   *tls.Config
 	UtlsConfig  *utls.Config
 
 	//other option
+	UserAgent   string                                                  //headers User-Agent value
 	GetProxy    func(ctx context.Context, url *url.URL) (string, error) //proxy callback:support https,http,socks5 proxy
 	GetAddrType func(host string) gtls.AddrType
 }
@@ -118,7 +119,7 @@ type RequestOption struct {
 	LocalAddr   *net.TCPAddr
 	Dns         *net.UDPAddr  //dns
 	AddrType    gtls.AddrType //dns parse addr type                                             //tls timeout,default:15
-	Jar         *Jar          //custom cookies
+	Jar         Jar           //custom cookies
 	TlsConfig   *tls.Config
 	UtlsConfig  *utls.Config
 
@@ -128,6 +129,7 @@ type RequestOption struct {
 	Host        string
 	Referer     string //set headers referer value
 	ContentType string //headers Content-Type value
+	UserAgent   string //headers User-Agent value
 	Cookies     any    // cookies,support :json,map,str，http.Header
 
 	Params any //url params，join url query,json,map
