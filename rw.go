@@ -20,11 +20,14 @@ func (obj *readWriteCloser) Read(p []byte) (n int, err error) {
 func (obj *readWriteCloser) InPool() bool {
 	return obj.conn.inPool
 }
-func (obj *readWriteCloser) Proxy() *url.URL {
-	if obj.conn.proxy == nil {
-		return nil
+func (obj *readWriteCloser) Proxys() []*url.URL {
+	if l := len(obj.conn.proxys); l > 0 {
+		proxys := make([]*url.URL, l)
+		for i, proxy := range obj.conn.proxys {
+			proxys[i] = cloneUrl(proxy)
+		}
 	}
-	return cloneUrl(obj.conn.proxy)
+	return obj.conn.proxys
 }
 
 var ErrgospiderBodyClose = errors.New("gospider body close error")

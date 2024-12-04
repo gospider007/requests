@@ -52,6 +52,7 @@ type ClientOption struct {
 	Ja3Spec               ja3.Ja3Spec                                                                           //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
 	H2Ja3Spec             ja3.H2Ja3Spec                                                                         //h2 fingerprint
 	Proxy                 string                                                                                //proxy,support https,http,socks5
+	Proxys                []string                                                                              //proxy list,support https,http,socks5
 	ForceHttp1            bool                                                                                  //force  use http1 send requests
 	Ja3                   bool                                                                                  //enable ja3 fingerprint
 	DisCookie             bool                                                                                  //disable cookies
@@ -81,8 +82,9 @@ type ClientOption struct {
 	UtlsConfig  *utls.Config
 
 	//other option
-	UserAgent   string                                                  //headers User-Agent value
-	GetProxy    func(ctx context.Context, url *url.URL) (string, error) //proxy callback:support https,http,socks5 proxy
+	UserAgent   string                                                    //headers User-Agent value
+	GetProxy    func(ctx context.Context, url *url.URL) (string, error)   //proxy callback:support https,http,socks5 proxy
+	GetProxys   func(ctx context.Context, url *url.URL) ([]string, error) //proxys callback:support https,http,socks5 proxy
 	GetAddrType func(host string) gtls.AddrType
 }
 
@@ -94,6 +96,7 @@ type RequestOption struct {
 	Ja3Spec         ja3.Ja3Spec                                                                           //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
 	H2Ja3Spec       ja3.H2Ja3Spec                                                                         //custom h2 fingerprint
 	Proxy           string                                                                                //proxy,support http,https,socks5,example：http://127.0.0.1:7005
+	Proxys          []string                                                                              //proxy list,support http,https,socks5,example：http://127.0.0.1:7005
 	ForceHttp1      bool                                                                                  //force  use http1 send requests
 	Ja3             bool                                                                                  //enable ja3 fingerprint
 	DisCookie       bool                                                                                  //disable cookies,not use cookies
@@ -264,6 +267,9 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	if option.Proxy == "" {
 		option.Proxy = obj.option.Proxy
 	}
+	if len(option.Proxys) == 0 {
+		option.Proxys = obj.option.Proxys
+	}
 	if !option.ForceHttp1 {
 		option.ForceHttp1 = obj.option.ForceHttp1
 	}
@@ -375,6 +381,9 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	}
 	if !option.Ja3Spec.IsSet() && option.Ja3 {
 		option.Ja3Spec = ja3.DefaultJa3Spec()
+	}
+	if option.UserAgent == "" {
+		option.UserAgent = obj.option.UserAgent
 	}
 	if option.DisCookie {
 		option.Jar = nil

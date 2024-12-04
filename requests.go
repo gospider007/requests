@@ -35,6 +35,7 @@ type reqCtxData struct {
 	forceHttp1            bool
 	maxRedirect           int
 	proxy                 *url.URL
+	proxys                []*url.URL
 	disProxy              bool
 	disAlive              bool
 	orderHeaders          []string
@@ -101,6 +102,16 @@ func NewReqCtxData(ctx context.Context, option *RequestOption) (*reqCtxData, err
 			return nil, tools.WrapError(errFatal, errors.New("tempRequest init proxy error"), err)
 		}
 		ctxData.proxy = tempProxy
+	}
+	if l := len(option.Proxys); l > 0 {
+		ctxData.proxys = make([]*url.URL, l)
+		for i, proxy := range option.Proxys {
+			tempProxy, err := gtls.VerifyProxy(proxy)
+			if err != nil {
+				return ctxData, tools.WrapError(errFatal, errors.New("tempRequest init proxy error"), err)
+			}
+			ctxData.proxys[i] = tempProxy
+		}
 	}
 	return ctxData, nil
 }
@@ -270,6 +281,9 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	headers, orderHeaders, err := option.initHeaders()
 	if err != nil {
 		return response, tools.WrapError(err, errors.New("tempRequest init headers error"), err)
+	}
+	if headers != nil && option.UserAgent != "" {
+		headers.Set("User-Agent", option.UserAgent)
 	}
 	if orderHeaders == nil {
 		orderHeaders = option.OrderHeaders

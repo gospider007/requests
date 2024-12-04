@@ -62,6 +62,23 @@ func (obj *Client) SetGetProxy(getProxy func(ctx context.Context, url *url.URL) 
 	obj.transport.setGetProxy(getProxy)
 }
 
+// Modifying the client's proxy
+func (obj *Client) SetProxys(proxyUrls []string) (err error) {
+	for _, proxy := range proxyUrls {
+		_, err = gtls.VerifyProxy(proxy)
+		if err != nil {
+			return
+		}
+	}
+	obj.option.Proxys = proxyUrls
+	return
+}
+
+// Modify the proxy method of the client
+func (obj *Client) SetGetProxys(getProxys func(ctx context.Context, url *url.URL) ([]string, error)) {
+	obj.transport.setGetProxys(getProxys)
+}
+
 // Close idle connections. If the connection is in use, wait until it ends before closing
 func (obj *Client) CloseConns() {
 	obj.transport.closeConns()

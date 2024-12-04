@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"net/url"
+	"strconv"
 	"sync"
 	"time"
 
@@ -157,62 +158,96 @@ func (obj *DialClient) DialContext(ctx context.Context, ctxData *reqCtxData, net
 func (obj *DialClient) ProxyDialContext(ctx context.Context, ctxData *reqCtxData, network string, addr string) (net.Conn, error) {
 	return obj.dialContext(ctx, ctxData, network, addr, true)
 }
-func (obj *DialClient) DialContextWithProxy(ctx context.Context, ctxData *reqCtxData, network string, scheme string, addr string, host string, proxyUrl *url.URL, tlsConfig *tls.Config) (net.Conn, error) {
+
+func (obj *DialClient) DialProxyContext(ctx context.Context, ctxData *reqCtxData, network string, proxyTlsConfig *tls.Config, proxyUrls ...*url.URL) (net.Conn, error) {
+	proxyLen := len(proxyUrls)
+	if proxyLen < 2 {
+		return nil, errors.New("proxyUrls is nil")
+	}
+	var conn net.Conn
+	var err error
+	for index := range proxyLen - 1 {
+		oneProxy := proxyUrls[index]
+		remoteUrl := proxyUrls[index+1]
+		if index == 0 {
+			conn, err = obj.dialProxyContext(ctx, ctxData, network, oneProxy)
+			if err != nil {
+				return conn, err
+			}
+		}
+		conn, err = obj.verifyProxyToRemote(ctx, ctxData, conn, proxyTlsConfig, oneProxy, remoteUrl)
+	}
+	return conn, err
+}
+func getProxyAddr(proxyUrl *url.URL) (addr string, err error) {
+	if proxyUrl.Port() == "" {
+		switch proxyUrl.Scheme {
+		case "http":
+			addr = net.JoinHostPort(proxyUrl.Hostname(), "80")
+		case "https":
+			addr = net.JoinHostPort(proxyUrl.Hostname(), "443")
+		case "socks5":
+			addr = net.JoinHostPort(proxyUrl.Hostname(), "1080")
+		default:
+			return "", errors.New("not support scheme")
+		}
+	} else {
+		addr = net.JoinHostPort(proxyUrl.Hostname(), proxyUrl.Port())
+	}
+	return
+}
+func (obj *DialClient) dialProxyContext(ctx context.Context, ctxData *reqCtxData, network string, proxyUrl *url.URL) (net.Conn, error) {
+	if proxyUrl == nil {
+		return nil, errors.New("proxyUrl is nil")
+	}
 	if ctxData == nil {
 		ctxData = &reqCtxData{}
 	}
-	if proxyUrl == nil {
-		return obj.DialContext(ctx, ctxData, network, addr)
+	addr, err := getProxyAddr(proxyUrl)
+	if err != nil {
+		return nil, err
 	}
-	if proxyUrl.Port() == "" {
-		if proxyUrl.Scheme == "http" {
-			proxyUrl.Host = net.JoinHostPort(proxyUrl.Hostname(), "80")
-		} else if proxyUrl.Scheme == "https" {
-			proxyUrl.Host = net.JoinHostPort(proxyUrl.Hostname(), "443")
+	return obj.ProxyDialContext(ctx, ctxData, network, addr)
+}
+
+func (obj *DialClient) verifyProxyToRemote(ctx context.Context, ctxData *reqCtxData, conn net.Conn, proxyTlsConfig *tls.Config, proxyUrl *url.URL, remoteUrl *url.URL) (net.Conn, error) {
+	var err error
+	if proxyUrl.Scheme == "https" {
+		if conn, err = obj.addTls(ctx, conn, proxyUrl.Host, true, proxyTlsConfig); err != nil {
+			return conn, err
+		}
+		if ctxData.logger != nil {
+			ctxData.logger(Log{
+				Id:   ctxData.requestId,
+				Time: time.Now(),
+				Type: LogType_ProxyTLSHandshake,
+				Msg:  proxyUrl.String(),
+			})
 		}
 	}
 	switch proxyUrl.Scheme {
 	case "http", "https":
-		conn, err := obj.ProxyDialContext(ctx, ctxData, network, net.JoinHostPort(proxyUrl.Hostname(), proxyUrl.Port()))
-		if err != nil {
-			return conn, err
-		} else if proxyUrl.Scheme == "https" {
-			if conn, err = obj.addTls(ctx, conn, proxyUrl.Host, true, tlsConfig); err != nil {
-				return conn, err
-			}
-			if ctxData.logger != nil {
-				ctxData.logger(Log{
-					Id:   ctxData.requestId,
-					Time: time.Now(),
-					Type: LogType_ProxyTLSHandshake,
-					Msg:  addr,
-				})
-			}
-		}
-		err = obj.clientVerifyHttps(ctx, scheme, proxyUrl, addr, host, conn)
+		err = obj.clientVerifyHttps(ctx, conn, proxyUrl, remoteUrl)
 		if ctxData.logger != nil {
 			ctxData.logger(Log{
 				Id:   ctxData.requestId,
 				Time: time.Now(),
 				Type: LogType_ProxyConnectRemote,
-				Msg:  addr,
+				Msg:  remoteUrl.String(),
 			})
 		}
-		return conn, err
 	case "socks5":
-		conn, err := obj.Socks5Proxy(ctx, ctxData, network, addr, proxyUrl)
+		err = obj.socks5ProxyWithConn(ctx, conn, proxyUrl, remoteUrl)
 		if ctxData.logger != nil {
 			ctxData.logger(Log{
 				Id:   ctxData.requestId,
 				Time: time.Now(),
 				Type: LogType_ProxyTCPConnect,
-				Msg:  addr,
+				Msg:  remoteUrl.String(),
 			})
 		}
-		return conn, err
-	default:
-		return nil, errors.New("proxyUrl Scheme error")
 	}
+	return conn, err
 }
 func (obj *DialClient) loadHost(host string) (string, bool) {
 	msgDataAny, ok := obj.dnsIpData.Load(host)
@@ -232,7 +267,7 @@ func (obj *DialClient) addrToIp(host string, ips []net.IPAddr, addrType gtls.Add
 	obj.dnsIpData.Store(host, msgClient{time: time.Now(), host: ip.String()})
 	return ip.String(), nil
 }
-func (obj *DialClient) clientVerifySocks5(proxyUrl *url.URL, addr string, conn net.Conn) (err error) {
+func (obj *DialClient) clientVerifySocks5(conn net.Conn, proxyUrl *url.URL, remoteUrl *url.URL) (err error) {
 	if _, err = conn.Write([]byte{5, 2, 0, 2}); err != nil {
 		return
 	}
@@ -283,10 +318,26 @@ func (obj *DialClient) clientVerifySocks5(proxyUrl *url.URL, addr string, conn n
 		err = errors.New("not support auth format")
 		return
 	}
-	var host string
+
+	host := remoteUrl.Hostname()
 	var port int
-	if host, port, err = gtls.SplitHostPort(addr); err != nil {
-		return
+	if cport := remoteUrl.Port(); cport == "" {
+		switch remoteUrl.Scheme {
+		case "http":
+			port = 80
+		case "https":
+			port = 443
+		case "socks5":
+			port = 1080
+		default:
+			err = errors.New("not support scheme")
+			return
+		}
+	} else {
+		port, err = strconv.Atoi(cport)
+		if err != nil {
+			return
+		}
 	}
 	writeCon := []byte{5, 1, 0}
 	ip, ipInt := gtls.ParseHost(host)
@@ -431,13 +482,13 @@ func (obj *DialClient) addJa3Tls(ctx context.Context, conn net.Conn, host string
 	}
 	return ja3.NewClient(ctx, conn, ja3Spec, disHttp2, tlsConfig)
 }
-func (obj *DialClient) Socks5Proxy(ctx context.Context, ctxData *reqCtxData, network string, addr string, proxyUrl *url.URL) (conn net.Conn, err error) {
+func (obj *DialClient) Socks5Proxy(ctx context.Context, ctxData *reqCtxData, network string, proxyUrl *url.URL, remoteUrl *url.URL) (conn net.Conn, err error) {
 	if conn, err = obj.DialContext(ctx, ctxData, network, net.JoinHostPort(proxyUrl.Hostname(), proxyUrl.Port())); err != nil {
 		return
 	}
 	didVerify := make(chan struct{})
 	go func() {
-		if err = obj.clientVerifySocks5(proxyUrl, addr, conn); err != nil {
+		if err = obj.clientVerifySocks5(conn, proxyUrl, remoteUrl); err != nil {
 			conn.Close()
 		}
 		close(didVerify)
@@ -449,7 +500,23 @@ func (obj *DialClient) Socks5Proxy(ctx context.Context, ctxData *reqCtxData, net
 		return
 	}
 }
-func (obj *DialClient) clientVerifyHttps(ctx context.Context, scheme string, proxyUrl *url.URL, addr string, host string, conn net.Conn) (err error) {
+func (obj *DialClient) socks5ProxyWithConn(ctx context.Context, conn net.Conn, proxyUrl *url.URL, remoteUrl *url.URL) (err error) {
+	didVerify := make(chan struct{})
+	go func() {
+		if err = obj.clientVerifySocks5(conn, proxyUrl, remoteUrl); err != nil {
+			conn.Close()
+		}
+		close(didVerify)
+	}()
+	select {
+	case <-ctx.Done():
+		conn.Close()
+		return context.Cause(ctx)
+	case <-didVerify:
+		return
+	}
+}
+func (obj *DialClient) clientVerifyHttps(ctx context.Context, conn net.Conn, proxyUrl *url.URL, remoteUrl *url.URL) (err error) {
 	hdr := make(http.Header)
 	hdr.Set("User-Agent", tools.UserAgent)
 	if proxyUrl.User != nil {
@@ -457,26 +524,16 @@ func (obj *DialClient) clientVerifyHttps(ctx context.Context, scheme string, pro
 			hdr.Set("Proxy-Authorization", "Basic "+tools.Base64Encode(proxyUrl.User.Username()+":"+password))
 		}
 	}
-	cHost := host
-	_, hport, _ := net.SplitHostPort(host)
-	if hport == "" {
-		_, aport, _ := net.SplitHostPort(addr)
-		if aport != "" {
-			cHost = net.JoinHostPort(cHost, aport)
-		} else if scheme == "http" {
-			cHost = net.JoinHostPort(cHost, "80")
-		} else if scheme == "https" {
-			cHost = net.JoinHostPort(cHost, "443")
-		} else {
-			return errors.New("clientVerifyHttps not found port")
-		}
+	addr, err := getProxyAddr(remoteUrl)
+	if err != nil {
+		return err
 	}
 	connectReq, err := NewRequestWithContext(ctx, http.MethodConnect, &url.URL{Opaque: addr}, nil)
 	if err != nil {
 		return err
 	}
 	connectReq.Header = hdr
-	connectReq.Host = cHost
+	connectReq.Host = remoteUrl.Host
 	if err = connectReq.Write(conn); err != nil {
 		return err
 	}

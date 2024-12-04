@@ -62,6 +62,7 @@ type roundTripper struct {
 	tlsConfig  *tls.Config
 	utlsConfig *utls.Config
 	getProxy   func(ctx context.Context, url *url.URL) (string, error)
+	getProxys  func(ctx context.Context, url *url.URL) ([]string, error)
 }
 
 func newRoundTripper(preCtx context.Context, option ClientOption) *roundTripper {
@@ -97,6 +98,7 @@ func newRoundTripper(preCtx context.Context, option ClientOption) *roundTripper 
 		cnl:        cnl,
 		dialer:     dialClient,
 		getProxy:   option.GetProxy,
+		getProxys:  option.GetProxys,
 		connPools:  newConnPools(),
 	}
 }
@@ -178,20 +180,52 @@ func (obj *roundTripper) dial(ctxData *reqCtxData, req *http.Request) (conn *con
 			return obj.http3Dial(ctxData, req)
 		}
 	}
-	var proxy *url.URL
+	var proxys []*url.URL
 	if !ctxData.disProxy {
-		if proxy = cloneUrl(ctxData.proxy); proxy == nil && obj.getProxy != nil {
-			proxyStr, err := obj.getProxy(req.Context(), proxy)
+		if ctxData.proxy != nil {
+			proxys = []*url.URL{cloneUrl(ctxData.proxy)}
+		}
+		if len(proxys) == 0 && len(ctxData.proxys) > 0 {
+			proxys = make([]*url.URL, len(ctxData.proxys))
+			for i, proxy := range ctxData.proxys {
+				proxys[i] = cloneUrl(proxy)
+			}
+		}
+		if len(proxys) == 0 && obj.getProxy != nil {
+			proxyStr, err := obj.getProxy(req.Context(), req.URL)
 			if err != nil {
 				return conn, err
 			}
-			if proxy, err = gtls.VerifyProxy(proxyStr); err != nil {
+			proxy, err := gtls.VerifyProxy(proxyStr)
+			if err != nil {
 				return conn, err
+			}
+			proxys = []*url.URL{proxy}
+		}
+		if len(proxys) == 0 && obj.getProxys != nil {
+			proxyStrs, err := obj.getProxys(req.Context(), req.URL)
+			if err != nil {
+				return conn, err
+			}
+			if l := len(proxyStrs); l > 0 {
+				proxys = make([]*url.URL, l)
+				for i, proxyStr := range proxyStrs {
+					proxy, err := gtls.VerifyProxy(proxyStr)
+					if err != nil {
+						return conn, err
+					}
+					proxys[i] = proxy
+				}
 			}
 		}
 	}
 	host := getHost(req)
-	netConn, err := obj.dialer.DialContextWithProxy(req.Context(), ctxData, "tcp", req.URL.Scheme, getAddr(req.URL), host, proxy, obj.tlsConfigClone(ctxData))
+	var netConn net.Conn
+	if len(proxys) > 0 {
+		netConn, err = obj.dialer.DialProxyContext(req.Context(), ctxData, "tcp", obj.tlsConfigClone(ctxData), append(proxys, cloneUrl(req.URL))...)
+	} else {
+		netConn, err = obj.dialer.DialContext(req.Context(), ctxData, "tcp", getAddr(req.URL))
+	}
 	if err != nil {
 		return conn, err
 	}
@@ -225,9 +259,7 @@ func (obj *roundTripper) dial(ctxData *reqCtxData, req *http.Request) (conn *con
 		}
 	}
 	conne := obj.newConnecotr(netConn)
-	if proxy != nil {
-		conne.proxy = proxy
-	}
+	conne.proxys = proxys
 	if h2 {
 		if conne.h2RawConn, err = http2.NewClientConn(func() {
 			conne.forceCnl(errors.New("http2 client close"))
@@ -241,6 +273,9 @@ func (obj *roundTripper) dial(ctxData *reqCtxData, req *http.Request) (conn *con
 }
 func (obj *roundTripper) setGetProxy(getProxy func(ctx context.Context, url *url.URL) (string, error)) {
 	obj.getProxy = getProxy
+}
+func (obj *roundTripper) setGetProxys(getProxys func(ctx context.Context, url *url.URL) ([]string, error)) {
+	obj.getProxys = getProxys
 }
 
 func (obj *roundTripper) poolRoundTrip(ctxData *reqCtxData, pool *connPool, task *reqTask, key string) (isTry bool) {

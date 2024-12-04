@@ -30,7 +30,7 @@ type connecotr struct {
 	rawConn   net.Conn
 	h2RawConn *http2.Http2ClientConn
 	h3RawConn http3.RoundTripper
-	proxy     *url.URL
+	proxys    []*url.URL
 	r         *bufio.Reader
 	w         *bufio.Writer
 	pr        *pipCon
