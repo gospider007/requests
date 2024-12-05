@@ -16,6 +16,17 @@
 
 Requests is a fully featured HTTP client library for Golang. Network requests can be completed with just a few lines of code. Unified support for http1, http2, http3, websocket, sse protocols
 ---
+## Innovative Features
+
+| **gospider007/requests** | **Other Request Libraries** |
+|---------------------------|----------------------------|
+| Unlimited chained proxy   | Not supported             |
+| HTTP/3 fingerprint spoofing protection | Not supported  |
+| Streamed request body reading | Not supported         |
+| Arbitrary closure of underlying connections | Not supported |
+| Proxy settings at the request level | Not supported   |
+| Unique transport layer management mechanism, fully unifying HTTP/1, HTTP/2, HTTP/3, WebSocket, and SSE protocol handling | Partially supported |
+
 ## Features
   * [Simple for settings and Request](https://github.com/gospider007/requests#quickly-send-requests)
   * [Request](https://github.com/gospider007/requests/tree/master/test/request) Support Automatic type conversion, Support orderly map
@@ -50,10 +61,12 @@ Requests is a fully featured HTTP client library for Golang. Network requests ca
   * [Session](https://github.com/gospider007/requests/blob/master/test/session_test.go)
   * [IPv4, IPv6 Address Control Parsing](https://github.com/gospider007/requests/blob/master/test/addType_test.go)
   * [DNS Settings](https://github.com/gospider007/requests/blob/master/test/dns_test.go)
-  * [Proxy](https://github.com/gospider007/requests/blob/master/test/proxy_test.go)
+  * [Proxy](https://github.com/gospider007/requests/blob/master/test/proxy/proxy_test.go)
+  * [Chain Proxy](https://github.com/gospider007/requests/blob/master/test/proxy/chain_proxy_test.go)
   * [Logger](https://github.com/gospider007/requests/blob/master/test/logger/logger_test.go)
   * [Well tested client library](https://github.com/gospider007/requests/tree/master/test)
 ## [Benchmark](https://github.com/gospider007/benchmark)
+
 [gospider007/requests](https://github.com/gospider007/requests) > [imroc/req](github.com/imroc/req) > [go-resty](github.com/go-resty/resty) > [wangluozhe/requests](github.com/wangluozhe/requests) > [curl_cffi](https://github.com/yifeikong/curl_cffi) > [httpx](https://github.com/encode/httpx) > [psf/requests](https://github.com/psf/requests)
 ## Supported Go Versions
 Recommended to use `go1.21.3` and above.
