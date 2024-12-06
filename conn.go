@@ -141,7 +141,7 @@ func (obj *connecotr) http3Req(task *reqTask, done chan struct{}) {
 func (obj *connecotr) waitBodyClose() error {
 	select {
 	case <-obj.bodyCtx.Done(): //wait body close
-		if err := context.Cause(obj.bodyCtx); errors.Is(err, ErrgospiderBodyClose) {
+		if err := context.Cause(obj.bodyCtx); errors.Is(err, errGospiderBodyClose) {
 			return nil
 		} else {
 			return err

@@ -316,7 +316,7 @@ func (obj *roundTripper) connRoundTrip(ctxData *reqCtxData, task *reqTask, key s
 	if retry || task.err != nil {
 		return retry
 	}
-	if task.inPool() && !ctxData.disAlive {
+	if task.inPool() {
 		obj.putConnPool(key, conn)
 	}
 	return retry
@@ -368,18 +368,14 @@ func (obj *roundTripper) RoundTrip(req *http.Request) (response *http.Response, 
 	}
 	key := getKey(ctxData, req) //pool key
 	task := obj.newReqTask(req, ctxData)
-	if ctxData.disAlive {
-		obj.connRoundTripMain(ctxData, task, key)
-	} else {
-		for {
-			pool := obj.connPools.get(key)
-			if pool == nil {
-				obj.connRoundTripMain(ctxData, task, key)
-				break
-			}
-			if !obj.poolRoundTrip(ctxData, pool, task, key) {
-				break
-			}
+	for {
+		pool := obj.connPools.get(key)
+		if pool == nil {
+			obj.connRoundTripMain(ctxData, task, key)
+			break
+		}
+		if !obj.poolRoundTrip(ctxData, pool, task, key) {
+			break
 		}
 	}
 	if task.err == nil && ctxData.requestCallBack != nil {

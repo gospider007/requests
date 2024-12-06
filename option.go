@@ -102,7 +102,6 @@ type RequestOption struct {
 	DisCookie       bool                                                                                  //disable cookies,not use cookies
 	DisDecode       bool                                                                                  //disable auto decode
 	DisUnZip        bool                                                                                  //disable auto zip decode
-	DisAlive        bool                                                                                  //disable  keepalive
 	Bar             bool                                                                                  //enable bar display
 	OptionCallBack  func(ctx context.Context, option *RequestOption) error                                //option callback,if error is returnd, break request
 	ResultCallBack  func(ctx context.Context, option *RequestOption, response *Response) error            //result callback,if error is returnd,next errCallback
@@ -284,9 +283,6 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	}
 	if !option.DisUnZip {
 		option.DisUnZip = obj.option.DisUnZip
-	}
-	if !option.DisAlive {
-		option.DisAlive = obj.option.DisAlive
 	}
 	if !option.Bar {
 		option.Bar = obj.option.Bar

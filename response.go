@@ -33,12 +33,7 @@ type Response struct {
 
 	content  []byte
 	encoding string
-	// stream    bool
-	// disDecode bool
-	// disUnzip  bool
 	filePath string
-	// bar       bool
-	// isNewConn bool
 	readBody bool
 }
 
@@ -202,14 +197,7 @@ func (obj *Response) SetContent(val []byte) {
 func (obj *Response) Content() []byte {
 	if !obj.IsWebSocket() && !obj.IsSse() {
 		obj.ReadBody()
-		// err := obj.ReadBody()
-		// if err != nil {
-		// 	// log.Panic(err, " Response Content read body error")
-		// 	// log.Print(err, " Response Content read body error")
-		// 	// return nil
-		// }
 	}
-	// log.Print(len(obj.content))
 	return obj.content
 }
 
@@ -271,8 +259,24 @@ func (obj *Response) Conn() *connecotr {
 	return nil
 }
 
+type Body struct {
+	response *Response
+}
+
+func (obj *Body) Read(p []byte) (n int, err error) {
+	i, err := obj.response.response.Body.Read(p)
+	if err == io.EOF {
+		obj.Close()
+	}
+	return i, err
+}
+func (obj *Body) Close() (err error) {
+	obj.response.CloseBody()
+	return nil
+}
+
 func (obj *Response) Body() io.ReadCloser {
-	return obj.response.Body
+	return &Body{response: obj}
 }
 
 // return true if response is stream
@@ -291,7 +295,7 @@ func (obj *Response) IsSse() bool {
 // read body
 func (obj *Response) ReadBody() (err error) {
 	if obj.readBody {
-		return errors.New("already read body")
+		return nil
 	}
 	if obj.IsWebSocket() && obj.IsSse() {
 		return errors.New("can not read stream")

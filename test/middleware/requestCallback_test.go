@@ -21,9 +21,6 @@ func TestRequestCallBack(t *testing.T) {
 			return nil
 		},
 	})
-	if err == nil {
-		t.Error("err is nil")
-	}
 	if !strings.Contains(err.Error(), "max length") {
 		t.Error("err is not max length")
 	}

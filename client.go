@@ -96,14 +96,6 @@ func (obj *Client) Close() {
 	obj.cnl()
 }
 
-// func checkRedirect(req *http.Request, via []*http.Request) error {
-// 	ctxData := GetReqCtxData(req.Context())
-// 	if ctxData.maxRedirect == 0 || ctxData.maxRedirect >= len(via) {
-// 		return nil
-// 	}
-// 	return http.ErrUseLastResponse
-// }
-
 func (obj *Client) do(req *http.Request, option *RequestOption) (resp *http.Response, err error) {
 	var redirectNum int
 	for {
@@ -166,13 +158,10 @@ func (obj *Client) send(req *http.Request, option *RequestOption) (resp *http.Re
 		addCookie(req, option.Jar.GetCookies(req.URL))
 	}
 	resp, err = obj.transport.RoundTrip(req)
-	if err != nil {
-		return nil, err
-	}
-	if option.Jar != nil {
+	if option.Jar != nil && resp != nil {
 		if rc := resp.Cookies(); len(rc) > 0 {
 			option.Jar.SetCookies(req.URL, rc)
 		}
 	}
-	return resp, nil
+	return resp, err
 }

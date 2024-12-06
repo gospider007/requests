@@ -44,6 +44,7 @@ Requests is a fully featured HTTP client library for Golang. Network requests ca
   * [Middleware](https://github.com/gospider007/requests/tree/master/test/middleware)
     * [Option Callback Method](https://github.com/gospider007/requests/blob/master/test/middleware/optionltCallBack_test.go)
     * [Result Callback Method](https://github.com/gospider007/requests/blob/master/test/middleware/resultCallBack_test.go)
+    * [Redirect Callback Method](https://github.com/gospider007/requests/blob/master/test/middleware/redirectCallBack_test.go)
     * [Error Callback Method](https://github.com/gospider007/requests/blob/master/test/middleware/errCallBack_test.go)
     * [Request Callback Method](https://github.com/gospider007/requests/blob/master/test/middleware/requestCallback_test.go)
     * [Retry](https://github.com/gospider007/requests/blob/master/test/middleware/try_test.go)

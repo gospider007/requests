@@ -29,6 +29,8 @@ const gospiderContextKey contextKey = "GospiderContextKey"
 
 var errFatal = errors.New("ErrFatal")
 
+var ErrUseLastResponse = http.ErrUseLastResponse
+
 type reqCtxData struct {
 	isWs                  bool
 	h3                    bool
@@ -37,7 +39,6 @@ type reqCtxData struct {
 	proxy                 *url.URL
 	proxys                []*url.URL
 	disProxy              bool
-	disAlive              bool
 	orderHeaders          []string
 	responseHeaderTimeout time.Duration
 	tlsHandshakeTimeout   time.Duration
@@ -70,7 +71,6 @@ func NewReqCtxData(ctx context.Context, option *RequestOption) (*reqCtxData, err
 	ctxData.ja3Spec = option.Ja3Spec
 	ctxData.h2Ja3Spec = option.H2Ja3Spec
 	ctxData.forceHttp1 = option.ForceHttp1
-	ctxData.disAlive = option.DisAlive
 	ctxData.maxRedirect = option.MaxRedirect
 	ctxData.requestCallBack = option.RequestCallBack
 	ctxData.responseHeaderTimeout = option.ResponseHeaderTimeout
@@ -383,7 +383,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	}
 	//send req
 	response.response, err = obj.do(reqs, option)
-	if err != nil {
+	if err != nil && err != ErrUseLastResponse {
 		err = tools.WrapError(err, "client do error")
 		return
 	}
@@ -392,7 +392,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		return
 	}
 	if response.Body() != nil {
-		response.rawConn = response.Body().(*readWriteCloser)
+		response.rawConn = response.response.Body.(*readWriteCloser)
 	}
 	if !response.requestOption.DisUnZip {
 		response.requestOption.DisUnZip = response.response.Uncompressed

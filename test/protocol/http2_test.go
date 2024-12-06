@@ -1,13 +1,14 @@
 package main
 
 import (
+	"context"
 	"testing"
 
 	"github.com/gospider007/requests"
 )
 
 func TestHttp2(t *testing.T) {
-	resp, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{DisAlive: true})
+	resp, err := requests.Get(context.TODO(), "https://httpbin.org/anything")
 	if err != nil {
 		t.Error(err)
 	}

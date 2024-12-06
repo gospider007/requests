@@ -15,7 +15,11 @@ func (obj *readWriteCloser) Conn() *connecotr {
 	return obj.conn
 }
 func (obj *readWriteCloser) Read(p []byte) (n int, err error) {
-	return obj.body.Read(p)
+	i, err := obj.body.Read(p)
+	if err == io.EOF {
+		obj.Close()
+	}
+	return i, err
 }
 func (obj *readWriteCloser) InPool() bool {
 	return obj.conn.inPool
@@ -30,13 +34,13 @@ func (obj *readWriteCloser) Proxys() []*url.URL {
 	return obj.conn.proxys
 }
 
-var ErrgospiderBodyClose = errors.New("gospider body close error")
+var errGospiderBodyClose = errors.New("gospider body close error")
 
 func (obj *readWriteCloser) Close() (err error) {
 	if !obj.InPool() {
 		obj.ForceCloseConn()
 	} else {
-		obj.conn.bodyCnl(ErrgospiderBodyClose)
+		obj.conn.bodyCnl(errGospiderBodyClose)
 		err = obj.body.Close() //reuse conn
 	}
 	return
