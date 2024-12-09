@@ -258,25 +258,8 @@ func (obj *Response) Conn() *connecotr {
 	}
 	return nil
 }
-
-type Body struct {
-	response *Response
-}
-
-func (obj *Body) Read(p []byte) (n int, err error) {
-	i, err := obj.response.response.Body.Read(p)
-	if err == io.EOF {
-		obj.Close()
-	}
-	return i, err
-}
-func (obj *Body) Close() (err error) {
-	obj.response.CloseBody()
-	return nil
-}
-
 func (obj *Response) Body() io.ReadCloser {
-	return &Body{response: obj}
+	return obj.response.Body
 }
 
 // return true if response is stream

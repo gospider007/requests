@@ -3,11 +3,11 @@ module github.com/gospider007/requests
 go 1.23.0
 
 require (
-	github.com/gospider007/bar v0.0.0-20231215084215-956cfa59ce61
-	github.com/gospider007/bs4 v0.0.0-20241120020109-42eda1e01a18
+	github.com/gospider007/bar v0.0.0-20241205091858-06f3c7e16dd9
+	github.com/gospider007/bs4 v0.0.0-20241205092056-32204f68d82e
 	github.com/gospider007/gson v0.0.0-20240912023741-2238f9748e4a
 	github.com/gospider007/gtls v0.0.0-20240527084326-e580531eb89e
-	github.com/gospider007/http2 v0.0.0-20241205082628-c23dc6cfc75c
+	github.com/gospider007/http2 v0.0.0-20241209124643-ab437692e699
 	github.com/gospider007/http3 v0.0.0-20241127000428-49c74ea8f814
 	github.com/gospider007/ja3 v0.0.0-20240620005139-f0602f169903
 	github.com/gospider007/re v0.0.0-20240227100911-e27255e48eff
@@ -34,8 +34,8 @@ require (
 	github.com/gaukas/godicttls v0.0.4 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
-	github.com/google/pprof v0.0.0-20241203143554-1e3fdc7de467 // indirect
-	github.com/gospider007/blog v0.0.0-20231121084103-59a004dafccf // indirect
+	github.com/google/pprof v0.0.0-20241206021119-61a79c692802 // indirect
+	github.com/gospider007/blog v0.0.0-20241205091827-6bcaf48620d4 // indirect
 	github.com/gospider007/kinds v0.0.0-20240929092451-8f867acde255 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
@@ -46,7 +46,7 @@ require (
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/libdns/libdns v0.2.2 // indirect
 	github.com/mholt/acmez/v2 v2.0.3 // indirect
-	github.com/mholt/archives v0.0.0-20241203232558-998c9622f6b8 // indirect
+	github.com/mholt/archives v0.0.0-20241207175349-5e373c52f8aa // indirect
 	github.com/miekg/dns v1.1.62 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect

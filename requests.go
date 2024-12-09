@@ -392,7 +392,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		return
 	}
 	if response.Body() != nil {
-		response.rawConn = response.response.Body.(*readWriteCloser)
+		response.rawConn = response.Body().(*readWriteCloser)
 	}
 	if !response.requestOption.DisUnZip {
 		response.requestOption.DisUnZip = response.response.Uncompressed
