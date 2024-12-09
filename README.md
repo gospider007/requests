@@ -22,10 +22,9 @@ Requests is a fully featured HTTP client library for Golang. Network requests ca
 |---------------------------|----------------------------|
 | Unlimited chained proxy   | Not supported             |
 | HTTP/3 fingerprint spoofing protection | Not supported  |
-| Streamed request body reading | Not supported         |
 | Arbitrary closure of underlying connections | Not supported |
-| Proxy settings at the request level | Not supported   |
-| Unique transport layer management mechanism, fully unifying HTTP/1, HTTP/2, HTTP/3, WebSocket, and SSE protocol handling | Partially supported |
+| Genuine request-level proxy settings | Not supported   |
+| Unique transport layer management mechanism, fully unifying HTTP/1, HTTP/2, HTTP/3, WebSocket, and SSE protocol handling | Not supported |
 
 ## Features
   * [Simple for settings and Request](https://github.com/gospider007/requests#quickly-send-requests)

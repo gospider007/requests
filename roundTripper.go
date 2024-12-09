@@ -297,11 +297,12 @@ func (obj *roundTripper) poolRoundTrip(ctxData *reqCtxData, pool *connPool, task
 	}
 }
 func (obj *roundTripper) connRoundTripMain(ctxData *reqCtxData, task *reqTask, key string) {
-	for {
+	for range 10 {
 		if !obj.connRoundTrip(ctxData, task, key) {
 			return
 		}
 	}
+	task.err = errors.New("connRoundTripMain retry 5 times")
 }
 
 func (obj *roundTripper) connRoundTrip(ctxData *reqCtxData, task *reqTask, key string) (retry bool) {
