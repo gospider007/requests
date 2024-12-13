@@ -52,7 +52,8 @@ func TestSse(t *testing.T) {
 		t.Error(err)
 	}
 	defer response.CloseBody()
-	sseCli := response.Sse()
+	sseCli := response.SSE()
+	defer sseCli.Close()
 	if sseCli == nil {
 		t.Error("not is sseCli")
 	}

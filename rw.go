@@ -3,6 +3,7 @@ package requests
 import (
 	"errors"
 	"io"
+	"net"
 	"net/url"
 )
 
@@ -11,8 +12,8 @@ type readWriteCloser struct {
 	conn *connecotr
 }
 
-func (obj *readWriteCloser) Conn() *connecotr {
-	return obj.conn
+func (obj *readWriteCloser) Conn() net.Conn {
+	return obj.conn.rawConn.(net.Conn)
 }
 func (obj *readWriteCloser) Read(p []byte) (n int, err error) {
 	i, err := obj.body.Read(p)
@@ -20,9 +21,6 @@ func (obj *readWriteCloser) Read(p []byte) (n int, err error) {
 		obj.Close()
 	}
 	return i, err
-}
-func (obj *readWriteCloser) InPool() bool {
-	return obj.conn.inPool
 }
 func (obj *readWriteCloser) Proxys() []*url.URL {
 	if l := len(obj.conn.proxys); l > 0 {
@@ -37,26 +35,18 @@ func (obj *readWriteCloser) Proxys() []*url.URL {
 var errGospiderBodyClose = errors.New("gospider body close error")
 
 func (obj *readWriteCloser) Close() (err error) {
-	if !obj.InPool() {
-		obj.ForceCloseConn()
-	} else {
-		obj.conn.bodyCnl(errGospiderBodyClose)
-		err = obj.body.Close() //reuse conn
-	}
+	obj.conn.bodyCnl(errGospiderBodyClose)
+	err = obj.body.Close() //reuse conn
 	return
 }
 
 // safe close conn
 func (obj *readWriteCloser) CloseConn() {
-	if !obj.InPool() {
-		obj.ForceCloseConn()
-	} else {
-		obj.conn.bodyCnl(errors.New("readWriterCloser close conn"))
-		obj.conn.safeCnl(errors.New("readWriterCloser close conn"))
-	}
+	obj.conn.bodyCnl(errors.New("readWriterCloser close conn"))
+	obj.conn.safeCnl(errors.New("readWriterCloser close conn"))
 }
 
 // force close conn
 func (obj *readWriteCloser) ForceCloseConn() {
-	obj.conn.closeWithError(errConnectionForceClosed)
+	obj.conn.rawConn.CloseWithError(errConnectionForceClosed)
 }

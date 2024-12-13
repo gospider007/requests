@@ -34,6 +34,7 @@ func getHost(req *http.Request) string {
 	}
 	return host
 }
+
 func getAddr(uurl *url.URL) (addr string) {
 	if uurl == nil {
 		return ""
@@ -239,38 +240,21 @@ func httpWrite(r *http.Request, w *bufio.Writer, orderHeaders []string) (err err
 }
 
 type requestBody struct {
-	r      io.Reader
-	readed bool
-	closed bool
+	r io.Reader
 }
 
-func (obj *requestBody) Read(p []byte) (n int, err error) {
-	obj.readed = true
-	return obj.r.Read(p)
-}
-func (obj *requestBody) Close() (err error) {
-	obj.closed = true
-	obj.readed = true
-	if closer, ok := obj.r.(io.Closer); ok {
-		return closer.Close()
+func (obj *requestBody) Close() error {
+	b, ok := obj.r.(io.Closer)
+	if ok {
+		return b.Close()
 	}
 	return nil
 }
+func (obj *requestBody) Read(p []byte) (n int, err error) {
+	return obj.r.Read(p)
+}
 func (obj *requestBody) Seek(offset int64, whence int) (int64, error) {
-	if obj.closed {
-		return 0, fmt.Errorf("unsupported operation: closed")
-	}
-	if !obj.readed {
-		return 0, nil
-	}
-	if seeker, ok := obj.r.(io.Seeker); ok {
-		i, err := seeker.Seek(offset, whence)
-		if i == 0 && err == nil {
-			obj.readed = false
-		}
-		return i, err
-	}
-	return 0, fmt.Errorf("unsupported operation: seeker")
+	return obj.r.(io.Seeker).Seek(0, whence)
 }
 
 func NewRequestWithContext(ctx context.Context, method string, u *url.URL, body io.Reader) (*http.Request, error) {
@@ -290,7 +274,13 @@ func NewRequestWithContext(ctx context.Context, method string, u *url.URL, body 
 		if v, ok := body.(interface{ Len() int }); ok {
 			req.ContentLength = int64(v.Len())
 		}
-		req.Body = &requestBody{r: body}
+		if _, ok := body.(io.Seeker); ok {
+			req.Body = &requestBody{body}
+		} else if b, ok := body.(io.ReadCloser); ok {
+			req.Body = b
+		} else {
+			req.Body = io.NopCloser(body)
+		}
 	}
 	return req, nil
 }

@@ -48,9 +48,12 @@ func (obj *pipCon) Write(b []byte) (n int, err error) {
 	}
 	return
 }
-func (obj *pipCon) Close(err error) error {
+func (obj *pipCon) CloseWitError(err error) error {
 	obj.cnl(err)
 	return nil
+}
+func (obj *pipCon) Close() error {
+	return obj.CloseWitError(nil)
 }
 
 func pipe(preCtx context.Context) (*pipCon, *pipCon) {

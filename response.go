@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"iter"
 	"net/url"
 	"strconv"
 	"strings"
@@ -25,21 +26,19 @@ type Response struct {
 	rawConn       *readWriteCloser
 	response      *http.Response
 	webSocket     *websocket.Conn
-	sse           *Sse
+	sse           *SSE
 	ctx           context.Context
 	cnl           context.CancelFunc
-	reqCtxData    *reqCtxData
 	requestOption *RequestOption
-
-	content  []byte
-	encoding string
-	filePath string
-	readBody bool
+	content       []byte
+	encoding      string
+	filePath      string
+	readBody      bool
 }
 
-type Sse struct {
-	reader *bufio.Reader
-	raw    io.ReadCloser
+type SSE struct {
+	reader   *bufio.Reader
+	response *Response
 }
 type Event struct {
 	Data    string //data
@@ -49,12 +48,12 @@ type Event struct {
 	Comment string //comment info
 }
 
-func newSse(rd io.ReadCloser) *Sse {
-	return &Sse{raw: rd, reader: bufio.NewReader(rd)}
+func newSSE(response *Response) *SSE {
+	return &SSE{response: response, reader: bufio.NewReader(response.Body())}
 }
 
-// recv sse envent data
-func (obj *Sse) Recv() (Event, error) {
+// recv SSE envent data
+func (obj *SSE) Recv() (Event, error) {
 	var event Event
 	for {
 		readStr, err := obj.reader.ReadString('\n')
@@ -93,9 +92,24 @@ func (obj *Sse) Recv() (Event, error) {
 	}
 }
 
-// close sse
-func (obj *Sse) Close() error {
-	return obj.raw.Close()
+func (obj *SSE) Range() iter.Seq2[Event, error] {
+	return func(yield func(Event, error) bool) {
+		defer obj.Close()
+		for {
+			event, err := obj.Recv()
+			if err == io.EOF {
+				return
+			}
+			if !yield(event, err) || err != nil {
+				return
+			}
+		}
+	}
+}
+
+// close SSE
+func (obj *SSE) Close() {
+	obj.response.ForceCloseConn()
 }
 
 // return websocket client
@@ -103,8 +117,8 @@ func (obj *Response) WebSocket() *websocket.Conn {
 	return obj.webSocket
 }
 
-// return sse client
-func (obj *Response) Sse() *Sse {
+// return SSE client
+func (obj *Response) SSE() *SSE {
 	return obj.sse
 }
 
@@ -195,7 +209,7 @@ func (obj *Response) SetContent(val []byte) {
 
 // return content with []byte
 func (obj *Response) Content() []byte {
-	if !obj.IsWebSocket() && !obj.IsSse() {
+	if !obj.IsWebSocket() && !obj.IsSSE() {
 		obj.ReadBody()
 	}
 	return obj.content
@@ -251,13 +265,6 @@ func (obj *Response) defaultDecode() bool {
 	return strings.Contains(obj.ContentType(), "html")
 }
 
-// must stream=true
-func (obj *Response) Conn() *connecotr {
-	if obj.IsWebSocket() || obj.IsSse() || obj.IsStream() {
-		return obj.rawConn.Conn()
-	}
-	return nil
-}
 func (obj *Response) Body() io.ReadCloser {
 	return obj.response.Body
 }
@@ -271,7 +278,7 @@ func (obj *Response) IsStream() bool {
 func (obj *Response) IsWebSocket() bool {
 	return obj.webSocket != nil
 }
-func (obj *Response) IsSse() bool {
+func (obj *Response) IsSSE() bool {
 	return obj.sse != nil
 }
 
@@ -280,7 +287,7 @@ func (obj *Response) ReadBody() (err error) {
 	if obj.readBody {
 		return nil
 	}
-	if obj.IsWebSocket() && obj.IsSse() {
+	if obj.IsWebSocket() && obj.IsSSE() {
 		return errors.New("can not read stream")
 	}
 	obj.readBody = true
@@ -293,9 +300,9 @@ func (obj *Response) ReadBody() (err error) {
 	} else {
 		_, err = io.Copy(bBody, obj.Body())
 	}
-	if obj.reqCtxData.logger != nil {
-		obj.reqCtxData.logger(Log{
-			Id:   obj.reqCtxData.requestId,
+	if obj.requestOption.Logger != nil {
+		obj.requestOption.Logger(Log{
+			Id:   obj.requestOption.requestId,
 			Time: time.Now(),
 			Type: LogType_ResponseBody,
 			Msg:  "response body",
@@ -316,7 +323,7 @@ func (obj *Response) ReadBody() (err error) {
 
 // conn is new conn
 func (obj *Response) IsNewConn() bool {
-	return obj.reqCtxData.isNewConn
+	return obj.requestOption.isNewConn
 }
 
 // conn proxy
@@ -325,14 +332,6 @@ func (obj *Response) Proxys() []*url.URL {
 		return obj.rawConn.Proxys()
 	}
 	return nil
-}
-
-// conn is in pool ?
-func (obj *Response) InPool() bool {
-	if obj.rawConn != nil {
-		return obj.rawConn.InPool()
-	}
-	return false
 }
 
 // close body
@@ -353,7 +352,7 @@ func (obj *Response) close(closeConn bool) {
 	if obj.sse != nil {
 		obj.sse.Close()
 	}
-	if obj.IsWebSocket() || obj.IsSse() || !obj.readBody {
+	if obj.IsWebSocket() || obj.IsSSE() || !obj.readBody {
 		obj.ForceCloseConn()
 	} else if obj.rawConn != nil {
 		if closeConn {

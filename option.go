@@ -141,11 +141,15 @@ type RequestOption struct {
 	Text   any //send text/xml,support: io.Reader, string,[]bytes,json,map
 	Body   any //not setting context-type,support io.Reader, string,[]bytes,json,map
 
-	Stream   bool             //disable auto read
-	WsOption websocket.Option //websocket option
-	DisProxy bool             //force disable proxy
-	once     bool
-	client   *Client
+	Stream    bool             //disable auto read
+	WsOption  websocket.Option //websocket option
+	DisProxy  bool             //force disable proxy
+	once      bool
+	client    *Client
+	requestId string
+	proxy     *url.URL
+	proxys    []*url.URL
+	isNewConn bool
 }
 
 func (obj *RequestOption) Client() *Client {

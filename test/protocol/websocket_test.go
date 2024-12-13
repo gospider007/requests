@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+	"strings"
 	"testing"
 
 	"github.com/gospider007/requests"
@@ -8,26 +10,28 @@ import (
 )
 
 func TestWebSocket(t *testing.T) {
-	response, err := requests.Get(nil, "ws://82.157.123.54:9010/ajaxchattest", requests.RequestOption{Headers: map[string]string{
-		"Origin": "http://coolaf.com",
-	}}) // Send WebSocket request
+	response, err := requests.Get(nil, "ws://124.222.224.186:8800", requests.RequestOption{}) // Send WebSocket request
 	if err != nil {
-		t.Error(err)
+		log.Panic(err)
 	}
 	defer response.CloseBody()
 	wsCli := response.WebSocket()
 	defer wsCli.Close()
-	if err = wsCli.WriteMessage(websocket.TextMessage, "test"); err != nil { // Send text message
-		t.Error(err)
+	if err = wsCli.WriteMessage(websocket.TextMessage, "test1122332211"); err != nil { // Send text message
+		log.Panic(err)
 	}
-	msgType, con, err := wsCli.ReadMessage() // Receive message
-	if err != nil {
-		t.Error(err)
-	}
-	if msgType != websocket.TextMessage {
-		t.Error("Message type is not text")
-	}
-	if string(con) != "test" {
-		t.Error("Message content is not test")
+	for {
+
+		msgType, con, err := wsCli.ReadMessage() // Receive message
+		if err != nil {
+			log.Panic(err)
+		}
+		if msgType != websocket.TextMessage {
+			log.Panic("Message type is not text")
+		}
+		log.Print(string(con))
+		if strings.Contains(string(con), "test1122332211") {
+			break
+		}
 	}
 }

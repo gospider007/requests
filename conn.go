@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"iter"
 	"net"
 	"net/http"
 	"net/url"
@@ -12,10 +13,89 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/gospider007/http2"
-	"github.com/gospider007/http3"
 	"github.com/gospider007/tools"
 )
+
+type Conn interface {
+	CloseWithError(err error) error
+	DoRequest(*http.Request, []string) (*http.Response, error)
+}
+
+type conn struct {
+	r         *bufio.Reader
+	w         *bufio.Writer
+	pr        *pipCon
+	pw        *pipCon
+	conn      net.Conn
+	closeFunc func()
+}
+
+func newConn(ctx context.Context, con net.Conn, closeFunc func()) *conn {
+	c := &conn{
+		conn:      con,
+		closeFunc: closeFunc,
+	}
+	c.pr, c.pw = pipe(ctx)
+	c.r = bufio.NewReader(c)
+	c.w = bufio.NewWriter(c)
+	go c.run()
+	return c
+}
+func (obj *conn) Close() error {
+	return obj.CloseWithError(nil)
+}
+func (obj *conn) CloseWithError(err error) error {
+	if err == nil {
+		err = errors.New("connecotr closeWithError close")
+	} else {
+		err = tools.WrapError(err, "connecotr closeWithError close")
+	}
+	if obj.closeFunc != nil {
+		obj.closeFunc()
+	}
+	obj.conn.Close()
+	return obj.pr.CloseWitError(err)
+}
+func (obj *conn) DoRequest(req *http.Request, orderHeaders []string) (*http.Response, error) {
+	err := httpWrite(req, obj.w, orderHeaders)
+	if err != nil {
+		return nil, err
+	}
+	res, err := http.ReadResponse(obj.r, req)
+	if err != nil {
+		err = tools.WrapError(err, "http1 read error")
+		return nil, err
+	}
+	if res == nil {
+		err = errors.New("response is nil")
+	}
+	return res, err
+}
+func (obj *conn) run() (err error) {
+	_, err = io.Copy(obj.pw, obj.conn)
+	return obj.CloseWithError(err)
+}
+func (obj *conn) Read(b []byte) (i int, err error) {
+	return obj.pr.Read(b)
+}
+func (obj *conn) Write(b []byte) (int, error) {
+	return obj.conn.Write(b)
+}
+func (obj *conn) LocalAddr() net.Addr {
+	return obj.conn.LocalAddr()
+}
+func (obj *conn) RemoteAddr() net.Addr {
+	return obj.conn.RemoteAddr()
+}
+func (obj *conn) SetDeadline(t time.Time) error {
+	return obj.conn.SetDeadline(t)
+}
+func (obj *conn) SetReadDeadline(t time.Time) error {
+	return obj.conn.SetReadDeadline(t)
+}
+func (obj *conn) SetWriteDeadline(t time.Time) error {
+	return obj.conn.SetWriteDeadline(t)
+}
 
 type connecotr struct {
 	parentForceCtx context.Context //parent force close
@@ -27,14 +107,9 @@ type connecotr struct {
 	bodyCtx context.Context //body close
 	bodyCnl context.CancelCauseFunc
 
-	rawConn   net.Conn
-	h2RawConn *http2.Http2ClientConn
-	h3RawConn http3.RoundTripper
-	proxys    []*url.URL
-	r         *bufio.Reader
-	w         *bufio.Writer
-	pr        *pipCon
-	inPool    bool
+	rawConn Conn
+	proxys  []*url.URL
+	// inPool  bool
 }
 
 func (obj *connecotr) withCancel(forceCtx context.Context, safeCtx context.Context) {
@@ -43,62 +118,7 @@ func (obj *connecotr) withCancel(forceCtx context.Context, safeCtx context.Conte
 	obj.safeCtx, obj.safeCnl = context.WithCancelCause(safeCtx)
 }
 func (obj *connecotr) Close() error {
-	return obj.closeWithError(errors.New("connecotr Close close"))
-}
-func (obj *connecotr) closeWithError(err error) error {
-	if err == nil {
-		err = errors.New("connecotr closeWithError close")
-	} else {
-		err = tools.WrapError(err, "connecotr closeWithError close")
-	}
-	obj.forceCnl(err)
-	if obj.pr != nil {
-		obj.pr.Close(err)
-	}
-	if obj.h2RawConn != nil {
-		obj.h2RawConn.Close()
-	}
-	if obj.h3RawConn != nil {
-		return obj.h3RawConn.Close(err.Error())
-	}
-	return obj.rawConn.Close()
-}
-func (obj *connecotr) read() (err error) {
-	if obj.pr != nil {
-		return nil
-	}
-	var pw *pipCon
-	obj.pr, pw = pipe(obj.forceCtx)
-	if _, err = io.Copy(pw, obj.rawConn); err == nil {
-		err = io.EOF
-	}
-	pw.Close(err)
-	obj.closeWithError(err)
-	return
-}
-func (obj *connecotr) Read(b []byte) (i int, err error) {
-	if obj.pr == nil {
-		return obj.rawConn.Read(b)
-	}
-	return obj.pr.Read(b)
-}
-func (obj *connecotr) Write(b []byte) (int, error) {
-	return obj.rawConn.Write(b)
-}
-func (obj *connecotr) LocalAddr() net.Addr {
-	return obj.rawConn.LocalAddr()
-}
-func (obj *connecotr) RemoteAddr() net.Addr {
-	return obj.rawConn.RemoteAddr()
-}
-func (obj *connecotr) SetDeadline(t time.Time) error {
-	return obj.rawConn.SetDeadline(t)
-}
-func (obj *connecotr) SetReadDeadline(t time.Time) error {
-	return obj.rawConn.SetReadDeadline(t)
-}
-func (obj *connecotr) SetWriteDeadline(t time.Time) error {
-	return obj.rawConn.SetWriteDeadline(t)
+	return obj.rawConn.CloseWithError(errors.New("connecotr Close close"))
 }
 
 func (obj *connecotr) wrapBody(task *reqTask) {
@@ -108,36 +128,15 @@ func (obj *connecotr) wrapBody(task *reqTask) {
 	body.conn = obj
 	task.res.Body = body
 }
-func (obj *connecotr) http1Req(task *reqTask, done chan struct{}) {
-	if task.err = httpWrite(task.req, obj.w, task.orderHeaders); task.err == nil {
-		task.res, task.err = http.ReadResponse(obj.r, task.req)
-		if task.err != nil {
-			task.err = tools.WrapError(task.err, "http1 read error")
-		} else if task.res == nil {
-			task.err = errors.New("response is nil")
-		} else {
-			obj.wrapBody(task)
-		}
+func (obj *connecotr) httpReq(task *reqTask, done chan struct{}) {
+	if task.res, task.err = obj.rawConn.DoRequest(task.req, task.option.OrderHeaders); task.res != nil && task.err == nil {
+		obj.wrapBody(task)
+	} else if task.err != nil {
+		task.err = tools.WrapError(task.err, "http1 roundTrip error")
 	}
 	close(done)
 }
 
-func (obj *connecotr) http2Req(task *reqTask, done chan struct{}) {
-	if task.res, task.err = obj.h2RawConn.DoRequest(task.req, task.orderHeaders2); task.res != nil && task.err == nil {
-		obj.wrapBody(task)
-	} else if task.err != nil {
-		task.err = tools.WrapError(task.err, "http2 roundTrip error")
-	}
-	close(done)
-}
-func (obj *connecotr) http3Req(task *reqTask, done chan struct{}) {
-	if task.res, task.err = obj.h3RawConn.RoundTrip(task.req); task.res != nil && task.err == nil {
-		obj.wrapBody(task)
-	} else if task.err != nil {
-		task.err = tools.WrapError(task.err, "http2 roundTrip error")
-	}
-	close(done)
-}
 func (obj *connecotr) waitBodyClose() error {
 	select {
 	case <-obj.bodyCtx.Done(): //wait body close
@@ -155,14 +154,14 @@ func (obj *connecotr) taskMain(task *reqTask, waitBody bool) (retry bool) {
 	defer func() {
 		if retry {
 			task.err = nil
-			obj.closeWithError(errors.New("taskMain retry close"))
+			obj.rawConn.CloseWithError(errors.New("taskMain retry close"))
 		} else {
 			task.cnl()
 			if task.err != nil {
-				obj.closeWithError(task.err)
+				obj.rawConn.CloseWithError(task.err)
 			} else if waitBody {
 				if err := obj.waitBodyClose(); err != nil {
-					obj.closeWithError(err)
+					obj.rawConn.CloseWithError(err)
 				}
 			}
 		}
@@ -175,13 +174,7 @@ func (obj *connecotr) taskMain(task *reqTask, waitBody bool) (retry bool) {
 	default:
 	}
 	done := make(chan struct{})
-	if obj.h3RawConn != nil {
-		go obj.http3Req(task, done)
-	} else if obj.h2RawConn != nil {
-		go obj.http2Req(task, done)
-	} else {
-		go obj.http1Req(task, done)
-	}
+	go obj.httpReq(task, done)
 	select {
 	case <-task.ctx.Done():
 		task.err = tools.WrapError(context.Cause(task.ctx), "task.ctx error: ")
@@ -197,9 +190,9 @@ func (obj *connecotr) taskMain(task *reqTask, waitBody bool) (retry bool) {
 			}
 			return task.suppertRetry()
 		}
-		if task.ctxData.logger != nil {
-			task.ctxData.logger(Log{
-				Id:   task.ctxData.requestId,
+		if task.option.Logger != nil {
+			task.option.Logger(Log{
+				Id:   task.option.requestId,
 				Time: time.Now(),
 				Type: LogType_ResponseHeader,
 				Msg:  "response header",
@@ -257,11 +250,12 @@ func (obj *connPools) set(key string, pool *connPool) {
 func (obj *connPools) del(key string) {
 	obj.connPools.Delete(key)
 }
-
-func (obj *connPools) iter(f func(key string, value *connPool) bool) {
-	obj.connPools.Range(func(key, value any) bool {
-		return f(key.(string), value.(*connPool))
-	})
+func (obj *connPools) Range() iter.Seq2[string, *connPool] {
+	return func(yield func(string, *connPool) bool) {
+		obj.connPools.Range(func(key, value any) bool {
+			return yield(key.(string), value.(*connPool))
+		})
+	}
 }
 
 func (obj *connPool) notice(task *reqTask) {
@@ -274,7 +268,7 @@ func (obj *connPool) notice(task *reqTask) {
 func (obj *connPool) rwMain(conn *connecotr) {
 	conn.withCancel(obj.forceCtx, obj.safeCtx)
 	defer func() {
-		conn.closeWithError(errors.New("connPool rwMain close"))
+		conn.rawConn.CloseWithError(errors.New("connPool rwMain close"))
 		obj.total.Add(-1)
 		if obj.total.Load() <= 0 {
 			obj.safeClose()

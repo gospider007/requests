@@ -11,14 +11,14 @@ func TestRawConn(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if resp.Conn() != nil {
+	if resp.Body() != nil {
 		t.Error("conn is not nil")
 	}
 	resp, err = requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{Stream: true})
 	if err != nil {
 		t.Error(err)
 	}
-	if resp.Conn() == nil {
+	if resp.Body() == nil {
 		t.Error("conn is nil")
 	}
 }

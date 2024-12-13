@@ -129,8 +129,8 @@ func (obj *OrderMap) parseForm(ctx context.Context) (io.Reader, string, bool, er
 			if err == nil {
 				err = io.EOF
 			}
-			pr.Close(err)
-			pw.Close(err)
+			pr.CloseWitError(err)
+			pw.CloseWitError(err)
 		}()
 		return pr, writer.FormDataContentType(), true, nil
 	}
@@ -207,7 +207,7 @@ func (obj *OrderMap) parseParams() *bytes.Buffer {
 	}
 	return buf
 }
-func (obj *OrderMap) parseData() *bytes.Reader {
+func (obj *OrderMap) parseData() io.Reader {
 	val := obj.parseParams().Bytes()
 	if val == nil {
 		return nil
@@ -285,6 +285,9 @@ func (obj *RequestOption) newBody(val any, valType int) (reader io.Reader, parse
 	}
 	if valType == readType {
 		switch value := val.(type) {
+		case io.ReadCloser:
+			obj.once = true
+			return value, nil, nil, nil
 		case io.Reader:
 			obj.once = true
 			return value, nil, nil, nil

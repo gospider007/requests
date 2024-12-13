@@ -2,16 +2,14 @@ package requests
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
-	"net"
+	"os"
 	"strings"
 	"time"
 
 	"net/url"
-	"os"
 
 	"net/http"
 
@@ -20,7 +18,6 @@ import (
 	"github.com/gospider007/re"
 	"github.com/gospider007/tools"
 	"github.com/gospider007/websocket"
-	utls "github.com/refraction-networking/utls"
 )
 
 type contextKey string
@@ -31,95 +28,15 @@ var errFatal = errors.New("ErrFatal")
 
 var ErrUseLastResponse = http.ErrUseLastResponse
 
-type reqCtxData struct {
-	isWs                  bool
-	h3                    bool
-	forceHttp1            bool
-	maxRedirect           int
-	proxy                 *url.URL
-	proxys                []*url.URL
-	disProxy              bool
-	orderHeaders          []string
-	responseHeaderTimeout time.Duration
-	tlsHandshakeTimeout   time.Duration
-	tlsConfig             *tls.Config
-	utlsConfig            *utls.Config
-
-	requestCallBack func(context.Context, *http.Request, *http.Response) error
-
-	h2Ja3Spec ja3.H2Ja3Spec
-	ja3Spec   ja3.Ja3Spec
-
-	dialTimeout time.Duration
-	keepAlive   time.Duration
-	localAddr   *net.TCPAddr  //network card ip
-	addrType    gtls.AddrType //first ip type
-	dns         *net.UDPAddr
-	isNewConn   bool
-	logger      func(Log)
-	requestId   string
+func CreateReqCtx(ctx context.Context, option *RequestOption) context.Context {
+	return context.WithValue(ctx, gospiderContextKey, option)
 }
-
-func NewReqCtxData(ctx context.Context, option *RequestOption) (*reqCtxData, error) {
-	//init ctxData
-	ctxData := new(reqCtxData)
-	ctxData.requestId = tools.NaoId()
-	ctxData.logger = option.Logger
-	ctxData.h3 = option.H3
-	ctxData.tlsConfig = option.TlsConfig
-	ctxData.utlsConfig = option.UtlsConfig
-	ctxData.ja3Spec = option.Ja3Spec
-	ctxData.h2Ja3Spec = option.H2Ja3Spec
-	ctxData.forceHttp1 = option.ForceHttp1
-	ctxData.maxRedirect = option.MaxRedirect
-	ctxData.requestCallBack = option.RequestCallBack
-	ctxData.responseHeaderTimeout = option.ResponseHeaderTimeout
-	ctxData.addrType = option.AddrType
-	ctxData.dialTimeout = option.DialTimeout
-	ctxData.keepAlive = option.KeepAlive
-	ctxData.localAddr = option.LocalAddr
-	ctxData.dns = option.Dns
-	ctxData.disProxy = option.DisProxy
-	ctxData.tlsHandshakeTimeout = option.TlsHandshakeTimeout
-	//init scheme
-	if option.Url != nil {
-		if option.Url.Scheme == "ws" {
-			ctxData.isWs = true
-			option.Url.Scheme = "http"
-		} else if option.Url.Scheme == "wss" {
-			ctxData.isWs = true
-			option.Url.Scheme = "https"
-		}
+func GetRequestOption(ctx context.Context) *RequestOption {
+	option, ok := ctx.Value(gospiderContextKey).(*RequestOption)
+	if ok {
+		return option
 	}
-	//init tls timeout
-	if option.TlsHandshakeTimeout == 0 {
-		ctxData.tlsHandshakeTimeout = time.Second * 15
-	}
-	//init proxy
-	if option.Proxy != "" {
-		tempProxy, err := gtls.VerifyProxy(option.Proxy)
-		if err != nil {
-			return nil, tools.WrapError(errFatal, errors.New("tempRequest init proxy error"), err)
-		}
-		ctxData.proxy = tempProxy
-	}
-	if l := len(option.Proxys); l > 0 {
-		ctxData.proxys = make([]*url.URL, l)
-		for i, proxy := range option.Proxys {
-			tempProxy, err := gtls.VerifyProxy(proxy)
-			if err != nil {
-				return ctxData, tools.WrapError(errFatal, errors.New("tempRequest init proxy error"), err)
-			}
-			ctxData.proxys[i] = tempProxy
-		}
-	}
-	return ctxData, nil
-}
-func CreateReqCtx(ctx context.Context, ctxData *reqCtxData) context.Context {
-	return context.WithValue(ctx, gospiderContextKey, ctxData)
-}
-func GetReqCtxData(ctx context.Context) *reqCtxData {
-	return ctx.Value(gospiderContextKey).(*reqCtxData)
+	return nil
 }
 
 // sends a GET request and returns the response.
@@ -230,6 +147,7 @@ func (obj *Client) Request(ctx context.Context, method string, href string, opti
 		rawOption = options[0]
 	}
 	optionBak := obj.newRequestOption(rawOption)
+	optionBak.requestId = tools.NaoId()
 	if optionBak.Method == "" {
 		optionBak.Method = method
 	}
@@ -255,7 +173,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	response = new(Response)
 	defer func() {
 		//read body
-		if err == nil && !response.IsWebSocket() && !response.IsSse() && !response.IsStream() {
+		if err == nil && !response.IsWebSocket() && !response.IsSSE() && !response.IsStream() {
 			err = response.ReadBody()
 		}
 		//result callback
@@ -278,44 +196,75 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	}
 	response.requestOption = option
 	//init headers and orderheaders,befor init ctxData
-	headers, orderHeaders, err := option.initHeaders()
+	headers, err := option.initHeaders()
 	if err != nil {
 		return response, tools.WrapError(err, errors.New("tempRequest init headers error"), err)
 	}
 	if headers != nil && option.UserAgent != "" {
 		headers.Set("User-Agent", option.UserAgent)
 	}
-	if orderHeaders == nil {
-		orderHeaders = option.OrderHeaders
-	}
 	//设置 h2 请求头顺序
-	if orderHeaders != nil {
+	if option.OrderHeaders != nil {
 		if !option.H2Ja3Spec.IsSet() {
 			option.H2Ja3Spec = ja3.DefaultH2Ja3Spec()
-			option.H2Ja3Spec.OrderHeaders = orderHeaders
+			option.H2Ja3Spec.OrderHeaders = option.OrderHeaders
 		} else if option.H2Ja3Spec.OrderHeaders == nil {
-			option.H2Ja3Spec.OrderHeaders = orderHeaders
+			option.H2Ja3Spec.OrderHeaders = option.OrderHeaders
 		}
 	}
-	//init ctxData
-	response.reqCtxData, err = NewReqCtxData(ctx, option)
-	if err != nil {
-		return response, tools.WrapError(err, " reqCtxData init error")
+	//init tls timeout
+	if option.TlsHandshakeTimeout == 0 {
+		option.TlsHandshakeTimeout = time.Second * 15
 	}
+	//init proxy
+	if option.Proxy != "" {
+		tempProxy, err := gtls.VerifyProxy(option.Proxy)
+		if err != nil {
+			return nil, tools.WrapError(errFatal, errors.New("tempRequest init proxy error"), err)
+		}
+		option.proxy = tempProxy
+	}
+	if l := len(option.Proxys); l > 0 {
+		option.proxys = make([]*url.URL, l)
+		for i, proxy := range option.Proxys {
+			tempProxy, err := gtls.VerifyProxy(proxy)
+			if err != nil {
+				return response, tools.WrapError(errFatal, errors.New("tempRequest init proxy error"), err)
+			}
+			option.proxys[i] = tempProxy
+		}
+	}
+	//init headers
 	if headers == nil {
 		headers = defaultHeaders()
 	}
 	//设置 h1 请求头顺序
-	if orderHeaders != nil {
-		response.reqCtxData.orderHeaders = orderHeaders
-	} else {
-		response.reqCtxData.orderHeaders = ja3.DefaultOrderHeaders()
+	if option.OrderHeaders == nil {
+		option.OrderHeaders = ja3.DefaultOrderHeaders()
 	}
 	//init ctx,cnl
 	if option.Timeout > 0 { //超时
-		response.ctx, response.cnl = context.WithTimeout(CreateReqCtx(ctx, response.reqCtxData), option.Timeout)
+		response.ctx, response.cnl = context.WithTimeout(CreateReqCtx(ctx, option), option.Timeout)
 	} else {
-		response.ctx, response.cnl = context.WithCancel(CreateReqCtx(ctx, response.reqCtxData))
+		response.ctx, response.cnl = context.WithCancel(CreateReqCtx(ctx, option))
+	}
+	//init Scheme
+	switch option.Url.Scheme {
+	case "file":
+		response.filePath = re.Sub(`^/+`, "", option.Url.Path)
+		response.content, err = os.ReadFile(response.filePath)
+		if err != nil {
+			err = tools.WrapError(errFatal, errors.New("read filePath data error"), err)
+		}
+		return
+	case "ws":
+		option.ForceHttp1 = true
+		option.Url.Scheme = "http"
+		websocket.SetClientHeadersWithOption(headers, option.WsOption)
+	case "wss":
+		option.ForceHttp1 = true
+		option.Url.Scheme = "https"
+		websocket.SetClientHeadersWithOption(headers, option.WsOption)
 	}
 	//init url
 	href, err := option.initParams()
@@ -341,7 +290,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	if reqs.Header.Get("Referer") == "" {
 		if option.Referer != "" {
 			reqs.Header.Set("Referer", option.Referer)
-		} else if reqs.URL.Scheme != "" && reqs.URL.Host != "" {
+		} else {
 			reqs.Header.Set("Referer", fmt.Sprintf("%s://%s", reqs.URL.Scheme, reqs.URL.Host))
 		}
 	}
@@ -351,19 +300,6 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		reqs.Header.Set("Content-Type", option.ContentType)
 	}
 
-	//init ws
-	if response.reqCtxData.isWs {
-		websocket.SetClientHeadersWithOption(reqs.Header, option.WsOption)
-	}
-
-	if reqs.URL.Scheme == "file" {
-		response.filePath = re.Sub(`^/+`, "", reqs.URL.Path)
-		response.content, err = os.ReadFile(response.filePath)
-		if err != nil {
-			err = tools.WrapError(errFatal, errors.New("read filePath data error"), err)
-		}
-		return
-	}
 	//add host
 	if option.Host != "" {
 		reqs.Host = option.Host
@@ -400,7 +336,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	if response.response.StatusCode == 101 {
 		response.webSocket = websocket.NewClientConn(response.rawConn.Conn(), websocket.GetResponseHeaderOption(response.response.Header))
 	} else if strings.Contains(response.response.Header.Get("Content-Type"), "text/event-stream") {
-		response.sse = newSse(response.Body())
+		response.sse = newSSE(response)
 	} else if !response.requestOption.DisUnZip {
 		var unCompressionBody io.ReadCloser
 		unCompressionBody, err = tools.CompressionDecode(response.Body(), response.ContentEncoding())

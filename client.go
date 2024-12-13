@@ -2,6 +2,7 @@ package requests
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net/url"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/gospider007/gtls"
+	utls "github.com/refraction-networking/utls"
 )
 
 // Connection Management
@@ -35,6 +37,21 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	result.ctx, result.cnl = context.WithCancel(preCtx)
 	result.transport = newRoundTripper(result.ctx, option)
 	result.option = option
+	if result.option.TlsConfig == nil {
+		result.option.TlsConfig = &tls.Config{
+			InsecureSkipVerify: true,
+			ClientSessionCache: tls.NewLRUClientSessionCache(0),
+		}
+	}
+	if result.option.UtlsConfig == nil {
+		result.option.UtlsConfig = &utls.Config{
+			InsecureSkipVerify:                 true,
+			ClientSessionCache:                 utls.NewLRUClientSessionCache(0),
+			InsecureSkipTimeVerify:             true,
+			OmitEmptyPsk:                       true,
+			PreferSkipResumptionOnNilExtension: true,
+		}
+	}
 	//cookiesjar
 	if !result.option.DisCookie {
 		if result.option.Jar == nil {
