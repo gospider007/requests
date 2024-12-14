@@ -38,11 +38,7 @@ func (obj *reqTask) suppertRetry() bool {
 	return false
 }
 func getKey(option *RequestOption, req *http.Request) (key string) {
-	var proxyUser string
-	if option.proxy != nil {
-		proxyUser = option.proxy.User.String()
-	}
-	return fmt.Sprintf("%s@%s@%s", proxyUser, option.proxy.Host, req.URL.Host)
+	return fmt.Sprintf("%s@%s", getAddr(option.proxy), getAddr(req.URL))
 }
 
 type roundTripper struct {
