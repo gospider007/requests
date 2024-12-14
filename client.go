@@ -149,7 +149,6 @@ func (obj *Client) do(req *http.Request, option *RequestOption) (resp *http.Resp
 		}
 		ireq.Response = resp
 		ireq.Header = defaultHeaders()
-		ireq.Header.Set("Referer", req.URL.String())
 		for key := range ireq.Header {
 			if val := req.Header.Get(key); val != "" {
 				ireq.Header.Set(key, val)

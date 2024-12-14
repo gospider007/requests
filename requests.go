@@ -3,7 +3,6 @@ package requests
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -286,14 +285,6 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		return response, tools.WrapError(errFatal, errors.New("tempRequest 构造request失败"), err)
 	}
 	reqs.Header = headers
-	//add Referer
-	if reqs.Header.Get("Referer") == "" {
-		if option.Referer != "" {
-			reqs.Header.Set("Referer", option.Referer)
-		} else {
-			reqs.Header.Set("Referer", fmt.Sprintf("%s://%s", reqs.URL.Scheme, reqs.URL.Host))
-		}
-	}
 
 	//set ContentType
 	if option.ContentType != "" && reqs.Header.Get("Content-Type") == "" {
