@@ -287,7 +287,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	reqs.Header = headers
 	//add Referer
 
-	if reqs.Header.Get("Referer") == "" {
+	if reqs.Header.Get("Referer") == "" && option.Referer != "" {
 		reqs.Header.Set("Referer", option.Referer)
 	}
 
