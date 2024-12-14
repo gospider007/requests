@@ -6,12 +6,10 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/http"
 	"net/url"
 	"time"
 
-	"net/http"
-
-	"github.com/gospider007/gtls"
 	"github.com/gospider007/http2"
 	"github.com/gospider007/http3"
 	"github.com/gospider007/tools"
@@ -38,11 +36,16 @@ func (obj *reqTask) suppertRetry() bool {
 	return false
 }
 func getKey(option *RequestOption, req *http.Request) (key string) {
-	var proxyUser string
 	if option.proxy != nil {
-		proxyUser = option.proxy.User.String()
+		var proxyUser string
+		if option.proxy.User != nil {
+			proxyUser = option.proxy.User.String()
+		}
+
+		return fmt.Sprintf("%s@%s@%s", proxyUser, option.proxy.Host, req.URL.Host)
 	}
-	return fmt.Sprintf("%s@%s@%s", proxyUser, option.proxy.Host, req.URL.Host)
+
+	return req.URL.Host
 }
 
 type roundTripper struct {
@@ -137,6 +140,7 @@ func (obj *roundTripper) dial(option *RequestOption, req *http.Request) (conn *c
 			return obj.http3Dial(option, req)
 		}
 	}
+
 	var proxys []*url.URL
 	if !option.DisProxy {
 		if option.proxy != nil {
@@ -150,13 +154,15 @@ func (obj *roundTripper) dial(option *RequestOption, req *http.Request) (conn *c
 		}
 		if len(proxys) == 0 && obj.getProxy != nil {
 			proxyStr, err := obj.getProxy(req.Context(), req.URL)
+			if err != nil { // proxyStr might be empty
+				return conn, err
+			}
+
+			proxy, err := verifyProxy(proxyStr)
 			if err != nil {
 				return conn, err
 			}
-			proxy, err := gtls.VerifyProxy(proxyStr)
-			if err != nil {
-				return conn, err
-			}
+
 			proxys = []*url.URL{proxy}
 		}
 		if len(proxys) == 0 && obj.getProxys != nil {
@@ -164,10 +170,11 @@ func (obj *roundTripper) dial(option *RequestOption, req *http.Request) (conn *c
 			if err != nil {
 				return conn, err
 			}
+
 			if l := len(proxyStrs); l > 0 {
 				proxys = make([]*url.URL, l)
 				for i, proxyStr := range proxyStrs {
-					proxy, err := gtls.VerifyProxy(proxyStr)
+					proxy, err := verifyProxy(proxyStr)
 					if err != nil {
 						return conn, err
 					}

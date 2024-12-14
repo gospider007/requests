@@ -3,6 +3,7 @@ package requests
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -12,6 +13,7 @@ import (
 	"strings"
 	_ "unsafe"
 
+	"github.com/gospider007/gtls"
 	"github.com/gospider007/ja3"
 	"github.com/gospider007/tools"
 	"golang.org/x/exp/slices"
@@ -296,4 +298,19 @@ func addCookie(req *http.Request, cookies Cookies) {
 	if result := cooks.String(); result != "" {
 		req.Header.Set("Cookie", result)
 	}
+}
+
+func verifyProxy(proxyStr string) (*url.URL, error) {
+	// Check for empty proxy string first since gtls.VerifyProxy
+	// returns nil without error for empty strings
+	if proxyStr == "" {
+		return nil, errors.New("proxyStr is empty")
+	}
+
+	proxy, err := gtls.VerifyProxy(proxyStr)
+	if err != nil {
+		return proxy, err
+	}
+
+	return proxy, nil
 }
