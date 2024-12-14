@@ -4,13 +4,11 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
-
-	"net/url"
-
-	"net/http"
 
 	"github.com/gospider007/gtls"
 	"github.com/gospider007/ja3"
@@ -287,7 +285,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	reqs.Header = headers
 	//add Referer
 
-	if reqs.Header.Get("Referer") == "" {
+	if option.Referer != "" && reqs.Header.Get("Referer") == "" {
 		reqs.Header.Set("Referer", option.Referer)
 	}
 
