@@ -3,7 +3,6 @@ package requests
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -287,12 +286,9 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	}
 	reqs.Header = headers
 	//add Referer
+
 	if reqs.Header.Get("Referer") == "" {
-		if option.Referer != "" {
-			reqs.Header.Set("Referer", option.Referer)
-		} else {
-			reqs.Header.Set("Referer", fmt.Sprintf("%s://%s", reqs.URL.Scheme, reqs.URL.Host))
-		}
+		reqs.Header.Set("Referer", option.Referer)
 	}
 
 	//set ContentType
