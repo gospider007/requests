@@ -107,6 +107,8 @@ github.com/gospider007/gtls v0.0.0-20240527084326-e580531eb89e h1:3bTAtZx+JstbWb
 github.com/gospider007/gtls v0.0.0-20240527084326-e580531eb89e/go.mod h1:pUD3WKesQAdqD1W8O3v03qRYyq760iPNE8IPEILf52Y=
 github.com/gospider007/http2 v0.0.0-20241214105312-2cf2a243a9eb h1:BqfS6+kMHYPoRM8CDUtE9awVqWABvcvzVoGLWyObulA=
 github.com/gospider007/http2 v0.0.0-20241214105312-2cf2a243a9eb/go.mod h1:0A43UUydE6EB5QlgYiRyPlidwN3e0faIGEEaI8mxYeU=
+github.com/gospider007/http2 v0.0.0-20241215075940-632d27d19c93 h1:GpHEydQZfXxH+uHbP87JtfNKe6MVZ5ygwsmqmE1E1aQ=
+github.com/gospider007/http2 v0.0.0-20241215075940-632d27d19c93/go.mod h1:0A43UUydE6EB5QlgYiRyPlidwN3e0faIGEEaI8mxYeU=
 github.com/gospider007/http3 v0.0.0-20241214104411-f9a6d924a254 h1:qur79Bvjm07E11mcdXFrvtGW9HKo0ZUB7qn5TJmx4v8=
 github.com/gospider007/http3 v0.0.0-20241214104411-f9a6d924a254/go.mod h1:dCygjc5CZHjrAOYZkdGcwHTZV8w4DbTQkbuTEIl7jMg=
 github.com/gospider007/ja3 v0.0.0-20240620005139-f0602f169903 h1:elWGt/rRpoPLc7dsnC8axzXnzAAyNdrtOzOgJ3OxisY=
@@ -164,6 +166,7 @@ github.com/onsi/ginkgo/v2 v2.22.0 h1:Yed107/8DjTr0lKCNt7Dn8yQ6ybuDRQoMGrNFKzMfHg
 github.com/onsi/ginkgo/v2 v2.22.0/go.mod h1:7Du3c42kxCUegi0IImZ1wUQzMBVecgIHjR1C+NkhLQo=
 github.com/onsi/gomega v1.34.2 h1:pNCwDkzrsv7MS9kpaQvVb1aVLahQXyJ/Tv5oAZMI3i8=
 github.com/onsi/gomega v1.34.2/go.mod h1:v1xfxRgk0KIsG+QOdm7p8UosrOzPYRo60fd3B/1Dukc=
+github.com/pierrec/lz4/v4 v4.0.0/go.mod h1:gZWDp/Ze/IJXGXf23ltt2EXimqmTUXEy0GFuRQyBid4=
 github.com/pierrec/lz4/v4 v4.1.22 h1:cKFw6uJDK+/gfw5BcDL0JL5aBsAFdsIT18eRtLj7VIU=
 github.com/pierrec/lz4/v4 v4.1.22/go.mod h1:gZWDp/Ze/IJXGXf23ltt2EXimqmTUXEy0GFuRQyBid4=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

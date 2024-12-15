@@ -7,7 +7,7 @@ require (
 	github.com/gospider007/bs4 v0.0.0-20241205092056-32204f68d82e
 	github.com/gospider007/gson v0.0.0-20240912023741-2238f9748e4a
 	github.com/gospider007/gtls v0.0.0-20240527084326-e580531eb89e
-	github.com/gospider007/http2 v0.0.0-20241214105312-2cf2a243a9eb
+	github.com/gospider007/http2 v0.0.0-20241215075940-632d27d19c93
 	github.com/gospider007/http3 v0.0.0-20241214104411-f9a6d924a254
 	github.com/gospider007/ja3 v0.0.0-20240620005139-f0602f169903
 	github.com/gospider007/re v0.0.0-20240227100911-e27255e48eff
