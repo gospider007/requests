@@ -36,8 +36,7 @@ var errGospiderBodyClose = errors.New("gospider body close error")
 
 func (obj *readWriteCloser) Close() (err error) {
 	obj.conn.bodyCnl(errGospiderBodyClose)
-	err = obj.body.Close() //reuse conn
-	return
+	return obj.body.Close() //reuse conn
 }
 
 // safe close conn

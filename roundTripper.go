@@ -108,7 +108,9 @@ func (obj *roundTripper) http3Dial(option *RequestOption, req *http.Request) (co
 		return
 	}
 	conn = obj.newConnecotr()
-	conn.rawConn = http3.NewClient(netConn)
+	conn.rawConn = http3.NewClient(netConn, func() {
+		conn.forceCnl(errors.New("http3 client close"))
+	})
 	return
 }
 
@@ -121,7 +123,9 @@ func (obj *roundTripper) ghttp3Dial(option *RequestOption, req *http.Request) (c
 		return
 	}
 	conn = obj.newConnecotr()
-	conn.rawConn = http3.NewUClient(netConn)
+	conn.rawConn = http3.NewUClient(netConn, func() {
+		conn.forceCnl(errors.New("http3 client close"))
+	})
 	return
 }
 

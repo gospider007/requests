@@ -292,6 +292,7 @@ func (obj *Response) ReadBody() (err error) {
 	}
 	obj.readBody = true
 	bBody := bytes.NewBuffer(nil)
+	
 	if obj.requestOption.Bar && obj.ContentLength() > 0 {
 		_, err = io.Copy(&barBody{
 			bar:  bar.NewClient(obj.response.ContentLength),
@@ -300,6 +301,7 @@ func (obj *Response) ReadBody() (err error) {
 	} else {
 		_, err = io.Copy(bBody, obj.Body())
 	}
+
 	if obj.requestOption.Logger != nil {
 		obj.requestOption.Logger(Log{
 			Id:   obj.requestOption.requestId,

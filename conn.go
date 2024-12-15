@@ -137,19 +137,6 @@ func (obj *connecotr) httpReq(task *reqTask, done chan struct{}) {
 	close(done)
 }
 
-func (obj *connecotr) waitBodyClose() error {
-	select {
-	case <-obj.bodyCtx.Done(): //wait body close
-		if err := context.Cause(obj.bodyCtx); errors.Is(err, errGospiderBodyClose) {
-			return nil
-		} else {
-			return err
-		}
-	case <-obj.forceCtx.Done(): //force conn close
-		return tools.WrapError(context.Cause(obj.forceCtx), "connecotr force close")
-	}
-}
-
 func (obj *connecotr) taskMain(task *reqTask) (retry bool) {
 	defer func() {
 		if task.err != nil && task.option.ErrCallBack != nil {
@@ -161,13 +148,27 @@ func (obj *connecotr) taskMain(task *reqTask) (retry bool) {
 		if retry {
 			task.err = nil
 			obj.rawConn.CloseWithError(errors.New("taskMain retry close"))
+			if task.res != nil && task.res.Body != nil {
+				task.res.Body.Close()
+			}
 		} else {
 			task.cnl()
+			if task.err == nil && task.res != nil && task.res.Body != nil {
+				select {
+				case <-obj.bodyCtx.Done(): //wait body close
+					if task.err = context.Cause(obj.bodyCtx); !errors.Is(task.err, errGospiderBodyClose) {
+						task.err = tools.WrapError(task.err, "bodyCtx  close")
+					}
+				case <-task.req.Context().Done(): //wait request close
+					task.err = tools.WrapError(context.Cause(task.req.Context()), "requestCtx close")
+				case <-obj.forceCtx.Done(): //force conn close
+					task.err = tools.WrapError(context.Cause(obj.forceCtx), "connecotr force close")
+				}
+			}
 			if task.err != nil {
 				obj.rawConn.CloseWithError(task.err)
-			} else {
-				if err := obj.waitBodyClose(); err != nil {
-					obj.rawConn.CloseWithError(err)
+				if task.res != nil && task.res.Body != nil {
+					task.res.Body.Close()
 				}
 			}
 		}
