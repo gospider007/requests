@@ -264,7 +264,17 @@ func (obj *roundTripper) poolRoundTrip(option *RequestOption, pool *connPool, ta
 
 func (obj *roundTripper) createPool(option *RequestOption, task *reqTask, key string) (isOk bool, err error) {
 	option.isNewConn = true
-	conn, err := obj.dial(option, task.req)
+	var conn *connecotr
+	done := make(chan struct{})
+	go func() {
+		conn, err = obj.dial(option, task.req)
+		close(done)
+	}()
+	select {
+	case <-obj.ctx.Done():
+		return true, obj.ctx.Err()
+	case <-done:
+	}
 	if err != nil {
 		if task.option.ErrCallBack != nil {
 			if err2 := task.option.ErrCallBack(task.req.Context(), task.option, nil, err); err2 != nil {
