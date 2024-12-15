@@ -130,6 +130,12 @@ func (obj *roundTripper) ghttp3Dial(option *RequestOption, req *http.Request) (c
 }
 
 func (obj *roundTripper) dial(option *RequestOption, req *http.Request) (conn *connecotr, err error) {
+	var netConn net.Conn
+	defer func() {
+		if err != nil && netConn != nil {
+			netConn.Close()
+		}
+	}()
 	if option.H3 {
 		if option.Ja3Spec.IsSet() {
 			return obj.ghttp3Dial(option, req)
@@ -177,7 +183,6 @@ func (obj *roundTripper) dial(option *RequestOption, req *http.Request) (conn *c
 		}
 	}
 	host := getHost(req)
-	var netConn net.Conn
 	if len(proxys) > 0 {
 		netConn, err = obj.dialer.DialProxyContext(req.Context(), option, "tcp", option.TlsConfig.Clone(), append(proxys, cloneUrl(req.URL))...)
 	} else {
