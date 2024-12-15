@@ -292,16 +292,23 @@ func (obj *Response) ReadBody() (err error) {
 	}
 	obj.readBody = true
 	bBody := bytes.NewBuffer(nil)
-	
-	if obj.requestOption.Bar && obj.ContentLength() > 0 {
-		_, err = io.Copy(&barBody{
-			bar:  bar.NewClient(obj.response.ContentLength),
-			body: bBody,
-		}, obj.Body())
-	} else {
-		_, err = io.Copy(bBody, obj.Body())
+	done := make(chan struct{})
+	go func() {
+		if obj.requestOption.Bar && obj.ContentLength() > 0 {
+			_, err = io.Copy(&barBody{
+				bar:  bar.NewClient(obj.response.ContentLength),
+				body: bBody,
+			}, obj.Body())
+		} else {
+			_, err = io.Copy(bBody, obj.Body())
+		}
+		close(done)
+	}()
+	select {
+	case <-obj.ctx.Done():
+		err = obj.ctx.Err()
+	case <-done:
 	}
-
 	if obj.requestOption.Logger != nil {
 		obj.requestOption.Logger(Log{
 			Id:   obj.requestOption.requestId,

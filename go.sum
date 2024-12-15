@@ -58,6 +58,7 @@ github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1/go.mod h1:vR7hzQXu2zJy9
 github.com/go-gl/glfw/v3.3/glfw v0.0.0-20191125211704-12ad95a8df72/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=
 github.com/go-logr/logr v1.4.2 h1:6pFjapn8bFcIbiKo3XT4j/BhANplGihG6tvd+8rYgrY=
 github.com/go-logr/logr v1.4.2/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
+github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 h1:tfuBGBXKqDEevZMzYi5KSi8KkcZtzBcTgAUUtapy0OI=
 github.com/go-task/slim-sprig/v3 v3.0.0 h1:sUs3vkvUymDpBKi3qH1YSqBQk9+9D/8M2mN1vB6EwHI=
 github.com/go-task/slim-sprig/v3 v3.0.0/go.mod h1:W848ghGpv3Qj3dhTPRyJypKRiqCdHZiAzKg9hl15HA8=
 github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b/go.mod h1:SBH7ygxi8pfUlaOkMMuAQtPIUF8ecWP5IEl/CR7VP2Q=
@@ -111,6 +112,8 @@ github.com/gospider007/http2 v0.0.0-20241215075940-632d27d19c93 h1:GpHEydQZfXxH+
 github.com/gospider007/http2 v0.0.0-20241215075940-632d27d19c93/go.mod h1:0A43UUydE6EB5QlgYiRyPlidwN3e0faIGEEaI8mxYeU=
 github.com/gospider007/http2 v0.0.0-20241215120203-9ee063748247 h1:OaW1iVBa0GdYE5CILbO/40nF/Rtktv1TCXh9muCw08s=
 github.com/gospider007/http2 v0.0.0-20241215120203-9ee063748247/go.mod h1:0A43UUydE6EB5QlgYiRyPlidwN3e0faIGEEaI8mxYeU=
+github.com/gospider007/http2 v0.0.0-20241215124211-46ad3fc8e608 h1:/icO1CnWE7r6CCmWs6QHURUL+6bqp+43ITXDS0tAuWM=
+github.com/gospider007/http2 v0.0.0-20241215124211-46ad3fc8e608/go.mod h1:0A43UUydE6EB5QlgYiRyPlidwN3e0faIGEEaI8mxYeU=
 github.com/gospider007/http3 v0.0.0-20241214104411-f9a6d924a254 h1:qur79Bvjm07E11mcdXFrvtGW9HKo0ZUB7qn5TJmx4v8=
 github.com/gospider007/http3 v0.0.0-20241214104411-f9a6d924a254/go.mod h1:dCygjc5CZHjrAOYZkdGcwHTZV8w4DbTQkbuTEIl7jMg=
 github.com/gospider007/http3 v0.0.0-20241215120136-980caa047c47 h1:HYYKcKHPFqpjFjEjwceE8hi2lxQ+EZtMLFJG4KEr9NY=
@@ -153,6 +156,8 @@ github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
 github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
 github.com/libdns/libdns v0.2.2 h1:O6ws7bAfRPaBsgAYt8MDe2HcNBGC29hkZ9MX2eUSX3s=
 github.com/libdns/libdns v0.2.2/go.mod h1:4Bj9+5CQiNMVGf87wjX4CY3HQJypUHRuLvlsfsZqLWQ=
+github.com/mholt/acmez v1.2.0 h1:1hhLxSgY5FvH5HCnGUuwbKY2VQVo8IU7rxXKSnZ7F30=
+github.com/mholt/acmez v1.2.0/go.mod h1:VT9YwH1xgNX1kmYY89gY8xPJC84BFAisjo8Egigt4kE=
 github.com/mholt/acmez/v2 v2.0.3 h1:CgDBlEwg3QBp6s45tPQmFIBrkRIkBT4rW4orMM6p4sw=
 github.com/mholt/acmez/v2 v2.0.3/go.mod h1:pQ1ysaDeGrIMvJ9dfJMk5kJNkn7L2sb3UhyrX6Q91cw=
 github.com/mholt/archives v0.0.0-20241207175349-5e373c52f8aa h1:SzCiDuxF6489FegHHZe/ktxpRIDhu5IemNnWlW1Fquo=
