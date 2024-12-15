@@ -150,8 +150,14 @@ func (obj *connecotr) waitBodyClose() error {
 	}
 }
 
-func (obj *connecotr) taskMain(task *reqTask, waitBody bool) (retry bool) {
+func (obj *connecotr) taskMain(task *reqTask) (retry bool) {
 	defer func() {
+		if task.err != nil && task.option.ErrCallBack != nil {
+			if err2 := task.option.ErrCallBack(task.ctx, task.option, nil, task.err); err2 != nil {
+				retry = false
+				task.err = err2
+			}
+		}
 		if retry {
 			task.err = nil
 			obj.rawConn.CloseWithError(errors.New("taskMain retry close"))
@@ -159,7 +165,7 @@ func (obj *connecotr) taskMain(task *reqTask, waitBody bool) (retry bool) {
 			task.cnl()
 			if task.err != nil {
 				obj.rawConn.CloseWithError(task.err)
-			} else if waitBody {
+			} else {
 				if err := obj.waitBodyClose(); err != nil {
 					obj.rawConn.CloseWithError(err)
 				}
@@ -274,9 +280,6 @@ func (obj *connPool) rwMain(conn *connecotr) {
 			obj.safeClose()
 		}
 	}()
-	if err := conn.waitBodyClose(); err != nil {
-		return
-	}
 	for {
 		select {
 		case <-conn.safeCtx.Done(): //safe close conn
@@ -287,7 +290,7 @@ func (obj *connPool) rwMain(conn *connecotr) {
 			if task == nil {
 				return
 			}
-			if conn.taskMain(task, true) {
+			if conn.taskMain(task) {
 				obj.notice(task)
 				return
 			}

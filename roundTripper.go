@@ -235,47 +235,37 @@ func (obj *roundTripper) setGetProxys(getProxys func(ctx context.Context, url *u
 	obj.getProxys = getProxys
 }
 
-func (obj *roundTripper) poolRoundTrip(option *RequestOption, pool *connPool, task *reqTask, key string) (isTry bool) {
+func (obj *roundTripper) poolRoundTrip(option *RequestOption, pool *connPool, task *reqTask, key string) (isOk bool, err error) {
 	task.ctx, task.cnl = context.WithTimeout(task.req.Context(), option.ResponseHeaderTimeout)
 	select {
 	case pool.tasks <- task:
 		select {
 		case <-task.emptyPool:
-			return true
+			return false, nil
 		case <-task.ctx.Done():
 			if task.err == nil && task.res == nil {
 				task.err = context.Cause(task.ctx)
 			}
-			return false
+			return true, nil
 		}
 	default:
-		obj.connRoundTripMain(option, task, key)
-		return false
+		return obj.createPool(option, task, key)
 	}
-}
-func (obj *roundTripper) connRoundTripMain(option *RequestOption, task *reqTask, key string) {
-	for range 10 {
-		if !obj.connRoundTrip(option, task, key) {
-			return
-		}
-	}
-	task.err = errors.New("connRoundTripMain retry 5 times")
 }
 
-func (obj *roundTripper) connRoundTrip(option *RequestOption, task *reqTask, key string) (retry bool) {
+func (obj *roundTripper) createPool(option *RequestOption, task *reqTask, key string) (isOk bool, err error) {
 	option.isNewConn = true
 	conn, err := obj.dial(option, task.req)
 	if err != nil {
-		task.err = err
-		return
-	}
-	task.ctx, task.cnl = context.WithTimeout(task.req.Context(), option.ResponseHeaderTimeout)
-	retry = conn.taskMain(task, false)
-	if retry || task.err != nil {
-		return retry
+		if task.option.ErrCallBack != nil {
+			if err2 := task.option.ErrCallBack(task.req.Context(), task.option, nil, err); err2 != nil {
+				return true, err2
+			}
+		}
+		return false, err
 	}
 	obj.putConnPool(key, conn)
-	return retry
+	return false, nil
 }
 
 func (obj *roundTripper) closeConns() {
@@ -316,14 +306,28 @@ func (obj *roundTripper) RoundTrip(req *http.Request) (response *http.Response, 
 	}
 	key := getKey(option, req) //pool key
 	task := obj.newReqTask(req, option)
+	maxRetry := 10
+	var errNum int
+	var isOk bool
 	for {
-		pool := obj.connPools.get(key)
-		if pool == nil {
-			obj.connRoundTripMain(option, task, key)
+		if errNum >= maxRetry {
+			task.err = fmt.Errorf("roundTrip retry %d times", maxRetry)
 			break
 		}
-		if !obj.poolRoundTrip(option, pool, task, key) {
+		pool := obj.connPools.get(key)
+		if pool == nil {
+			isOk, err = obj.createPool(option, task, key)
+		} else {
+			isOk, err = obj.poolRoundTrip(option, pool, task, key)
+		}
+		if isOk {
+			if err != nil {
+				task.err = err
+			}
 			break
+		}
+		if err != nil {
+			errNum++
 		}
 	}
 	if task.err == nil && option.RequestCallBack != nil {
