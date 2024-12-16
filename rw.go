@@ -13,7 +13,7 @@ type readWriteCloser struct {
 }
 
 func (obj *readWriteCloser) Conn() net.Conn {
-	return obj.conn.rawConn.(net.Conn)
+	return obj.conn.Conn.(net.Conn)
 }
 func (obj *readWriteCloser) Read(p []byte) (n int, err error) {
 	i, err := obj.body.Read(p)
@@ -47,5 +47,5 @@ func (obj *readWriteCloser) CloseConn() {
 
 // force close conn
 func (obj *readWriteCloser) ForceCloseConn() {
-	obj.conn.rawConn.CloseWithError(errConnectionForceClosed)
+	obj.conn.CloseWithError(errConnectionForceClosed)
 }

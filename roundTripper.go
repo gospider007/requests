@@ -108,7 +108,7 @@ func (obj *roundTripper) http3Dial(option *RequestOption, req *http.Request) (co
 		return
 	}
 	conn = obj.newConnecotr()
-	conn.rawConn = http3.NewClient(netConn, func() {
+	conn.Conn = http3.NewClient(netConn, func() {
 		conn.forceCnl(errors.New("http3 client close"))
 	})
 	return
@@ -123,19 +123,13 @@ func (obj *roundTripper) ghttp3Dial(option *RequestOption, req *http.Request) (c
 		return
 	}
 	conn = obj.newConnecotr()
-	conn.rawConn = http3.NewUClient(netConn, func() {
+	conn.Conn = http3.NewUClient(netConn, func() {
 		conn.forceCnl(errors.New("http3 client close"))
 	})
 	return
 }
 
 func (obj *roundTripper) dial(option *RequestOption, req *http.Request) (conn *connecotr, err error) {
-	var netConn net.Conn
-	defer func() {
-		if err != nil && netConn != nil {
-			netConn.Close()
-		}
-	}()
 	if option.H3 {
 		if option.Ja3Spec.IsSet() {
 			return obj.ghttp3Dial(option, req)
@@ -143,100 +137,126 @@ func (obj *roundTripper) dial(option *RequestOption, req *http.Request) (conn *c
 			return obj.http3Dial(option, req)
 		}
 	}
-	var proxys []*url.URL
-	if !option.DisProxy {
-		if option.proxy != nil {
-			proxys = []*url.URL{cloneUrl(option.proxy)}
-		}
-		if len(proxys) == 0 && len(option.proxys) > 0 {
-			proxys = make([]*url.URL, len(option.proxys))
-			for i, proxy := range option.proxys {
-				proxys[i] = cloneUrl(proxy)
-			}
-		}
-		if len(proxys) == 0 && obj.getProxy != nil {
-			proxyStr, err := obj.getProxy(req.Context(), req.URL)
-			if err != nil {
-				return conn, err
-			}
-			proxy, err := gtls.VerifyProxy(proxyStr)
-			if err != nil {
-				return conn, err
-			}
-			proxys = []*url.URL{proxy}
-		}
-		if len(proxys) == 0 && obj.getProxys != nil {
-			proxyStrs, err := obj.getProxys(req.Context(), req.URL)
-			if err != nil {
-				return conn, err
-			}
-			if l := len(proxyStrs); l > 0 {
-				proxys = make([]*url.URL, l)
-				for i, proxyStr := range proxyStrs {
-					proxy, err := gtls.VerifyProxy(proxyStr)
-					if err != nil {
-						return conn, err
-					}
-					proxys[i] = proxy
-				}
-			}
-		}
+	proxys, err := obj.initProxys(option, req)
+	if err != nil {
+		return nil, err
 	}
-	host := getHost(req)
+	var netConn net.Conn
 	if len(proxys) > 0 {
 		netConn, err = obj.dialer.DialProxyContext(req.Context(), option, "tcp", option.TlsConfig.Clone(), append(proxys, cloneUrl(req.URL))...)
 	} else {
 		netConn, err = obj.dialer.DialContext(req.Context(), option, "tcp", getAddr(req.URL))
 	}
+	defer func() {
+		if err != nil && netConn != nil {
+			netConn.Close()
+		}
+	}()
 	if err != nil {
-		return conn, err
+		return nil, err
 	}
 	var h2 bool
 	if req.URL.Scheme == "https" {
-		ctx, cnl := context.WithTimeout(req.Context(), option.TlsHandshakeTimeout)
-		defer cnl()
-		if option.Ja3Spec.IsSet() {
-			if tlsConn, err := obj.dialer.addJa3Tls(ctx, netConn, host, option.ForceHttp1, option.Ja3Spec, option.UtlsConfig.Clone()); err != nil {
-				return conn, tools.WrapError(err, "add ja3 tls error")
-			} else {
-				h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
-				netConn = tlsConn
-			}
-		} else {
-			if tlsConn, err := obj.dialer.addTls(ctx, netConn, host, option.ForceHttp1, option.TlsConfig.Clone()); err != nil {
-				return conn, tools.WrapError(err, "add tls error")
-			} else {
-				h2 = tlsConn.ConnectionState().NegotiatedProtocol == "h2"
-				netConn = tlsConn
-			}
-		}
+		netConn, h2, err = obj.dialAddTls(option, req, netConn)
 		if option.Logger != nil {
 			option.Logger(Log{
 				Id:   option.requestId,
 				Time: time.Now(),
 				Type: LogType_TLSHandshake,
-				Msg:  host,
+				Msg:  getHost(req),
 			})
+		}
+		if err != nil {
+			return nil, err
 		}
 	}
 	conne := obj.newConnecotr()
 	conne.proxys = proxys
+	conne.c = netConn
+	err = obj.dialConnecotr(option, req, conne, h2)
+	if err != nil {
+		return nil, err
+	}
+	return conne, err
+}
+func (obj *roundTripper) dialConnecotr(option *RequestOption, req *http.Request, conne *connecotr, h2 bool) (err error) {
 	if h2 {
 		if option.H2Ja3Spec.OrderHeaders != nil {
 			option.OrderHeaders = option.H2Ja3Spec.OrderHeaders
 		}
-		if conne.rawConn, err = http2.NewClientConn(func() {
+		if conne.Conn, err = http2.NewClientConn(req.Context(), conne.c, option.H2Ja3Spec, func() {
 			conne.forceCnl(errors.New("http2 client close"))
-		}, netConn, option.H2Ja3Spec); err != nil {
-			return conne, err
+		}); err != nil {
+			return err
 		}
 	} else {
-		conne.rawConn = newConn(conne.forceCtx, netConn, func() {
+		conne.Conn = newConn(conne.forceCtx, conne.c, func() {
 			conne.forceCnl(errors.New("http1 client close"))
 		})
 	}
-	return conne, err
+	return err
 }
+func (obj *roundTripper) dialAddTls(option *RequestOption, req *http.Request, netConn net.Conn) (net.Conn, bool, error) {
+	ctx, cnl := context.WithTimeout(req.Context(), option.TlsHandshakeTimeout)
+	defer cnl()
+	if option.Ja3Spec.IsSet() {
+		if tlsConn, err := obj.dialer.addJa3Tls(ctx, netConn, getHost(req), option.ForceHttp1, option.Ja3Spec, option.UtlsConfig.Clone()); err != nil {
+			return tlsConn, false, tools.WrapError(err, "add ja3 tls error")
+		} else {
+			return tlsConn, tlsConn.ConnectionState().NegotiatedProtocol == "h2", nil
+		}
+	} else {
+		if tlsConn, err := obj.dialer.addTls(ctx, netConn, getHost(req), option.ForceHttp1, option.TlsConfig.Clone()); err != nil {
+			return tlsConn, false, tools.WrapError(err, "add tls error")
+		} else {
+			return tlsConn, tlsConn.ConnectionState().NegotiatedProtocol == "h2", nil
+		}
+	}
+}
+func (obj *roundTripper) initProxys(option *RequestOption, req *http.Request) ([]*url.URL, error) {
+	var proxys []*url.URL
+	if option.DisProxy {
+		return nil, nil
+	}
+	if option.proxy != nil {
+		proxys = []*url.URL{cloneUrl(option.proxy)}
+	}
+	if len(proxys) == 0 && len(option.proxys) > 0 {
+		proxys = make([]*url.URL, len(option.proxys))
+		for i, proxy := range option.proxys {
+			proxys[i] = cloneUrl(proxy)
+		}
+	}
+	if len(proxys) == 0 && obj.getProxy != nil {
+		proxyStr, err := obj.getProxy(req.Context(), req.URL)
+		if err != nil {
+			return proxys, err
+		}
+		proxy, err := gtls.VerifyProxy(proxyStr)
+		if err != nil {
+			return proxys, err
+		}
+		proxys = []*url.URL{proxy}
+	}
+	if len(proxys) == 0 && obj.getProxys != nil {
+		proxyStrs, err := obj.getProxys(req.Context(), req.URL)
+		if err != nil {
+			return proxys, err
+		}
+		if l := len(proxyStrs); l > 0 {
+			proxys = make([]*url.URL, l)
+			for i, proxyStr := range proxyStrs {
+				proxy, err := gtls.VerifyProxy(proxyStr)
+				if err != nil {
+					return proxys, err
+				}
+				proxys[i] = proxy
+			}
+		}
+	}
+	return proxys, nil
+}
+
 func (obj *roundTripper) setGetProxy(getProxy func(ctx context.Context, url *url.URL) (string, error)) {
 	obj.getProxy = getProxy
 }
@@ -264,17 +284,7 @@ func (obj *roundTripper) poolRoundTrip(option *RequestOption, pool *connPool, ta
 
 func (obj *roundTripper) createPool(option *RequestOption, task *reqTask, key string) (isOk bool, err error) {
 	option.isNewConn = true
-	var conn *connecotr
-	done := make(chan struct{})
-	go func() {
-		conn, err = obj.dial(option, task.req)
-		close(done)
-	}()
-	select {
-	case <-obj.ctx.Done():
-		return true, obj.ctx.Err()
-	case <-done:
-	}
+	conn, err := obj.dial(option, task.req)
 	if err != nil {
 		if task.option.ErrCallBack != nil {
 			if err2 := task.option.ErrCallBack(task.req.Context(), task.option, nil, err); err2 != nil {
@@ -329,6 +339,11 @@ func (obj *roundTripper) RoundTrip(req *http.Request) (response *http.Response, 
 	var errNum int
 	var isOk bool
 	for {
+		select {
+		case <-req.Context().Done():
+			return nil, context.Cause(req.Context())
+		default:
+		}
 		if errNum >= maxRetry {
 			task.err = fmt.Errorf("roundTrip retry %d times", maxRetry)
 			break

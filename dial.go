@@ -225,29 +225,38 @@ func (obj *DialClient) verifyProxyToRemote(ctx context.Context, option *RequestO
 			})
 		}
 	}
-	switch proxyUrl.Scheme {
-	case "http", "https":
-		err = obj.clientVerifyHttps(ctx, conn, proxyUrl, remoteUrl)
-		if option.Logger != nil {
-			option.Logger(Log{
-				Id:   option.requestId,
-				Time: time.Now(),
-				Type: LogType_ProxyConnectRemote,
-				Msg:  remoteUrl.String(),
-			})
+	done := make(chan struct{})
+	go func() {
+		switch proxyUrl.Scheme {
+		case "http", "https":
+			err = obj.clientVerifyHttps(ctx, conn, proxyUrl, remoteUrl)
+			if option.Logger != nil {
+				option.Logger(Log{
+					Id:   option.requestId,
+					Time: time.Now(),
+					Type: LogType_ProxyConnectRemote,
+					Msg:  remoteUrl.String(),
+				})
+			}
+		case "socks5":
+			err = obj.clientVerifySocks5(conn, proxyUrl, remoteUrl)
+			if option.Logger != nil {
+				option.Logger(Log{
+					Id:   option.requestId,
+					Time: time.Now(),
+					Type: LogType_ProxyTCPConnect,
+					Msg:  remoteUrl.String(),
+				})
+			}
 		}
-	case "socks5":
-		err = obj.socks5ProxyWithConn(ctx, conn, proxyUrl, remoteUrl)
-		if option.Logger != nil {
-			option.Logger(Log{
-				Id:   option.requestId,
-				Time: time.Now(),
-				Type: LogType_ProxyTCPConnect,
-				Msg:  remoteUrl.String(),
-			})
-		}
+		close(done)
+	}()
+	select {
+	case <-ctx.Done():
+		return conn, context.Cause(ctx)
+	case <-done:
+		return conn, err
 	}
-	return conn, err
 }
 func (obj *DialClient) loadHost(host string) (string, bool) {
 	msgDataAny, ok := obj.dnsIpData.Load(host)
@@ -496,22 +505,6 @@ func (obj *DialClient) Socks5Proxy(ctx context.Context, ctxData *RequestOption, 
 	select {
 	case <-ctx.Done():
 		return conn, context.Cause(ctx)
-	case <-didVerify:
-		return
-	}
-}
-func (obj *DialClient) socks5ProxyWithConn(ctx context.Context, conn net.Conn, proxyUrl *url.URL, remoteUrl *url.URL) (err error) {
-	didVerify := make(chan struct{})
-	go func() {
-		if err = obj.clientVerifySocks5(conn, proxyUrl, remoteUrl); err != nil {
-			conn.Close()
-		}
-		close(didVerify)
-	}()
-	select {
-	case <-ctx.Done():
-		conn.Close()
-		return context.Cause(ctx)
 	case <-didVerify:
 		return
 	}

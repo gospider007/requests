@@ -4,17 +4,17 @@ go 1.23.0
 
 require (
 	github.com/gospider007/bar v0.0.0-20241205091858-06f3c7e16dd9
-	github.com/gospider007/bs4 v0.0.0-20241205092056-32204f68d82e
-	github.com/gospider007/gson v0.0.0-20240912023741-2238f9748e4a
-	github.com/gospider007/gtls v0.0.0-20240527084326-e580531eb89e
-	github.com/gospider007/http2 v0.0.0-20241215124211-46ad3fc8e608
+	github.com/gospider007/bs4 v0.0.0-20241216122612-aa3f29179e6f
+	github.com/gospider007/gson v0.0.0-20241216122450-fb66d0ba2a07
+	github.com/gospider007/gtls v0.0.0-20241216053748-dc1a232bb017
+	github.com/gospider007/http2 v0.0.0-20241216122734-aa1047df028c
 	github.com/gospider007/http3 v0.0.0-20241215120136-980caa047c47
-	github.com/gospider007/ja3 v0.0.0-20240620005139-f0602f169903
+	github.com/gospider007/ja3 v0.0.0-20241216123149-83352be79439
 	github.com/gospider007/re v0.0.0-20240227100911-e27255e48eff
 	github.com/gospider007/tools v0.0.0-20241120013952-ff42051bfc9f
-	github.com/gospider007/websocket v0.0.0-20241205004859-e11571a81def
+	github.com/gospider007/websocket v0.0.0-20241216130619-89829336d9a6
 	github.com/refraction-networking/utls v1.6.7
-	golang.org/x/exp v0.0.0-20241210194714-1829a127f884
+	golang.org/x/exp v0.0.0-20241215155358-4a5509556b9e
 	golang.org/x/net v0.32.0
 )
 
@@ -46,7 +46,7 @@ require (
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/libdns/libdns v0.2.2 // indirect
 	github.com/mholt/acmez/v2 v2.0.3 // indirect
-	github.com/mholt/archives v0.0.0-20241207175349-5e373c52f8aa // indirect
+	github.com/mholt/archives v0.0.0-20241216060121-23e0af8fe73d // indirect
 	github.com/miekg/dns v1.1.62 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
@@ -61,6 +61,7 @@ require (
 	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/ulikunitz/xz v0.5.12 // indirect
 	github.com/zeebo/blake3 v0.2.4 // indirect
 	go.mongodb.org/mongo-driver v1.17.1 // indirect

@@ -73,6 +73,7 @@ func (obj *conn) DoRequest(req *http.Request, orderHeaders []string) (*http.Resp
 }
 func (obj *conn) run() (err error) {
 	_, err = io.Copy(obj.pw, obj.conn)
+
 	return obj.CloseWithError(err)
 }
 func (obj *conn) Read(b []byte) (i int, err error) {
@@ -107,9 +108,9 @@ type connecotr struct {
 	bodyCtx context.Context //body close
 	bodyCnl context.CancelCauseFunc
 
-	rawConn Conn
-	proxys  []*url.URL
-	// inPool  bool
+	Conn   Conn
+	c      net.Conn
+	proxys []*url.URL
 }
 
 func (obj *connecotr) withCancel(forceCtx context.Context, safeCtx context.Context) {
@@ -118,7 +119,14 @@ func (obj *connecotr) withCancel(forceCtx context.Context, safeCtx context.Conte
 	obj.safeCtx, obj.safeCnl = context.WithCancelCause(safeCtx)
 }
 func (obj *connecotr) Close() error {
-	return obj.rawConn.CloseWithError(errors.New("connecotr Close close"))
+	return obj.CloseWithError(errors.New("connecotr Close close"))
+}
+func (obj *connecotr) CloseWithError(err error) error {
+	err = obj.Conn.CloseWithError(err)
+	if obj.c != nil {
+		return obj.c.Close()
+	}
+	return err
 }
 
 func (obj *connecotr) wrapBody(task *reqTask) {
@@ -129,7 +137,7 @@ func (obj *connecotr) wrapBody(task *reqTask) {
 	task.res.Body = body
 }
 func (obj *connecotr) httpReq(task *reqTask, done chan struct{}) {
-	if task.res, task.err = obj.rawConn.DoRequest(task.req, task.option.OrderHeaders); task.res != nil && task.err == nil {
+	if task.res, task.err = obj.Conn.DoRequest(task.req, task.option.OrderHeaders); task.res != nil && task.err == nil {
 		obj.wrapBody(task)
 	} else if task.err != nil {
 		task.err = tools.WrapError(task.err, "http1 roundTrip error")
@@ -147,7 +155,7 @@ func (obj *connecotr) taskMain(task *reqTask) (retry bool) {
 		}
 		if retry {
 			task.err = nil
-			obj.rawConn.CloseWithError(errors.New("taskMain retry close"))
+			obj.CloseWithError(errors.New("taskMain retry close"))
 			if task.res != nil && task.res.Body != nil {
 				task.res.Body.Close()
 			}
@@ -166,7 +174,7 @@ func (obj *connecotr) taskMain(task *reqTask) (retry bool) {
 				}
 			}
 			if task.err != nil {
-				obj.rawConn.CloseWithError(task.err)
+				obj.CloseWithError(task.err)
 				if task.res != nil && task.res.Body != nil {
 					task.res.Body.Close()
 				}
@@ -275,7 +283,7 @@ func (obj *connPool) notice(task *reqTask) {
 func (obj *connPool) rwMain(conn *connecotr) {
 	conn.withCancel(obj.forceCtx, obj.safeCtx)
 	defer func() {
-		conn.rawConn.CloseWithError(errors.New("connPool rwMain close"))
+		conn.CloseWithError(errors.New("connPool rwMain close"))
 		obj.total.Add(-1)
 		if obj.total.Load() <= 0 {
 			obj.safeClose()
