@@ -115,8 +115,8 @@ github.com/gospider007/kinds v0.0.0-20240929092451-8f867acde255 h1:X+AM/mgmh/Efy
 github.com/gospider007/kinds v0.0.0-20240929092451-8f867acde255/go.mod h1:yZx7Zfp1I4P6CO3TcDyDY5SuXQYr0bZjzT9zG0XrJAI=
 github.com/gospider007/re v0.0.0-20240227100911-e27255e48eff h1:tiTX2nKAnHZ45JacB/cOf1p4pv5+gw4s1/iGX0ikF0E=
 github.com/gospider007/re v0.0.0-20240227100911-e27255e48eff/go.mod h1:X58uk0/F3mVskuQOZng0ZKJiAt3ETn0wxuLN//rVZrE=
-github.com/gospider007/tools v0.0.0-20241120013952-ff42051bfc9f h1:nIUWpSjqtNcDu75oGA2E6NtIIHNOAMhY0qg+U9NJDrE=
-github.com/gospider007/tools v0.0.0-20241120013952-ff42051bfc9f/go.mod h1:mAvRYlxXzlp7LU2iyhhbB+OSXiq6Nu7VdxV4m1pM20A=
+github.com/gospider007/tools v0.0.0-20241216141313-4a832f55a843 h1:Q5judZjpY0p9Qui/ovk2vpvunc1wGkk0wgc8ApbTi3U=
+github.com/gospider007/tools v0.0.0-20241216141313-4a832f55a843/go.mod h1:ADvKi8S7EkQleFhauAIzW5xnYVU9sKDSLpZ8mSo3yE4=
 github.com/gospider007/websocket v0.0.0-20241216130619-89829336d9a6 h1:GlEpnVq3W5SbDUGydFnQUavyZeNEXGWz08XsMRokNjs=
 github.com/gospider007/websocket v0.0.0-20241216130619-89829336d9a6/go.mod h1:7Q66Huzk5NiXzJXSlUG41uWSSjZMDGXljjWoSVDz3kc=
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=

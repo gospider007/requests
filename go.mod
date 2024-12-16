@@ -11,7 +11,7 @@ require (
 	github.com/gospider007/http3 v0.0.0-20241215120136-980caa047c47
 	github.com/gospider007/ja3 v0.0.0-20241216123149-83352be79439
 	github.com/gospider007/re v0.0.0-20240227100911-e27255e48eff
-	github.com/gospider007/tools v0.0.0-20241120013952-ff42051bfc9f
+	github.com/gospider007/tools v0.0.0-20241216141313-4a832f55a843
 	github.com/gospider007/websocket v0.0.0-20241216130619-89829336d9a6
 	github.com/refraction-networking/utls v1.6.7
 	golang.org/x/exp v0.0.0-20241215155358-4a5509556b9e

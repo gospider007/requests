@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
@@ -14,7 +15,6 @@ import (
 
 	"github.com/gospider007/gson"
 	"github.com/gospider007/tools"
-	"golang.org/x/exp/maps"
 )
 
 const (
@@ -333,7 +333,10 @@ mapL:
 	case map[string]any:
 		orderMap := NewOrderMap()
 		orderMap.data = value
-		orderMap.keys = maps.Keys(value)
+		orderMap.keys = make([]string, len(value))
+		for key := range maps.Keys(value) {
+			orderMap.keys = append(orderMap.keys, key)
+		}
 		return nil, orderMap, nil, nil
 	}
 	if val, err = gson.Decode(val); err != nil {

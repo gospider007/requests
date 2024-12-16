@@ -495,11 +495,14 @@ func (obj *DialClient) Socks5Proxy(ctx context.Context, ctxData *RequestOption, 
 	if conn, err = obj.DialContext(ctx, ctxData, network, net.JoinHostPort(proxyUrl.Hostname(), proxyUrl.Port())); err != nil {
 		return
 	}
-	didVerify := make(chan struct{})
-	go func() {
-		if err = obj.clientVerifySocks5(conn, proxyUrl, remoteUrl); err != nil {
+	defer func() {
+		if err != nil && conn != nil {
 			conn.Close()
 		}
+	}()
+	didVerify := make(chan struct{})
+	go func() {
+		err = obj.clientVerifySocks5(conn, proxyUrl, remoteUrl)
 		close(didVerify)
 	}()
 	select {
