@@ -70,6 +70,11 @@ type ClientOption struct {
 	Timeout               time.Duration                                                                         //request timeout
 	ResponseHeaderTimeout time.Duration                                                                         //ResponseHeaderTimeout ,default:300
 	TlsHandshakeTimeout   time.Duration                                                                         //tls timeout,default:15
+	UserAgent             string                                                                                //headers User-Agent value
+	//other option
+	GetProxy    func(ctx context.Context, url *url.URL) (string, error)   //proxy callback:support https,http,socks5 proxy
+	GetProxys   func(ctx context.Context, url *url.URL) ([]string, error) //proxys callback:support https,http,socks5 proxy
+	GetAddrType func(host string) gtls.AddrType
 
 	//network card ip
 	DialTimeout time.Duration //dial tcp timeout,default:15
@@ -80,12 +85,6 @@ type ClientOption struct {
 	Jar         Jar           //custom cookies
 	TlsConfig   *tls.Config
 	UtlsConfig  *utls.Config
-
-	//other option
-	UserAgent   string                                                    //headers User-Agent value
-	GetProxy    func(ctx context.Context, url *url.URL) (string, error)   //proxy callback:support https,http,socks5 proxy
-	GetProxys   func(ctx context.Context, url *url.URL) ([]string, error) //proxys callback:support https,http,socks5 proxy
-	GetAddrType func(host string) gtls.AddrType
 }
 
 // Options for sending requests
@@ -114,6 +113,11 @@ type RequestOption struct {
 	Timeout               time.Duration //request timeout
 	ResponseHeaderTimeout time.Duration //ResponseHeaderTimeout ,default:300
 	TlsHandshakeTimeout   time.Duration
+	UserAgent             string //headers User-Agent value
+
+	GetProxy    func(ctx context.Context, url *url.URL) (string, error)   //proxy callback:support https,http,socks5 proxy
+	GetProxys   func(ctx context.Context, url *url.URL) ([]string, error) //proxys callback:support https,http,socks5 proxy
+	GetAddrType func(host string) gtls.AddrType
 
 	//network card ip
 	DialTimeout time.Duration //dial tcp timeout,default:15
@@ -131,7 +135,6 @@ type RequestOption struct {
 	Host        string
 	Referer     string //set headers referer value
 	ContentType string //headers Content-Type value
-	UserAgent   string //headers User-Agent value
 	Cookies     any    // cookies,support :json,map,str，http.Header
 
 	Params any //url params，join url query,json,map
@@ -141,9 +144,10 @@ type RequestOption struct {
 	Text   any //send text/xml,support: io.Reader, string,[]bytes,json,map
 	Body   any //not setting context-type,support io.Reader, string,[]bytes,json,map
 
-	Stream    bool             //disable auto read
-	WsOption  websocket.Option //websocket option
-	DisProxy  bool             //force disable proxy
+	Stream   bool             //disable auto read
+	WsOption websocket.Option //websocket option
+	DisProxy bool             //force disable proxy
+
 	once      bool
 	client    *Client
 	requestId string
@@ -390,6 +394,15 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	}
 	if option.DisProxy {
 		option.Proxy = ""
+	}
+	if option.GetProxy == nil {
+		option.GetProxy = obj.option.GetProxy
+	}
+	if option.GetProxys == nil {
+		option.GetProxys = obj.option.GetProxys
+	}
+	if option.GetAddrType == nil {
+		option.GetAddrType = obj.option.GetAddrType
 	}
 	return option
 }

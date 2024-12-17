@@ -76,7 +76,7 @@ func (obj *Client) SetProxy(proxyUrl string) (err error) {
 
 // Modify the proxy method of the client
 func (obj *Client) SetGetProxy(getProxy func(ctx context.Context, url *url.URL) (string, error)) {
-	obj.transport.setGetProxy(getProxy)
+	obj.option.GetProxy = getProxy
 }
 
 // Modifying the client's proxy
@@ -93,7 +93,7 @@ func (obj *Client) SetProxys(proxyUrls []string) (err error) {
 
 // Modify the proxy method of the client
 func (obj *Client) SetGetProxys(getProxys func(ctx context.Context, url *url.URL) ([]string, error)) {
-	obj.transport.setGetProxys(getProxys)
+	obj.option.GetProxys = getProxys
 }
 
 // Close idle connections. If the connection is in use, wait until it ends before closing

@@ -280,7 +280,7 @@ func (obj *connPool) notice(task *reqTask) {
 	}
 }
 
-func (obj *connPool) rwMain(conn *connecotr) {
+func (obj *connPool) rwMain(done chan struct{}, conn *connecotr) {
 	conn.withCancel(obj.forceCtx, obj.safeCtx)
 	defer func() {
 		conn.CloseWithError(errors.New("connPool rwMain close"))
@@ -289,6 +289,7 @@ func (obj *connPool) rwMain(conn *connecotr) {
 			obj.safeClose()
 		}
 	}()
+	close(done)
 	for {
 		select {
 		case <-conn.safeCtx.Done(): //safe close conn
