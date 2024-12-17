@@ -140,7 +140,7 @@ func (obj *connecotr) httpReq(task *reqTask, done chan struct{}) {
 	if task.res, task.err = obj.Conn.DoRequest(task.req, task.option.OrderHeaders); task.res != nil && task.err == nil {
 		obj.wrapBody(task)
 	} else if task.err != nil {
-		task.err = tools.WrapError(task.err, "http1 roundTrip error")
+		task.err = tools.WrapError(task.err, "roundTrip error")
 	}
 	close(done)
 }

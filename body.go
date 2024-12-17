@@ -334,8 +334,10 @@ mapL:
 		orderMap := NewOrderMap()
 		orderMap.data = value
 		orderMap.keys = make([]string, len(value))
+		i := 0
 		for key := range maps.Keys(value) {
-			orderMap.keys = append(orderMap.keys, key)
+			orderMap.keys[i] = key
+			i++
 		}
 		return nil, orderMap, nil, nil
 	}
