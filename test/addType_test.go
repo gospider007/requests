@@ -9,7 +9,9 @@ import (
 
 func TestAddType(t *testing.T) {
 	session, _ := requests.NewClient(nil, requests.ClientOption{
-		AddrType: gtls.Ipv4, // Prioritize parsing IPv4 addresses
+		DialOption: requests.DialOption{
+			AddrType: gtls.Ipv4,
+		},
 	})
 	resp, err := session.Get(nil, "https://test.ipw.cn")
 	if err != nil {

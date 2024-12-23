@@ -45,26 +45,18 @@ type roundTripper struct {
 	ctx       context.Context
 	cnl       context.CancelFunc
 	connPools *connPools
-	dialer    *DialClient
+	dialer    *Dialer
 }
 
-func newRoundTripper(preCtx context.Context, option ClientOption) *roundTripper {
+func newRoundTripper(preCtx context.Context) *roundTripper {
 	if preCtx == nil {
 		preCtx = context.TODO()
 	}
 	ctx, cnl := context.WithCancel(preCtx)
-	dialClient := NewDail(DialOption{
-		DialTimeout: option.DialTimeout,
-		Dns:         option.Dns,
-		KeepAlive:   option.KeepAlive,
-		LocalAddr:   option.LocalAddr,
-		AddrType:    option.AddrType,
-		GetAddrType: option.GetAddrType,
-	})
 	return &roundTripper{
 		ctx:       ctx,
 		cnl:       cnl,
-		dialer:    dialClient,
+		dialer:    &Dialer{},
 		connPools: newConnPools(),
 	}
 }
@@ -161,7 +153,7 @@ func (obj *roundTripper) dial(option *RequestOption, req *http.Request) (conn *c
 				Id:   option.requestId,
 				Time: time.Now(),
 				Type: LogType_TLSHandshake,
-				Msg:  getHost(req),
+				Msg:  fmt.Sprintf("host:%s,  h2:%t", getHost(req), h2),
 			})
 		}
 		if err != nil {

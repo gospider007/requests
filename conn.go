@@ -166,6 +166,8 @@ func (obj *connecotr) taskMain(task *reqTask) (retry bool) {
 				case <-obj.bodyCtx.Done(): //wait body close
 					if task.err = context.Cause(obj.bodyCtx); !errors.Is(task.err, errGospiderBodyClose) {
 						task.err = tools.WrapError(task.err, "bodyCtx  close")
+					} else {
+						task.err = nil
 					}
 				case <-task.req.Context().Done(): //wait request close
 					task.err = tools.WrapError(context.Cause(task.req.Context()), "requestCtx close")

@@ -35,7 +35,7 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	}
 	result := new(Client)
 	result.ctx, result.cnl = context.WithCancel(preCtx)
-	result.transport = newRoundTripper(result.ctx, option)
+	result.transport = newRoundTripper(result.ctx)
 	result.option = option
 	if result.option.TlsConfig == nil {
 		result.option.TlsConfig = &tls.Config{

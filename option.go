@@ -4,12 +4,10 @@ import (
 	"context"
 	"crypto/tls"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"time"
 
-	"github.com/gospider007/gtls"
 	"github.com/gospider007/ja3"
 	"github.com/gospider007/websocket"
 	utls "github.com/refraction-networking/utls"
@@ -72,19 +70,13 @@ type ClientOption struct {
 	TlsHandshakeTimeout   time.Duration                                                                         //tls timeout,default:15
 	UserAgent             string                                                                                //headers User-Agent value
 	//other option
-	GetProxy    func(ctx context.Context, url *url.URL) (string, error)   //proxy callback:support https,http,socks5 proxy
-	GetProxys   func(ctx context.Context, url *url.URL) ([]string, error) //proxys callback:support https,http,socks5 proxy
-	GetAddrType func(host string) gtls.AddrType
+	GetProxy   func(ctx context.Context, url *url.URL) (string, error)   //proxy callback:support https,http,socks5 proxy
+	GetProxys  func(ctx context.Context, url *url.URL) ([]string, error) //proxys callback:support https,http,socks5 proxy
+	DialOption DialOption
 
-	//network card ip
-	DialTimeout time.Duration //dial tcp timeout,default:15
-	KeepAlive   time.Duration //keepalive,default:30
-	LocalAddr   *net.TCPAddr
-	Dns         *net.UDPAddr  //dns
-	AddrType    gtls.AddrType //dns parse addr type
-	Jar         Jar           //custom cookies
-	TlsConfig   *tls.Config
-	UtlsConfig  *utls.Config
+	Jar        Jar //custom cookies
+	TlsConfig  *tls.Config
+	UtlsConfig *utls.Config
 }
 
 // Options for sending requests
@@ -115,19 +107,14 @@ type RequestOption struct {
 	TlsHandshakeTimeout   time.Duration
 	UserAgent             string //headers User-Agent value
 
-	GetProxy    func(ctx context.Context, url *url.URL) (string, error)   //proxy callback:support https,http,socks5 proxy
-	GetProxys   func(ctx context.Context, url *url.URL) ([]string, error) //proxys callback:support https,http,socks5 proxy
-	GetAddrType func(host string) gtls.AddrType
-
+	GetProxy   func(ctx context.Context, url *url.URL) (string, error)   //proxy callback:support https,http,socks5 proxy
+	GetProxys  func(ctx context.Context, url *url.URL) ([]string, error) //proxys callback:support https,http,socks5 proxy
+	DialOption DialOption
 	//network card ip
-	DialTimeout time.Duration //dial tcp timeout,default:15
-	KeepAlive   time.Duration //keepalive,default:30
-	LocalAddr   *net.TCPAddr
-	Dns         *net.UDPAddr  //dns
-	AddrType    gtls.AddrType //dns parse addr type                                             //tls timeout,default:15
-	Jar         Jar           //custom cookies
-	TlsConfig   *tls.Config
-	UtlsConfig  *utls.Config
+
+	Jar        Jar //custom cookies
+	TlsConfig  *tls.Config
+	UtlsConfig *utls.Config
 
 	// other option
 	Method      string //method
@@ -313,15 +300,6 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	if option.TlsHandshakeTimeout == 0 {
 		option.TlsHandshakeTimeout = obj.option.TlsHandshakeTimeout
 	}
-	if option.DialTimeout == 0 {
-		option.DialTimeout = obj.option.DialTimeout
-	}
-	if option.KeepAlive == 0 {
-		option.KeepAlive = obj.option.KeepAlive
-	}
-	if option.LocalAddr == nil {
-		option.LocalAddr = obj.option.LocalAddr
-	}
 	if option.TlsConfig == nil {
 		option.TlsConfig = obj.option.TlsConfig
 	}
@@ -361,20 +339,23 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	if option.TlsHandshakeTimeout == 0 {
 		option.TlsHandshakeTimeout = obj.option.TlsHandshakeTimeout
 	}
-	if option.DialTimeout == 0 {
-		option.DialTimeout = obj.option.DialTimeout
+	if option.DialOption.DialTimeout == 0 {
+		option.DialOption.DialTimeout = obj.option.DialOption.DialTimeout
 	}
-	if option.KeepAlive == 0 {
-		option.KeepAlive = obj.option.KeepAlive
+	if option.DialOption.KeepAlive == 0 {
+		option.DialOption.KeepAlive = obj.option.DialOption.KeepAlive
 	}
-	if option.LocalAddr == nil {
-		option.LocalAddr = obj.option.LocalAddr
+	if option.DialOption.LocalAddr == nil {
+		option.DialOption.LocalAddr = obj.option.DialOption.LocalAddr
 	}
-	if option.Dns == nil {
-		option.Dns = obj.option.Dns
+	if option.DialOption.AddrType == 0 {
+		option.DialOption.AddrType = obj.option.DialOption.AddrType
 	}
-	if option.AddrType == 0 {
-		option.AddrType = obj.option.AddrType
+	if option.DialOption.Dns == nil {
+		option.DialOption.Dns = obj.option.DialOption.Dns
+	}
+	if option.DialOption.GetAddrType == nil {
+		option.DialOption.GetAddrType = obj.option.DialOption.GetAddrType
 	}
 	if option.Jar == nil {
 		option.Jar = obj.option.Jar
@@ -401,8 +382,6 @@ func (obj *Client) newRequestOption(option RequestOption) RequestOption {
 	if option.GetProxys == nil {
 		option.GetProxys = obj.option.GetProxys
 	}
-	if option.GetAddrType == nil {
-		option.GetAddrType = obj.option.GetAddrType
-	}
+
 	return option
 }
