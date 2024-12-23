@@ -302,6 +302,9 @@ func (obj *Response) ReadBody() (err error) {
 		} else {
 			_, err = io.Copy(bBody, obj.Body())
 		}
+		if err == io.ErrUnexpectedEOF {
+			err = nil
+		}
 		close(done)
 	}()
 	select {

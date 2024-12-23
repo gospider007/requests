@@ -260,7 +260,7 @@ func (obj *roundTripper) poolRoundTrip(option *RequestOption, pool *connPool, ta
 			if task.err == nil && task.res == nil {
 				task.err = context.Cause(task.ctx)
 			}
-			return true, nil
+			return true, task.err
 		}
 	default:
 		return obj.createPool(option, task, key)
