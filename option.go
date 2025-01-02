@@ -44,6 +44,7 @@ type Log struct {
 
 // Connection Management Options
 type ClientOption struct {
+	RequestOption
 	Logger                func(Log)                                                                             //debuggable
 	H3                    bool                                                                                  //开启http3
 	OrderHeaders          []string                                                                              //order headers

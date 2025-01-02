@@ -35,7 +35,7 @@ func GetRequestOption(ctx context.Context) *RequestOption {
 	if ok {
 		return option
 	}
-	return nil
+	return new(RequestOption)
 }
 
 // sends a GET request and returns the response.

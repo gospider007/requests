@@ -15,6 +15,8 @@ import (
 	"github.com/gospider007/http2"
 	"github.com/gospider007/http3"
 	"github.com/gospider007/tools"
+	"github.com/quic-go/quic-go"
+	uquic "github.com/refraction-networking/uquic"
 )
 
 type reqTask struct {
@@ -89,14 +91,38 @@ func (obj *roundTripper) newConnecotr() *connecotr {
 	return conne
 }
 
-func (obj *roundTripper) http3Dial(option *RequestOption, req *http.Request) (conn *connecotr, err error) {
+func (obj *roundTripper) http3Dial(ctx context.Context, option *RequestOption, proxyUrl *url.URL, remtoeAddress Address) (udpConn net.PacketConn, err error) {
+	if proxyUrl != nil {
+		if proxyUrl.Scheme != "socks5" {
+			err = errors.New("http3 only socks5 proxy supported")
+			return
+		}
+		var proxyAddress Address
+		proxyAddress, err = GetAddressWithUrl(proxyUrl)
+		if err != nil {
+			return nil, err
+		}
+		udpConn, err = obj.dialer.Socks5UdpProxy(ctx, option, proxyAddress, remtoeAddress)
+	} else {
+		udpConn, err = net.ListenUDP("udp", nil)
+	}
+	return
+}
+func (obj *roundTripper) ghttp3Dial(ctx context.Context, option *RequestOption, proxyUrl *url.URL, remoteAddress Address) (conn *connecotr, err error) {
+	udpConn, err := obj.http3Dial(ctx, option, proxyUrl, remoteAddress)
+	if err != nil {
+		return nil, err
+	}
 	tlsConfig := option.TlsConfig.Clone()
 	tlsConfig.NextProtos = []string{http3.NextProtoH3}
-	tlsConfig.ServerName = req.Host
-	netConn, err := http3.Dial(req.Context(), getAddr(req.URL), tlsConfig, nil)
-	if err != nil {
-		return
+	tlsConfig.ServerName = remoteAddress.Host
+	if remoteAddress.IP == nil {
+		remoteAddress.IP, err = obj.dialer.loadHost(ctx, remoteAddress.Name, option)
+		if err != nil {
+			return nil, err
+		}
 	}
+	netConn, err := quic.DialEarly(ctx, udpConn, &net.UDPAddr{IP: remoteAddress.IP, Port: remoteAddress.Port}, tlsConfig, nil)
 	conn = obj.newConnecotr()
 	conn.Conn = http3.NewClient(netConn, func() {
 		conn.forceCnl(errors.New("http3 client close"))
@@ -104,14 +130,21 @@ func (obj *roundTripper) http3Dial(option *RequestOption, req *http.Request) (co
 	return
 }
 
-func (obj *roundTripper) ghttp3Dial(option *RequestOption, req *http.Request) (conn *connecotr, err error) {
+func (obj *roundTripper) uhttp3Dial(ctx context.Context, option *RequestOption, proxyUrl *url.URL, remoteAddress Address) (conn *connecotr, err error) {
+	udpConn, err := obj.http3Dial(ctx, option, proxyUrl, remoteAddress)
+	if err != nil {
+		return nil, err
+	}
 	tlsConfig := option.UtlsConfig.Clone()
 	tlsConfig.NextProtos = []string{http3.NextProtoH3}
-	tlsConfig.ServerName = req.Host
-	netConn, err := http3.UDial(req.Context(), getAddr(req.URL), tlsConfig, nil)
-	if err != nil {
-		return
+	tlsConfig.ServerName = remoteAddress.Host
+	if remoteAddress.IP == nil {
+		remoteAddress.IP, err = obj.dialer.loadHost(ctx, remoteAddress.Name, option)
+		if err != nil {
+			return nil, err
+		}
 	}
+	netConn, err := uquic.DialEarly(ctx, udpConn, remoteAddress, tlsConfig, nil)
 	conn = obj.newConnecotr()
 	conn.Conn = http3.NewUClient(netConn, func() {
 		conn.forceCnl(errors.New("http3 client close"))
@@ -120,22 +153,35 @@ func (obj *roundTripper) ghttp3Dial(option *RequestOption, req *http.Request) (c
 }
 
 func (obj *roundTripper) dial(option *RequestOption, req *http.Request) (conn *connecotr, err error) {
-	if option.H3 {
-		if option.Ja3Spec.IsSet() {
-			return obj.ghttp3Dial(option, req)
-		} else {
-			return obj.http3Dial(option, req)
-		}
-	}
 	proxys, err := obj.initProxys(option, req)
 	if err != nil {
 		return nil, err
+	}
+	if option.H3 {
+		var proxyUrl *url.URL
+		if len(proxys) > 0 {
+			proxyUrl = proxys[0]
+		}
+		remoteAddress, err := GetAddressWithUrl(req.URL)
+		if err != nil {
+			return nil, err
+		}
+		if option.Ja3Spec.IsSet() {
+			return obj.uhttp3Dial(req.Context(), option, proxyUrl, remoteAddress)
+		} else {
+			return obj.ghttp3Dial(req.Context(), option, proxyUrl, remoteAddress)
+		}
 	}
 	var netConn net.Conn
 	if len(proxys) > 0 {
 		netConn, err = obj.dialer.DialProxyContext(req.Context(), option, "tcp", option.TlsConfig.Clone(), append(proxys, cloneUrl(req.URL))...)
 	} else {
-		netConn, err = obj.dialer.DialContext(req.Context(), option, "tcp", getAddr(req.URL))
+		var remoteAddress Address
+		remoteAddress, err = GetAddressWithUrl(req.URL)
+		if err != nil {
+			return nil, err
+		}
+		netConn, err = obj.dialer.DialContext(req.Context(), option, "tcp", remoteAddress)
 	}
 	defer func() {
 		if err != nil && netConn != nil {

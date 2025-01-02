@@ -3,15 +3,18 @@ package requests
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/textproto"
 	"net/url"
+	"strconv"
 	"strings"
 	_ "unsafe"
 
+	"github.com/gospider007/gtls"
 	"github.com/gospider007/ja3"
 	"github.com/gospider007/tools"
 	"golang.org/x/exp/slices"
@@ -49,6 +52,60 @@ func getAddr(uurl *url.URL) (addr string) {
 		return fmt.Sprintf("%s:%s", uurl.Host, port)
 	}
 	return uurl.Host
+}
+func GetAddressWithUrl(uurl *url.URL) (addr Address, err error) {
+	if uurl == nil {
+		return Address{}, errors.New("url is nil")
+	}
+	var port int
+	portStr := uurl.Port()
+	if portStr == "" {
+		switch uurl.Scheme {
+		case "http":
+			port = 80
+		case "https":
+			port = 443
+		case "socks5":
+			port = 1080
+		default:
+			return Address{}, errors.New("unknown scheme")
+		}
+	} else {
+		port, err = strconv.Atoi(portStr)
+		if err != nil {
+			return Address{}, err
+		}
+	}
+	ip, _ := gtls.ParseHost(uurl.Hostname())
+	addr = Address{
+		Name: uurl.Hostname(),
+		Host: uurl.Host,
+		IP:   ip,
+		Port: port,
+	}
+	if uurl.User != nil {
+		addr.User = uurl.User.Username()
+		addr.Password, _ = uurl.User.Password()
+	}
+	return
+}
+func GetAddressWithAddr(addrS string) (addr Address, err error) {
+	host, port, err := net.SplitHostPort(addrS)
+	if err != nil {
+		return Address{}, err
+	}
+	ip, _ := gtls.ParseHost(host)
+	portInt, err := strconv.Atoi(port)
+	if err != nil {
+		return Address{}, err
+	}
+	addr = Address{
+		Name: host,
+		IP:   ip,
+		Host: addrS,
+		Port: portInt,
+	}
+	return
 }
 func cloneUrl(u *url.URL) *url.URL {
 	if u == nil {
