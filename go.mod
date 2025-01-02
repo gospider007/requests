@@ -6,9 +6,9 @@ require (
 	github.com/gospider007/bar v0.0.0-20241205091858-06f3c7e16dd9
 	github.com/gospider007/bs4 v0.0.0-20241216122612-aa3f29179e6f
 	github.com/gospider007/gson v0.0.0-20241216122450-fb66d0ba2a07
-	github.com/gospider007/gtls v0.0.0-20241216053748-dc1a232bb017
+	github.com/gospider007/gtls v0.0.0-20250102091721-c5d429cea809
 	github.com/gospider007/http2 v0.0.0-20241222151842-034aa1d46e9d
-	github.com/gospider007/http3 v0.0.0-20241215120136-980caa047c47
+	github.com/gospider007/http3 v0.0.0-20250102093206-281d03368c89
 	github.com/gospider007/ja3 v0.0.0-20241216123149-83352be79439
 	github.com/gospider007/proxy v0.0.0-20241224001512-8d6d724b8ca3
 	github.com/gospider007/re v0.0.0-20241216142712-efbef8d55ea2
