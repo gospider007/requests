@@ -8,7 +8,6 @@ import (
 	"iter"
 	"net"
 	"net/http"
-	"net/url"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -110,7 +109,7 @@ type connecotr struct {
 
 	Conn   Conn
 	c      net.Conn
-	proxys []*url.URL
+	proxys []Address
 }
 
 func (obj *connecotr) withCancel(forceCtx context.Context, safeCtx context.Context) {

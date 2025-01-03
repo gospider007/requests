@@ -81,6 +81,7 @@ type Address struct {
 	IP       net.IP
 	Port     int
 	NetWork  string
+	Scheme   string
 }
 
 func (a Address) String() string {
@@ -92,6 +93,9 @@ func (a Address) String() string {
 }
 func (a Address) Network() string {
 	return a.NetWork
+}
+func (a Address) Nil() bool {
+	return a.IP == nil && a.Name == ""
 }
 
 func ReadUdpAddr(r io.Reader) (Address, error) {

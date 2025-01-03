@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"net/url"
 	"time"
 
 	"net/http"
@@ -91,16 +90,11 @@ func (obj *roundTripper) newConnecotr() *connecotr {
 	return conne
 }
 
-func (obj *roundTripper) http3Dial(ctx context.Context, option *RequestOption, proxyUrl *url.URL, remtoeAddress Address) (udpConn net.PacketConn, err error) {
-	if proxyUrl != nil {
-		if proxyUrl.Scheme != "socks5" {
+func (obj *roundTripper) http3Dial(ctx context.Context, option *RequestOption, proxyAddress Address, remtoeAddress Address) (udpConn net.PacketConn, err error) {
+	if !proxyAddress.Nil() {
+		if proxyAddress.Scheme != "socks5" {
 			err = errors.New("http3 only socks5 proxy supported")
 			return
-		}
-		var proxyAddress Address
-		proxyAddress, err = GetAddressWithUrl(proxyUrl)
-		if err != nil {
-			return nil, err
 		}
 		udpConn, err = obj.dialer.Socks5UdpProxy(ctx, option, proxyAddress, remtoeAddress)
 	} else {
@@ -108,8 +102,8 @@ func (obj *roundTripper) http3Dial(ctx context.Context, option *RequestOption, p
 	}
 	return
 }
-func (obj *roundTripper) ghttp3Dial(ctx context.Context, option *RequestOption, proxyUrl *url.URL, remoteAddress Address) (conn *connecotr, err error) {
-	udpConn, err := obj.http3Dial(ctx, option, proxyUrl, remoteAddress)
+func (obj *roundTripper) ghttp3Dial(ctx context.Context, option *RequestOption, proxyAddress Address, remoteAddress Address) (conn *connecotr, err error) {
+	udpConn, err := obj.http3Dial(ctx, option, proxyAddress, remoteAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -130,8 +124,8 @@ func (obj *roundTripper) ghttp3Dial(ctx context.Context, option *RequestOption, 
 	return
 }
 
-func (obj *roundTripper) uhttp3Dial(ctx context.Context, option *RequestOption, proxyUrl *url.URL, remoteAddress Address) (conn *connecotr, err error) {
-	udpConn, err := obj.http3Dial(ctx, option, proxyUrl, remoteAddress)
+func (obj *roundTripper) uhttp3Dial(ctx context.Context, option *RequestOption, proxyAddress Address, remoteAddress Address) (conn *connecotr, err error) {
+	udpConn, err := obj.http3Dial(ctx, option, proxyAddress, remoteAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -157,14 +151,14 @@ func (obj *roundTripper) dial(option *RequestOption, req *http.Request) (conn *c
 	if err != nil {
 		return nil, err
 	}
+	remoteAddress, err := GetAddressWithUrl(req.URL)
+	if err != nil {
+		return nil, err
+	}
 	if option.H3 {
-		var proxyUrl *url.URL
+		var proxyUrl Address
 		if len(proxys) > 0 {
 			proxyUrl = proxys[0]
-		}
-		remoteAddress, err := GetAddressWithUrl(req.URL)
-		if err != nil {
-			return nil, err
 		}
 		if option.Ja3Spec.IsSet() {
 			return obj.uhttp3Dial(req.Context(), option, proxyUrl, remoteAddress)
@@ -174,7 +168,7 @@ func (obj *roundTripper) dial(option *RequestOption, req *http.Request) (conn *c
 	}
 	var netConn net.Conn
 	if len(proxys) > 0 {
-		netConn, err = obj.dialer.DialProxyContext(req.Context(), option, "tcp", option.TlsConfig.Clone(), append(proxys, cloneUrl(req.URL))...)
+		netConn, err = obj.dialer.DialProxyContext(req.Context(), option, "tcp", option.TlsConfig.Clone(), append(proxys, remoteAddress)...)
 	} else {
 		var remoteAddress Address
 		remoteAddress, err = GetAddressWithUrl(req.URL)
@@ -249,18 +243,26 @@ func (obj *roundTripper) dialAddTls(option *RequestOption, req *http.Request, ne
 		}
 	}
 }
-func (obj *roundTripper) initProxys(option *RequestOption, req *http.Request) ([]*url.URL, error) {
-	var proxys []*url.URL
+func (obj *roundTripper) initProxys(option *RequestOption, req *http.Request) ([]Address, error) {
+	var proxys []Address
 	if option.DisProxy {
 		return nil, nil
 	}
 	if option.proxy != nil {
-		proxys = []*url.URL{cloneUrl(option.proxy)}
+		proxyAddress, err := GetAddressWithUrl(option.proxy)
+		if err != nil {
+			return nil, err
+		}
+		proxys = []Address{proxyAddress}
 	}
 	if len(proxys) == 0 && len(option.proxys) > 0 {
-		proxys = make([]*url.URL, len(option.proxys))
+		proxys = make([]Address, len(option.proxys))
 		for i, proxy := range option.proxys {
-			proxys[i] = cloneUrl(proxy)
+			proxyAddress, err := GetAddressWithUrl(proxy)
+			if err != nil {
+				return nil, err
+			}
+			proxys[i] = proxyAddress
 		}
 	}
 	if len(proxys) == 0 && option.GetProxy != nil {
@@ -273,7 +275,11 @@ func (obj *roundTripper) initProxys(option *RequestOption, req *http.Request) ([
 			if err != nil {
 				return proxys, err
 			}
-			proxys = []*url.URL{proxy}
+			proxyAddress, err := GetAddressWithUrl(proxy)
+			if err != nil {
+				return nil, err
+			}
+			proxys = []Address{proxyAddress}
 		}
 	}
 	if len(proxys) == 0 && option.GetProxys != nil {
@@ -282,13 +288,17 @@ func (obj *roundTripper) initProxys(option *RequestOption, req *http.Request) ([
 			return proxys, err
 		}
 		if l := len(proxyStrs); l > 0 {
-			proxys = make([]*url.URL, l)
+			proxys = make([]Address, l)
 			for i, proxyStr := range proxyStrs {
 				proxy, err := gtls.VerifyProxy(proxyStr)
 				if err != nil {
 					return proxys, err
 				}
-				proxys[i] = proxy
+				proxyAddress, err := GetAddressWithUrl(proxy)
+				if err != nil {
+					return nil, err
+				}
+				proxys[i] = proxyAddress
 			}
 		}
 	}

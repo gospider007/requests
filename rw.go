@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io"
 	"net"
-	"net/url"
 )
 
 type readWriteCloser struct {
@@ -22,13 +21,7 @@ func (obj *readWriteCloser) Read(p []byte) (n int, err error) {
 	}
 	return i, err
 }
-func (obj *readWriteCloser) Proxys() []*url.URL {
-	if l := len(obj.conn.proxys); l > 0 {
-		proxys := make([]*url.URL, l)
-		for i, proxy := range obj.conn.proxys {
-			proxys[i] = cloneUrl(proxy)
-		}
-	}
+func (obj *readWriteCloser) Proxys() []Address {
 	return obj.conn.proxys
 }
 

@@ -339,7 +339,7 @@ func (obj *Response) IsNewConn() bool {
 }
 
 // conn proxy
-func (obj *Response) Proxys() []*url.URL {
+func (obj *Response) Proxys() []Address {
 	if obj.rawConn != nil {
 		return obj.rawConn.Proxys()
 	}

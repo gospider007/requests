@@ -57,32 +57,30 @@ func GetAddressWithUrl(uurl *url.URL) (addr Address, err error) {
 	if uurl == nil {
 		return Address{}, errors.New("url is nil")
 	}
-	var port int
+	addr = Address{
+		Name: uurl.Hostname(),
+		Host: uurl.Host,
+	}
 	portStr := uurl.Port()
+	addr.Scheme = uurl.Scheme
 	if portStr == "" {
 		switch uurl.Scheme {
 		case "http":
-			port = 80
+			addr.Port = 80
 		case "https":
-			port = 443
+			addr.Port = 443
 		case "socks5":
-			port = 1080
+			addr.Port = 1080
 		default:
 			return Address{}, errors.New("unknown scheme")
 		}
 	} else {
-		port, err = strconv.Atoi(portStr)
+		addr.Port, err = strconv.Atoi(portStr)
 		if err != nil {
 			return Address{}, err
 		}
 	}
-	ip, _ := gtls.ParseHost(uurl.Hostname())
-	addr = Address{
-		Name: uurl.Hostname(),
-		Host: uurl.Host,
-		IP:   ip,
-		Port: port,
-	}
+	addr.IP, _ = gtls.ParseHost(uurl.Hostname())
 	if uurl.User != nil {
 		addr.User = uurl.User.Username()
 		addr.Password, _ = uurl.User.Password()
