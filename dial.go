@@ -146,44 +146,28 @@ func (obj *Dialer) ProxyDialContext(ctx context.Context, ctxData *RequestOption,
 	return obj.dialContext(ctx, ctxData, network, addr, true)
 }
 
-func (obj *Dialer) DialProxyContext(ctx context.Context, ctxData *RequestOption, network string, proxyTlsConfig *tls.Config, proxyUrls ...Address) (net.Conn, error) {
+func (obj *Dialer) DialProxyContext(ctx context.Context, ctxData *RequestOption, network string, proxyTlsConfig *tls.Config, proxyUrls ...Address) (net.PacketConn, net.Conn, error) {
 	proxyLen := len(proxyUrls)
 	if proxyLen < 2 {
-		return nil, errors.New("proxyUrls is nil")
+		return nil, nil, errors.New("proxyUrls is nil")
 	}
 	var conn net.Conn
 	var err error
+	var packCon net.PacketConn
 	for index := range proxyLen - 1 {
 		oneProxy := proxyUrls[index]
 		remoteUrl := proxyUrls[index+1]
 		if index == 0 {
 			conn, err = obj.dialProxyContext(ctx, ctxData, network, oneProxy)
 			if err != nil {
-				return conn, err
+				return packCon, conn, err
 			}
 		}
-		conn, err = obj.verifyProxyToRemote(ctx, ctxData, conn, proxyTlsConfig, oneProxy, remoteUrl)
+		packCon, conn, err = obj.verifyProxyToRemote(ctx, ctxData, conn, proxyTlsConfig, oneProxy, remoteUrl, index == proxyLen-2)
 	}
-	return conn, err
+	return packCon, conn, err
 }
 
-//	func getProxyAddr(proxyUrl *url.URL) (addr string, err error) {
-//		if proxyUrl.Port() == "" {
-//			switch proxyUrl.Scheme {
-//			case "http":
-//				addr = net.JoinHostPort(proxyUrl.Hostname(), "80")
-//			case "https":
-//				addr = net.JoinHostPort(proxyUrl.Hostname(), "443")
-//			case "socks5":
-//				addr = net.JoinHostPort(proxyUrl.Hostname(), "1080")
-//			default:
-//				return "", errors.New("not support scheme")
-//			}
-//		} else {
-//			addr = net.JoinHostPort(proxyUrl.Hostname(), proxyUrl.Port())
-//		}
-//		return
-//	}
 func (obj *Dialer) dialProxyContext(ctx context.Context, ctxData *RequestOption, network string, proxyUrl Address) (net.Conn, error) {
 	if ctxData == nil {
 		ctxData = &RequestOption{}
@@ -191,11 +175,12 @@ func (obj *Dialer) dialProxyContext(ctx context.Context, ctxData *RequestOption,
 	return obj.ProxyDialContext(ctx, ctxData, network, proxyUrl)
 }
 
-func (obj *Dialer) verifyProxyToRemote(ctx context.Context, option *RequestOption, conn net.Conn, proxyTlsConfig *tls.Config, proxyAddress Address, remoteAddress Address) (net.Conn, error) {
+func (obj *Dialer) verifyProxyToRemote(ctx context.Context, option *RequestOption, conn net.Conn, proxyTlsConfig *tls.Config, proxyAddress Address, remoteAddress Address, isLast bool) (net.PacketConn, net.Conn, error) {
 	var err error
+	var packCon net.PacketConn
 	if proxyAddress.Scheme == "https" {
 		if conn, err = obj.addTls(ctx, conn, proxyAddress.Host, true, proxyTlsConfig); err != nil {
-			return conn, err
+			return packCon, conn, err
 		}
 		if option.Logger != nil {
 			option.Logger(Log{
@@ -220,12 +205,16 @@ func (obj *Dialer) verifyProxyToRemote(ctx context.Context, option *RequestOptio
 				})
 			}
 		case "socks5":
-			err = obj.verifyTCPSocks5(conn, proxyAddress, remoteAddress)
+			if isLast && option.H3 {
+				packCon, err = obj.verifyUDPSocks5(ctx, conn, proxyAddress, remoteAddress)
+			} else {
+				err = obj.verifyTCPSocks5(conn, proxyAddress, remoteAddress)
+			}
 			if option.Logger != nil {
 				option.Logger(Log{
 					Id:   option.requestId,
 					Time: time.Now(),
-					Type: LogType_ProxyTCPConnect,
+					Type: LogType_ProxyConnectRemote,
 					Msg:  remoteAddress.String(),
 				})
 			}
@@ -234,9 +223,9 @@ func (obj *Dialer) verifyProxyToRemote(ctx context.Context, option *RequestOptio
 	}()
 	select {
 	case <-ctx.Done():
-		return conn, context.Cause(ctx)
+		return packCon, conn, context.Cause(ctx)
 	case <-done:
-		return conn, err
+		return packCon, conn, err
 	}
 }
 func (obj *Dialer) loadHost(ctx context.Context, host string, option *RequestOption) (net.IP, error) {

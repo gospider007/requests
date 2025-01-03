@@ -90,20 +90,21 @@ func (obj *roundTripper) newConnecotr() *connecotr {
 	return conne
 }
 
-func (obj *roundTripper) http3Dial(ctx context.Context, option *RequestOption, proxyAddress Address, remtoeAddress Address) (udpConn net.PacketConn, err error) {
-	if !proxyAddress.Nil() {
-		if proxyAddress.Scheme != "socks5" {
-			err = errors.New("http3 only socks5 proxy supported")
+func (obj *roundTripper) http3Dial(ctx context.Context, option *RequestOption, remtoeAddress Address, proxyAddress ...Address) (udpConn net.PacketConn, err error) {
+	if len(proxyAddress) > 0 {
+		if proxyAddress[len(proxyAddress)-1].Scheme != "socks5" {
+			err = errors.New("http3 last proxy must socks5 proxy")
 			return
 		}
-		udpConn, err = obj.dialer.Socks5UdpProxy(ctx, option, proxyAddress, remtoeAddress)
+		// udpConn, err = obj.dialer.Socks5UdpProxy(ctx, option, remtoeAddress, proxyAddress...)
+		udpConn, _, err = obj.dialer.DialProxyContext(ctx, option, "tcp", option.TlsConfig.Clone(), append(proxyAddress, remtoeAddress)...)
 	} else {
 		udpConn, err = net.ListenUDP("udp", nil)
 	}
 	return
 }
-func (obj *roundTripper) ghttp3Dial(ctx context.Context, option *RequestOption, proxyAddress Address, remoteAddress Address) (conn *connecotr, err error) {
-	udpConn, err := obj.http3Dial(ctx, option, proxyAddress, remoteAddress)
+func (obj *roundTripper) ghttp3Dial(ctx context.Context, option *RequestOption, remoteAddress Address, proxyAddress ...Address) (conn *connecotr, err error) {
+	udpConn, err := obj.http3Dial(ctx, option, remoteAddress, proxyAddress...)
 	if err != nil {
 		return nil, err
 	}
@@ -124,8 +125,8 @@ func (obj *roundTripper) ghttp3Dial(ctx context.Context, option *RequestOption, 
 	return
 }
 
-func (obj *roundTripper) uhttp3Dial(ctx context.Context, option *RequestOption, proxyAddress Address, remoteAddress Address) (conn *connecotr, err error) {
-	udpConn, err := obj.http3Dial(ctx, option, proxyAddress, remoteAddress)
+func (obj *roundTripper) uhttp3Dial(ctx context.Context, option *RequestOption, remoteAddress Address, proxyAddress ...Address) (conn *connecotr, err error) {
+	udpConn, err := obj.http3Dial(ctx, option, remoteAddress, proxyAddress...)
 	if err != nil {
 		return nil, err
 	}
@@ -156,19 +157,15 @@ func (obj *roundTripper) dial(option *RequestOption, req *http.Request) (conn *c
 		return nil, err
 	}
 	if option.H3 {
-		var proxyUrl Address
-		if len(proxys) > 0 {
-			proxyUrl = proxys[0]
-		}
 		if option.Ja3Spec.IsSet() {
-			return obj.uhttp3Dial(req.Context(), option, proxyUrl, remoteAddress)
+			return obj.uhttp3Dial(req.Context(), option, remoteAddress, proxys...)
 		} else {
-			return obj.ghttp3Dial(req.Context(), option, proxyUrl, remoteAddress)
+			return obj.ghttp3Dial(req.Context(), option, remoteAddress, proxys...)
 		}
 	}
 	var netConn net.Conn
 	if len(proxys) > 0 {
-		netConn, err = obj.dialer.DialProxyContext(req.Context(), option, "tcp", option.TlsConfig.Clone(), append(proxys, remoteAddress)...)
+		_, netConn, err = obj.dialer.DialProxyContext(req.Context(), option, "tcp", option.TlsConfig.Clone(), append(proxys, remoteAddress)...)
 	} else {
 		var remoteAddress Address
 		remoteAddress, err = GetAddressWithUrl(req.URL)

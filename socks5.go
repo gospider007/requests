@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	errBadHeader         = errors.New("bad header")
-	errUnsupportedMethod = errors.New("unsupported method")
+	errBadHeader = errors.New("bad header")
+	// errUnsupportedMethod = errors.New("unsupported method")
 )
 
 const MaxUdpPacket int = math.MaxUint16 - 28
@@ -94,10 +94,6 @@ func (a Address) String() string {
 func (a Address) Network() string {
 	return a.NetWork
 }
-func (a Address) Nil() bool {
-	return a.IP == nil && a.Name == ""
-}
-
 func ReadUdpAddr(r io.Reader) (Address, error) {
 	UdpAddress := Address{}
 	var addrType [1]byte
@@ -146,11 +142,13 @@ type UDPConn struct {
 	// defaultTarget net.Addr
 	prefix []byte
 	net.PacketConn
+	UDPConn *net.UDPConn
 }
 
-func NewUDPConn(raw net.PacketConn, proxyAddress net.Addr) (*UDPConn, error) {
+func NewUDPConn(packConn net.PacketConn, proxyAddress net.Addr) (*UDPConn, error) {
 	conn := &UDPConn{
-		PacketConn:   raw,
+		PacketConn:   packConn,
+		UDPConn:      packConn.(*net.UDPConn),
 		proxyAddress: proxyAddress,
 		prefix:       []byte{0, 0, 0},
 	}
@@ -229,83 +227,30 @@ func (c *UDPConn) WriteTo(p []byte, addr net.Addr) (n int, err error) {
 // 	return c.defaultTarget
 // }
 
-// SetReadBuffer implements the net.UDPConn SetReadBuffer method.
 func (c *UDPConn) SetReadBuffer(bytes int) error {
-	udpConn, ok := c.PacketConn.(*net.UDPConn)
-	if !ok {
-		return errUnsupportedMethod
-	}
-	return udpConn.SetReadBuffer(bytes)
+	return c.UDPConn.SetReadBuffer(bytes)
 }
-
-// SetWriteBuffer implements the net.UDPConn SetWriteBuffer method.
 func (c *UDPConn) SetWriteBuffer(bytes int) error {
-	udpConn, ok := c.PacketConn.(*net.UDPConn)
-	if !ok {
-		return errUnsupportedMethod
-	}
-	return udpConn.SetWriteBuffer(bytes)
+	return c.UDPConn.SetWriteBuffer(bytes)
 }
-
-// SetDeadline implements the Conn SetDeadline method.
 func (c *UDPConn) SetDeadline(t time.Time) error {
-	udpConn, ok := c.PacketConn.(*net.UDPConn)
-	if !ok {
-		return errUnsupportedMethod
-	}
-	return udpConn.SetDeadline(t)
+	return c.UDPConn.SetDeadline(t)
 }
-
-// SetReadDeadline implements the Conn SetReadDeadline method.
 func (c *UDPConn) SetReadDeadline(t time.Time) error {
-	udpConn, ok := c.PacketConn.(*net.UDPConn)
-	if !ok {
-		return errUnsupportedMethod
-	}
-	return udpConn.SetReadDeadline(t)
+	return c.UDPConn.SetReadDeadline(t)
 }
-
-// SetWriteDeadline implements the Conn SetWriteDeadline method.
 func (c *UDPConn) SetWriteDeadline(t time.Time) error {
-	udpConn, ok := c.PacketConn.(*net.UDPConn)
-	if !ok {
-		return errUnsupportedMethod
-	}
-	return udpConn.SetWriteDeadline(t)
+	return c.UDPConn.SetWriteDeadline(t)
 }
-
-// ReadFromUDP implements the net.UDPConn ReadFromUDP method.
 func (c *UDPConn) ReadFromUDP(b []byte) (n int, addr *net.UDPAddr, err error) {
-	udpConn, ok := c.PacketConn.(*net.UDPConn)
-	if !ok {
-		return 0, nil, errUnsupportedMethod
-	}
-	return udpConn.ReadFromUDP(b)
+	return c.UDPConn.ReadFromUDP(b)
 }
-
-// ReadMsgUDP implements the net.UDPConn ReadMsgUDP method.
 func (c *UDPConn) ReadMsgUDP(b, oob []byte) (n, oobn, flags int, addr *net.UDPAddr, err error) {
-	udpConn, ok := c.PacketConn.(*net.UDPConn)
-	if !ok {
-		return 0, 0, 0, nil, errUnsupportedMethod
-	}
-	return udpConn.ReadMsgUDP(b, oob)
+	return c.UDPConn.ReadMsgUDP(b, oob)
 }
-
-// WriteToUDP implements the net.UDPConn WriteToUDP method.
 func (c *UDPConn) WriteToUDP(b []byte, addr *net.UDPAddr) (int, error) {
-	udpConn, ok := c.PacketConn.(*net.UDPConn)
-	if !ok {
-		return 0, errUnsupportedMethod
-	}
-	return udpConn.WriteToUDP(b, addr)
+	return c.UDPConn.WriteToUDP(b, addr)
 }
-
-// WriteMsgUDP implements the net.UDPConn WriteMsgUDP method.
 func (c *UDPConn) WriteMsgUDP(b, oob []byte, addr *net.UDPAddr) (n, oobn int, err error) {
-	udpConn, ok := c.PacketConn.(*net.UDPConn)
-	if !ok {
-		return 0, 0, errUnsupportedMethod
-	}
-	return udpConn.WriteMsgUDP(b, oob, addr)
+	return c.UDPConn.WriteMsgUDP(b, oob, addr)
 }

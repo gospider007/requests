@@ -18,6 +18,7 @@ import (
 
 var (
 	proxyHost  = "127.0.0.1:1080"
+	proxyHost2 = "127.0.0.1:10801"
 	remoteHost = "127.0.0.1:8080"
 )
 
@@ -36,6 +37,28 @@ func client() {
 			continue
 		}
 
+		fmt.Println(resp.StatusCode())
+		fmt.Println(resp.Text())
+		time.Sleep(time.Second)
+	}
+}
+func client2() {
+	for range 5 {
+		resp, err := requests.Post(nil, "https://"+remoteHost, requests.RequestOption{
+			H3: true,
+			Logger: func(l requests.Log) {
+				log.Print(l)
+			},
+			Proxys: []string{
+				"http://" + proxyHost,
+				"socks5://" + proxyHost,
+			},
+			Body: []byte("hello, server!"),
+		})
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
 		fmt.Println(resp.StatusCode())
 		fmt.Println(resp.Text())
 		time.Sleep(time.Second)
@@ -74,9 +97,9 @@ func server() {
 	fmt.Println("Server is listening...")
 	fmt.Println(server.ListenAndServe())
 }
-func proxyServer() {
+func proxyServer(addr string) {
 	c, err := proxy.NewClient(nil, proxy.ClientOption{
-		Addr:      ":1080",
+		Addr:      addr,
 		Debug:     true,
 		DisVerify: true,
 	})
@@ -88,7 +111,9 @@ func proxyServer() {
 
 func TestHttp3Proxy(t *testing.T) {
 	go server()
-	go proxyServer()
+	go proxyServer(proxyHost)
+	go proxyServer(proxyHost2)
 	time.Sleep(time.Second * 3)
-	client()
+	// client()
+	client2()
 }
