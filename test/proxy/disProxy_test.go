@@ -8,7 +8,10 @@ import (
 
 func TestDisProxy(t *testing.T) {
 	resp, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{
-		Proxy:    "http://192.368.7.256:9887",
+		ClientOption: requests.ClientOption{
+
+			Proxy: "http://192.368.7.256:9887",
+		},
 		DisProxy: true,
 	})
 	if err != nil {

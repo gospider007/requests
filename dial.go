@@ -394,25 +394,25 @@ func (obj *Dialer) lookupIPAddr(ips []net.IPAddr, addrType gtls.AddrType) (net.I
 	}
 	return nil, errors.New("dns parse host error")
 }
-func (obj *Dialer) addTls(ctx context.Context, conn net.Conn, host string, forceHttp1 bool, tlsConfig *tls.Config) (*tls.Conn, error) {
+func (obj *Dialer) addTls(ctx context.Context, conn net.Conn, host string, h2 bool, tlsConfig *tls.Config) (*tls.Conn, error) {
 	var tlsConn *tls.Conn
 	tlsConfig.ServerName = gtls.GetServerName(host)
-	if forceHttp1 {
-		tlsConfig.NextProtos = []string{"http/1.1"}
-	} else {
+	if h2 {
 		tlsConfig.NextProtos = []string{"h2", "http/1.1"}
+	} else {
+		tlsConfig.NextProtos = []string{"http/1.1"}
 	}
 	tlsConn = tls.Client(conn, tlsConfig)
 	return tlsConn, tlsConn.HandshakeContext(ctx)
 }
-func (obj *Dialer) addJa3Tls(ctx context.Context, conn net.Conn, host string, forceHttp1 bool, ja3Spec ja3.Ja3Spec, tlsConfig *utls.Config) (*utls.UConn, error) {
+func (obj *Dialer) addJa3Tls(ctx context.Context, conn net.Conn, host string, h2 bool, spec ja3.Spec, tlsConfig *utls.Config) (*utls.UConn, error) {
 	tlsConfig.ServerName = gtls.GetServerName(host)
-	if forceHttp1 {
-		tlsConfig.NextProtos = []string{"http/1.1"}
-	} else {
+	if h2 {
 		tlsConfig.NextProtos = []string{"h2", "http/1.1"}
+	} else {
+		tlsConfig.NextProtos = []string{"http/1.1"}
 	}
-	return ja3.NewClient(ctx, conn, ja3Spec, forceHttp1, tlsConfig)
+	return ja3.NewClient(ctx, conn, spec, h2, tlsConfig)
 }
 func (obj *Dialer) Socks5TcpProxy(ctx context.Context, ctxData *RequestOption, proxyAddr Address, remoteAddr Address) (conn net.Conn, err error) {
 	if conn, err = obj.DialContext(ctx, ctxData, "tcp", proxyAddr); err != nil {

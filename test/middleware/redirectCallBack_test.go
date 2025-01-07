@@ -10,11 +10,14 @@ import (
 
 func TestRedirectCallBack(t *testing.T) {
 	response, err := requests.Get(context.TODO(), "http://www.baidu.com", requests.RequestOption{
-		RequestCallBack: func(ctx context.Context, request *http.Request, response *http.Response) error {
-			if response != nil {
-				return requests.ErrUseLastResponse
-			}
-			return nil
+		ClientOption: requests.ClientOption{
+
+			RequestCallBack: func(ctx context.Context, request *http.Request, response *http.Response) error {
+				if response != nil {
+					return requests.ErrUseLastResponse
+				}
+				return nil
+			},
 		},
 	})
 	if err != nil {

@@ -10,7 +10,10 @@ import (
 
 func TestHttp3(t *testing.T) {
 	resp, err := requests.Get(context.TODO(), "https://cloudflare-quic.com/", requests.RequestOption{
-		H3: true,
+		ClientOption: requests.ClientOption{
+
+			H3: true,
+		},
 	},
 	)
 	if err != nil {

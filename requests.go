@@ -145,7 +145,10 @@ func (obj *Client) Request(ctx context.Context, method string, href string, opti
 	if len(options) > 0 {
 		rawOption = options[0]
 	}
-	optionBak := obj.newRequestOption(rawOption)
+	optionBak, err := obj.newRequestOption(rawOption)
+	if err != nil {
+		return nil, err
+	}
 	optionBak.requestId = tools.NaoId()
 	if optionBak.Method == "" {
 		optionBak.Method = method
@@ -205,7 +208,7 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	//设置 h2 请求头顺序
 	if option.OrderHeaders != nil {
 		if !option.H2Ja3Spec.IsSet() {
-			option.H2Ja3Spec = ja3.DefaultH2Ja3Spec()
+			option.H2Ja3Spec = ja3.DefaultH2Spec()
 			option.H2Ja3Spec.OrderHeaders = option.OrderHeaders
 		} else if option.H2Ja3Spec.OrderHeaders == nil {
 			option.H2Ja3Spec.OrderHeaders = option.OrderHeaders

@@ -33,10 +33,14 @@ func TestProxy2(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp, err := reqCli.Request(nil, "get", "https://httpbin.org/ip", requests.RequestOption{Proxys: []string{
-		proIp,
-		proIp2,
-	}})
+	resp, err := reqCli.Request(nil, "get", "https://httpbin.org/ip", requests.RequestOption{
+		ClientOption: requests.ClientOption{
+
+			Proxys: []string{
+				proIp,
+				proIp2,
+			},
+		}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +49,10 @@ func TestProxy2(t *testing.T) {
 
 func TestChainProxy(t *testing.T) {
 	resp, err := requests.Get(context.TODO(), "https://httpbin.org/anything", requests.RequestOption{
-		Proxys: []string{}, //set proxy,ex:"http://127.0.0.1:8080","https://127.0.0.1:8080","socks5://127.0.0.1:8080"
+		ClientOption: requests.ClientOption{
+
+			Proxys: []string{}, //set proxy,ex:"http://127.0.0.1:8080","https://127.0.0.1:8080","socks5://127.0.0.1:8080"
+		},
 	})
 	if err != nil {
 		t.Error(err)

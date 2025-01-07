@@ -10,9 +10,12 @@ import (
 func TestLogger(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		response, err := requests.Get(nil, "https://www.httpbin.org", requests.RequestOption{
-			Ja3: true,
-			Logger: func(l requests.Log) {
-				log.Print(l)
+			ClientOption: requests.ClientOption{
+
+				Ja3: true,
+				Logger: func(l requests.Log) {
+					log.Print(l)
+				},
 			},
 		})
 		if err != nil {

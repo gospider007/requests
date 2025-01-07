@@ -12,13 +12,16 @@ import (
 
 func TestRequestCallBack(t *testing.T) {
 	_, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{
-		RequestCallBack: func(ctx context.Context, request *http.Request, response *http.Response) error {
-			if response != nil {
-				if response.ContentLength > 100 {
-					return errors.New("max length")
+		ClientOption: requests.ClientOption{
+
+			RequestCallBack: func(ctx context.Context, request *http.Request, response *http.Response) error {
+				if response != nil {
+					if response.ContentLength > 100 {
+						return errors.New("max length")
+					}
 				}
-			}
-			return nil
+				return nil
+			},
 		},
 	})
 	if !strings.Contains(err.Error(), "max length") {

@@ -17,11 +17,14 @@ func TestSetCookies(t *testing.T) {
 		log.Panic(err)
 	}
 	_, err = session.Get(context.TODO(), "https://www.baidu.com", requests.RequestOption{
-		RequestCallBack: func(ctx context.Context, request *http.Request, response *http.Response) error {
-			if request.Cookies() == nil {
-				log.Panic("cookie is nil")
-			}
-			return nil
+		ClientOption: requests.ClientOption{
+
+			RequestCallBack: func(ctx context.Context, request *http.Request, response *http.Response) error {
+				if request.Cookies() == nil {
+					log.Panic("cookie is nil")
+				}
+				return nil
+			},
 		},
 	})
 	if err != nil {

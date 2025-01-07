@@ -19,7 +19,10 @@ func TestJa3(t *testing.T) {
 		t.Fatal(err)
 	}
 	resp, err := requests.Get(nil, "https://tools.scrapfly.io/api/fp/anything", requests.RequestOption{
-		Ja3Spec: ja3Spec,
+		ClientOption: requests.ClientOption{
+
+			Ja3Spec: ja3Spec,
+		},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -48,7 +51,10 @@ func TestJa3Psk(t *testing.T) {
 	session, _ := requests.NewClient(nil)
 	for i := 0; i < 2; i++ {
 		resp, err := session.Get(nil, "https://tools.scrapfly.io/api/fp/anything", requests.RequestOption{
-			Ja3Spec: ja3Spec, //set ja3 spec
+			ClientOption: requests.ClientOption{
+
+				Ja3Spec: ja3Spec, //set ja3 spec
+			},
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -79,7 +85,10 @@ func TestJa3ClientHello(t *testing.T) {
 	}
 	// log.Print(ja3Spec)
 	resp, err := requests.Get(nil, "https://tools.scrapfly.io/api/fp/anything", requests.RequestOption{
-		Ja3Spec: ja3Spec,
+		ClientOption: requests.ClientOption{
+
+			Ja3Spec: ja3Spec,
+		},
 	})
 	if err != nil {
 		t.Fatal(err)

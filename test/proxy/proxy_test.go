@@ -10,7 +10,7 @@ import (
 
 func TestProxy(t *testing.T) {
 	resp, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{
-		Proxy: "", //set proxy,ex:"http://127.0.0.1:8080","https://127.0.0.1:8080","socks5://127.0.0.1:8080"
+		ClientOption: requests.ClientOption{Proxy: ""}, //set proxy,ex:"http://127.0.0.1:8080","https://127.0.0.1:8080","socks5://127.0.0.1:8080"
 	})
 	if err != nil {
 		t.Error(err)

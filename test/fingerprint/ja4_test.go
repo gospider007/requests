@@ -21,7 +21,9 @@ func TestOrderHeaders(t *testing.T) {
 	headers.Set("Sec-Ch-Ua-Mobile", "?0")
 	headers.Set("Sec-Ch-Ua-Platform", `"Windows"`)
 	resp, err := requests.Get(nil, "https://tools.scrapfly.io/api/fp/anything", requests.RequestOption{
-		Headers: headers,
+		ClientOption: requests.ClientOption{
+			Headers: headers,
+		},
 		// ForceHttp1: true,
 	})
 	if err != nil {
@@ -72,8 +74,11 @@ func TestOrderHeaders2(t *testing.T) {
 		"Sec-Ch-Ua-Platform",
 	}
 	resp, err := requests.Get(nil, "https://tools.scrapfly.io/api/fp/anything", requests.RequestOption{
-		Headers:      headers,
-		OrderHeaders: orderHeaders,
+		ClientOption: requests.ClientOption{
+
+			Headers:      headers,
+			OrderHeaders: orderHeaders,
+		},
 		// ForceHttp1: true,
 	})
 	if err != nil {

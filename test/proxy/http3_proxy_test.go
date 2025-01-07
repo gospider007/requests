@@ -25,12 +25,15 @@ var (
 func client() {
 	for range 5 {
 		resp, err := requests.Post(nil, "https://"+remoteHost, requests.RequestOption{
-			H3: true,
-			Logger: func(l requests.Log) {
-				log.Print(l)
+			ClientOption: requests.ClientOption{
+
+				H3: true,
+				Logger: func(l requests.Log) {
+					log.Print(l)
+				},
+				Proxy: "socks5://" + proxyHost,
 			},
-			Proxy: "socks5://" + proxyHost,
-			Body:  []byte("hello, server!"),
+			Body: []byte("hello, server!"),
 		})
 		if err != nil {
 			fmt.Println(err)
@@ -45,13 +48,16 @@ func client() {
 func client2() {
 	for range 5 {
 		resp, err := requests.Post(nil, "https://"+remoteHost, requests.RequestOption{
-			H3: true,
-			Logger: func(l requests.Log) {
-				log.Print(l)
-			},
-			Proxys: []string{
-				"http://" + proxyHost,
-				"socks5://" + proxyHost,
+
+			ClientOption: requests.ClientOption{
+				H3: true,
+				Logger: func(l requests.Log) {
+					log.Print(l)
+				},
+				Proxys: []string{
+					"http://" + proxyHost,
+					"socks5://" + proxyHost,
+				},
 			},
 			Body: []byte("hello, server!"),
 		})

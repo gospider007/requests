@@ -17,7 +17,9 @@ func TestH2(t *testing.T) {
 	}
 	// log.Print(h2Spec)
 	resp, err := requests.Get(nil, "https://tools.scrapfly.io/api/fp/anything", requests.RequestOption{
-		H2Ja3Spec: h2Spec, //set h2 spec
+		ClientOption: requests.ClientOption{
+			H2Ja3Spec: h2Spec, //set h2 spec
+		},
 	})
 	// log.Print(resp.Text())
 	if err != nil {

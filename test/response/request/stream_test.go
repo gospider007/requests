@@ -11,8 +11,10 @@ import (
 func TestStream(t *testing.T) {
 	resp, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{
 		Stream: true,
-		Logger: func(l requests.Log) {
-			log.Print(l)
+		ClientOption: requests.ClientOption{
+			Logger: func(l requests.Log) {
+				log.Print(l)
+			},
 		},
 	})
 	if err != nil {
