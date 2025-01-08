@@ -11,6 +11,8 @@ import (
 	"github.com/gospider007/ja3"
 	"github.com/gospider007/tools"
 	"github.com/gospider007/websocket"
+	"github.com/quic-go/quic-go"
+	uquic "github.com/refraction-networking/uquic"
 	utls "github.com/refraction-networking/utls"
 )
 
@@ -76,6 +78,9 @@ type ClientOption struct {
 	Jar                   Jar //custom cookies
 	TlsConfig             *tls.Config
 	UtlsConfig            *utls.Config
+
+	QuicConfig  *quic.Config
+	UquicConfig *uquic.Config
 }
 
 // Options for sending requests
@@ -238,146 +243,3 @@ func (obj *Client) newRequestOption(option RequestOption) (RequestOption, error)
 	}
 	return option, err
 }
-
-// func (obj *Client) newRequestOption(option RequestOption) RequestOption {
-// 	// start
-// 	if !option.Ja3Spec.IsSet() {
-// 		option.Ja3Spec = obj.option.Ja3Spec
-// 	}
-// 	if !option.Ja3 {
-// 		option.Ja3 = obj.option.Ja3
-// 	}
-// 	if !option.UJa3Spec.IsSet() {
-// 		option.UJa3Spec = obj.option.UJa3Spec
-// 	}
-
-// 	if !option.H2Ja3Spec.IsSet() {
-// 		option.H2Ja3Spec = obj.option.H2Ja3Spec
-// 	}
-// 	if option.Proxy == "" {
-// 		option.Proxy = obj.option.Proxy
-// 	}
-// 	if len(option.Proxys) == 0 {
-// 		option.Proxys = obj.option.Proxys
-// 	}
-// 	if !option.ForceHttp1 {
-// 		option.ForceHttp1 = obj.option.ForceHttp1
-// 	}
-// 	if !option.DisCookie {
-// 		option.DisCookie = obj.option.DisCookie
-// 	}
-// 	if !option.DisDecode {
-// 		option.DisDecode = obj.option.DisDecode
-// 	}
-// 	if !option.DisUnZip {
-// 		option.DisUnZip = obj.option.DisUnZip
-// 	}
-// 	if !option.Bar {
-// 		option.Bar = obj.option.Bar
-// 	}
-// 	if !option.H3 {
-// 		option.H3 = obj.option.H3
-// 	}
-// 	if option.Logger == nil {
-// 		option.Logger = obj.option.Logger
-// 	}
-// 	if option.Headers == nil {
-// 		option.Headers = obj.option.Headers
-// 	}
-// 	if option.Timeout == 0 {
-// 		option.Timeout = obj.option.Timeout
-// 	}
-// 	if option.ResponseHeaderTimeout == 0 {
-// 		option.ResponseHeaderTimeout = obj.option.ResponseHeaderTimeout
-// 	}
-// 	if option.TlsHandshakeTimeout == 0 {
-// 		option.TlsHandshakeTimeout = obj.option.TlsHandshakeTimeout
-// 	}
-// 	if option.TlsConfig == nil {
-// 		option.TlsConfig = obj.option.TlsConfig
-// 	}
-// 	if option.UtlsConfig == nil {
-// 		option.UtlsConfig = obj.option.UtlsConfig
-// 	}
-// 	if option.OrderHeaders == nil {
-// 		option.OrderHeaders = obj.option.OrderHeaders
-// 	}
-// 	if option.OptionCallBack == nil {
-// 		option.OptionCallBack = obj.option.OptionCallBack
-// 	}
-// 	if option.ResultCallBack == nil {
-// 		option.ResultCallBack = obj.option.ResultCallBack
-// 	}
-// 	if option.ErrCallBack == nil {
-// 		option.ErrCallBack = obj.option.ErrCallBack
-// 	}
-// 	if option.RequestCallBack == nil {
-// 		option.RequestCallBack = obj.option.RequestCallBack
-// 	}
-// 	if option.MaxRetries == 0 {
-// 		option.MaxRetries = obj.option.MaxRetries
-// 	}
-// 	if option.MaxRedirect == 0 {
-// 		option.MaxRedirect = obj.option.MaxRedirect
-// 	}
-// 	if option.Headers == nil {
-// 		option.Headers = obj.option.Headers
-// 	}
-// 	if option.Timeout == 0 {
-// 		option.Timeout = obj.option.Timeout
-// 	}
-// 	if option.ResponseHeaderTimeout == 0 {
-// 		option.ResponseHeaderTimeout = obj.option.ResponseHeaderTimeout
-// 	}
-// 	if option.TlsHandshakeTimeout == 0 {
-// 		option.TlsHandshakeTimeout = obj.option.TlsHandshakeTimeout
-// 	}
-// 	if option.DialOption.DialTimeout == 0 {
-// 		option.DialOption.DialTimeout = obj.option.DialOption.DialTimeout
-// 	}
-// 	if option.DialOption.KeepAlive == 0 {
-// 		option.DialOption.KeepAlive = obj.option.DialOption.KeepAlive
-// 	}
-// 	if option.DialOption.LocalAddr == nil {
-// 		option.DialOption.LocalAddr = obj.option.DialOption.LocalAddr
-// 	}
-// 	if option.DialOption.AddrType == 0 {
-// 		option.DialOption.AddrType = obj.option.DialOption.AddrType
-// 	}
-// 	if option.DialOption.Dns == nil {
-// 		option.DialOption.Dns = obj.option.DialOption.Dns
-// 	}
-// 	if option.DialOption.GetAddrType == nil {
-// 		option.DialOption.GetAddrType = obj.option.DialOption.GetAddrType
-// 	}
-// 	if option.Jar == nil {
-// 		option.Jar = obj.option.Jar
-// 	}
-// 	//end
-// 	if option.MaxRetries < 0 {
-// 		option.MaxRetries = 0
-// 	}
-// 	if !option.Ja3Spec.IsSet() && option.Ja3 {
-// 		option.Ja3Spec = ja3.DefaultJa3Spec()
-// 	}
-// 	if !option.UJa3Spec.IsSet() && option.Ja3 {
-// 		option.UJa3Spec = ja3.DefaultUJa3Spec()
-// 	}
-// 	if option.UserAgent == "" {
-// 		option.UserAgent = obj.option.UserAgent
-// 	}
-// 	if option.DisCookie {
-// 		option.Jar = nil
-// 	}
-// 	if option.DisProxy {
-// 		option.Proxy = ""
-// 	}
-// 	if option.GetProxy == nil {
-// 		option.GetProxy = obj.option.GetProxy
-// 	}
-// 	if option.GetProxys == nil {
-// 		option.GetProxys = obj.option.GetProxys
-// 	}
-
-// 	return option
-// }

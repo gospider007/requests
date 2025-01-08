@@ -117,7 +117,11 @@ func (obj *roundTripper) ghttp3Dial(ctx context.Context, option *RequestOption, 
 			return nil, err
 		}
 	}
-	netConn, err := quic.DialEarly(ctx, udpConn, &net.UDPAddr{IP: remoteAddress.IP, Port: remoteAddress.Port}, tlsConfig, nil)
+	var quicConfig *quic.Config
+	if option.UquicConfig != nil {
+		quicConfig = option.QuicConfig.Clone()
+	}
+	netConn, err := quic.DialEarly(ctx, udpConn, &net.UDPAddr{IP: remoteAddress.IP, Port: remoteAddress.Port}, tlsConfig, quicConfig)
 	conn = obj.newConnecotr()
 	conn.Conn = http3.NewClient(netConn, func() {
 		conn.forceCnl(errors.New("http3 client close"))
@@ -143,12 +147,16 @@ func (obj *roundTripper) uhttp3Dial(ctx context.Context, option *RequestOption, 
 			return nil, err
 		}
 	}
+	var quicConfig *uquic.Config
+	if option.UquicConfig != nil {
+		quicConfig = option.UquicConfig.Clone()
+	}
 	netConn, err := (&uquic.UTransport{
 		Transport: &uquic.Transport{
 			Conn: udpConn,
 		},
 		QUICSpec: &spec,
-	}).DialEarly(ctx, &net.UDPAddr{IP: remoteAddress.IP, Port: remoteAddress.Port}, tlsConfig, nil)
+	}).DialEarly(ctx, &net.UDPAddr{IP: remoteAddress.IP, Port: remoteAddress.Port}, tlsConfig, quicConfig)
 	conn = obj.newConnecotr()
 	conn.Conn = http3.NewUClient(netConn, func() {
 		conn.forceCnl(errors.New("http3 client close"))

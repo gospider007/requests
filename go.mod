@@ -6,11 +6,11 @@ require (
 	github.com/gospider007/bar v0.0.0-20241205091858-06f3c7e16dd9
 	github.com/gospider007/bs4 v0.0.0-20241216122612-aa3f29179e6f
 	github.com/gospider007/gson v0.0.0-20241216122450-fb66d0ba2a07
-	github.com/gospider007/gtls v0.0.0-20250102091721-c5d429cea809
-	github.com/gospider007/http2 v0.0.0-20241222151842-034aa1d46e9d
-	github.com/gospider007/http3 v0.0.0-20250102093206-281d03368c89
+	github.com/gospider007/gtls v0.0.0-20250107100054-2a14fa6fc9c5
+	github.com/gospider007/http2 v0.0.0-20250107095809-0f8c60040d4a
+	github.com/gospider007/http3 v0.0.0-20250107095941-a36b210aca37
 	github.com/gospider007/ja3 v0.0.0-20250107091445-e294e50de314
-	github.com/gospider007/proxy v0.0.0-20250103020907-1a1fa54066e4
+	github.com/gospider007/proxy v0.0.0-20250108001210-7c1a3d5eabb6
 	github.com/gospider007/re v0.0.0-20241216142712-efbef8d55ea2
 	github.com/gospider007/tools v0.0.0-20250107090942-5b406ab8a72b
 	github.com/gospider007/websocket v0.0.0-20250107091829-c78035a103b2
@@ -66,7 +66,7 @@ require (
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/ulikunitz/xz v0.5.12 // indirect
 	github.com/zeebo/blake3 v0.2.4 // indirect
-	go.mongodb.org/mongo-driver v1.17.1 // indirect
+	go.mongodb.org/mongo-driver v1.17.2 // indirect
 	go.uber.org/mock v0.5.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
