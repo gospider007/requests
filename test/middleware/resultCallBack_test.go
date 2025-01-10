@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -12,12 +11,11 @@ func TestResultCallBack(t *testing.T) {
 	var code int
 	_, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{
 		ClientOption: requests.ClientOption{
-
-			ResultCallBack: func(ctx context.Context, option *requests.RequestOption, response *requests.Response) error {
-				if response.StatusCode() != 200 {
+			ResultCallBack: func(ctx *requests.Response) error {
+				if ctx.StatusCode() != 200 {
 					return errors.New("resp.StatusCode!= 200")
 				}
-				code = response.StatusCode()
+				code = ctx.StatusCode()
 				return nil
 			},
 		},

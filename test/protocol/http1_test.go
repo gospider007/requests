@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"log"
 	"testing"
 
@@ -16,8 +15,8 @@ func TestHttp1(t *testing.T) {
 			Logger: func(l requests.Log) {
 				log.Print(l)
 			},
-			ErrCallBack: func(ctx context.Context, option *requests.RequestOption, response *requests.Response, err error) error {
-				log.Print(err)
+			ErrCallBack: func(ctx *requests.Response) error {
+				log.Print(ctx.Err())
 				return nil
 			},
 		},

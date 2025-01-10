@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -14,10 +13,10 @@ func TestErrCallBack(t *testing.T) {
 		ClientOption: requests.ClientOption{
 
 			MaxRetries: 3,
-			ResultCallBack: func(ctx context.Context, option *requests.RequestOption, response *requests.Response) error {
+			ResultCallBack: func(ctx *requests.Response) error {
 				return errors.New("try")
 			},
-			ErrCallBack: func(ctx context.Context, option *requests.RequestOption, response *requests.Response, err error) error {
+			ErrCallBack: func(ctx *requests.Response) error {
 				if n == 0 {
 					n++
 					return nil

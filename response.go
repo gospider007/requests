@@ -22,18 +22,61 @@ import (
 	"github.com/gospider007/websocket"
 )
 
+func NewResponse(ctx context.Context, option RequestOption) *Response {
+	return &Response{
+		ctx:    ctx,
+		option: &option,
+	}
+}
+
+func (obj *Response) Err() error {
+	if obj.err != nil {
+		return obj.err
+	}
+	if obj.request != nil {
+		return obj.request.Context().Err()
+	}
+	return obj.ctx.Err()
+}
+
+func (obj *Response) Request() *http.Request {
+	return obj.request
+}
+func (obj *Response) Response() *http.Response {
+	return obj.response
+}
+func (obj *Response) Context() context.Context {
+	if obj.request != nil {
+		return obj.request.Context()
+	}
+	return obj.ctx
+}
+func (obj *Response) Option() *RequestOption {
+	return obj.option
+}
+func (obj *Response) Client() *Client {
+	return obj.client
+}
+
 type Response struct {
-	rawConn       *readWriteCloser
-	response      *http.Response
-	webSocket     *websocket.Conn
-	sse           *SSE
-	ctx           context.Context
-	cnl           context.CancelFunc
-	requestOption *RequestOption
-	content       []byte
-	encoding      string
-	filePath      string
-	readBody      bool
+	err       error
+	request   *http.Request
+	rawConn   *readWriteCloser
+	response  *http.Response
+	webSocket *websocket.Conn
+	sse       *SSE
+	ctx       context.Context
+	cnl       context.CancelFunc
+	option    *RequestOption
+	content   []byte
+	encoding  string
+	filePath  string
+	readBody  bool
+
+	client    *Client
+	requestId string
+	proxys    []*url.URL
+	isNewConn bool
 }
 
 type SSE struct {
@@ -271,7 +314,7 @@ func (obj *Response) Body() io.ReadCloser {
 
 // return true if response is stream
 func (obj *Response) IsStream() bool {
-	return obj.requestOption.Stream
+	return obj.option.Stream
 }
 
 // return true if response is other stream
@@ -294,7 +337,7 @@ func (obj *Response) ReadBody() (err error) {
 	bBody := bytes.NewBuffer(nil)
 	done := make(chan struct{})
 	go func() {
-		if obj.requestOption.Bar && obj.ContentLength() > 0 {
+		if obj.option.Bar && obj.ContentLength() > 0 {
 			_, err = io.Copy(&barBody{
 				bar:  bar.NewClient(obj.response.ContentLength),
 				body: bBody,
@@ -312,9 +355,9 @@ func (obj *Response) ReadBody() (err error) {
 		err = obj.ctx.Err()
 	case <-done:
 	}
-	if obj.requestOption.Logger != nil {
-		obj.requestOption.Logger(Log{
-			Id:   obj.requestOption.requestId,
+	if obj.option.Logger != nil {
+		obj.option.Logger(Log{
+			Id:   obj.requestId,
 			Time: time.Now(),
 			Type: LogType_ResponseBody,
 			Msg:  "response body",
@@ -324,7 +367,7 @@ func (obj *Response) ReadBody() (err error) {
 		obj.ForceCloseConn()
 		return errors.New("response read content error: " + err.Error())
 	}
-	if !obj.requestOption.DisDecode && obj.defaultDecode() {
+	if !obj.option.DisDecode && obj.defaultDecode() {
 		obj.content, obj.encoding, _ = tools.Charset(bBody.Bytes(), obj.ContentType())
 	} else {
 		obj.content = bBody.Bytes()
@@ -335,7 +378,7 @@ func (obj *Response) ReadBody() (err error) {
 
 // conn is new conn
 func (obj *Response) IsNewConn() bool {
-	return obj.requestOption.isNewConn
+	return obj.isNewConn
 }
 
 // conn proxy

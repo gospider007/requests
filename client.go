@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
-	"net/url"
 
 	"net/http"
 
@@ -74,11 +73,6 @@ func (obj *Client) SetProxy(proxyUrl string) (err error) {
 	return
 }
 
-// Modify the proxy method of the client
-func (obj *Client) SetGetProxy(getProxy func(ctx context.Context, url *url.URL) (string, error)) {
-	obj.option.GetProxy = getProxy
-}
-
 // Modifying the client's proxy
 func (obj *Client) SetProxys(proxyUrls []string) (err error) {
 	for _, proxy := range proxyUrls {
@@ -89,11 +83,6 @@ func (obj *Client) SetProxys(proxyUrls []string) (err error) {
 	}
 	obj.option.Proxys = proxyUrls
 	return
-}
-
-// Modify the proxy method of the client
-func (obj *Client) SetGetProxys(getProxys func(ctx context.Context, url *url.URL) ([]string, error)) {
-	obj.option.GetProxys = getProxys
 }
 
 // Close idle connections. If the connection is in use, wait until it ends before closing
@@ -113,72 +102,71 @@ func (obj *Client) Close() {
 	obj.cnl()
 }
 
-func (obj *Client) do(req *http.Request, option *RequestOption) (resp *http.Response, err error) {
+func (obj *Client) do(ctx *Response) (err error) {
 	var redirectNum int
 	for {
 		redirectNum++
-		resp, err = obj.send(req, option)
-		if req.Body != nil {
-			req.Body.Close()
+		err = obj.send(ctx)
+		if ctx.Request().Body != nil {
+			ctx.Request().Body.Close()
 		}
 		if err != nil {
 			return
 		}
-		if option.MaxRedirect < 0 { //dis redirect
+		if ctx.Option().MaxRedirect < 0 { //dis redirect
 			return
 		}
-		if option.MaxRedirect > 0 && redirectNum > option.MaxRedirect {
+		if ctx.Option().MaxRedirect > 0 && redirectNum > ctx.Option().MaxRedirect {
 			return
 		}
-		loc := resp.Header.Get("Location")
+		loc := ctx.response.Header.Get("Location")
 		if loc == "" {
-			return resp, nil
+			return nil
 		}
-		u, err := req.URL.Parse(loc)
+		u, err := ctx.Request().URL.Parse(loc)
 		if err != nil {
-			return resp, fmt.Errorf("failed to parse Location header %q: %v", loc, err)
+			return fmt.Errorf("failed to parse Location header %q: %v", loc, err)
 		}
-		ireq, err := NewRequestWithContext(req.Context(), http.MethodGet, u, nil)
+		ctx.request, err = NewRequestWithContext(ctx.Context(), http.MethodGet, u, nil)
 		if err != nil {
-			return resp, err
+			return err
 		}
 		var shouldRedirect bool
-		ireq.Method, shouldRedirect, _ = redirectBehavior(req.Method, resp, ireq)
+		ctx.request.Method, shouldRedirect, _ = redirectBehavior(ctx.Request().Method, ctx.response, ctx.request)
 		if !shouldRedirect {
-			return resp, nil
+			return nil
 		}
-		ireq.Response = resp
-		ireq.Header = defaultHeaders()
-		ireq.Header.Set("Referer", req.URL.String())
-		for key := range ireq.Header {
-			if val := req.Header.Get(key); val != "" {
-				ireq.Header.Set(key, val)
+		ctx.request.Response = ctx.response
+		ctx.request.Header = defaultHeaders()
+		ctx.request.Header.Set("Referer", ctx.Request().URL.String())
+		for key := range ctx.request.Header {
+			if val := ctx.Request().Header.Get(key); val != "" {
+				ctx.request.Header.Set(key, val)
 			}
 		}
-		if getDomain(u) == getDomain(req.URL) {
-			if Authorization := req.Header.Get("Authorization"); Authorization != "" {
-				ireq.Header.Set("Authorization", Authorization)
+		if getDomain(u) == getDomain(ctx.Request().URL) {
+			if Authorization := ctx.Request().Header.Get("Authorization"); Authorization != "" {
+				ctx.request.Header.Set("Authorization", Authorization)
 			}
-			cookies := Cookies(req.Cookies()).String()
+			cookies := Cookies(ctx.Request().Cookies()).String()
 			if cookies != "" {
-				ireq.Header.Set("Cookie", cookies)
+				ctx.request.Header.Set("Cookie", cookies)
 			}
-			addCookie(ireq, resp.Cookies())
+			addCookie(ctx.request, ctx.response.Cookies())
 		}
-		io.Copy(io.Discard, resp.Body)
-		resp.Body.Close()
-		req = ireq
+		io.Copy(io.Discard, ctx.response.Body)
+		ctx.response.Body.Close()
 	}
 }
-func (obj *Client) send(req *http.Request, option *RequestOption) (resp *http.Response, err error) {
-	if option.Jar != nil {
-		addCookie(req, option.Jar.GetCookies(req.URL))
+func (obj *Client) send(ctx *Response) (err error) {
+	if ctx.Option().Jar != nil {
+		addCookie(ctx.Request(), ctx.Option().Jar.GetCookies(ctx.Request().URL))
 	}
-	resp, err = obj.transport.RoundTrip(req)
-	if option.Jar != nil && resp != nil {
-		if rc := resp.Cookies(); len(rc) > 0 {
-			option.Jar.SetCookies(req.URL, rc)
+	err = obj.transport.RoundTrip(ctx)
+	if ctx.Option().Jar != nil && ctx.response != nil {
+		if rc := ctx.response.Cookies(); len(rc) > 0 {
+			ctx.Option().Jar.SetCookies(ctx.Request().URL, rc)
 		}
 	}
-	return resp, err
+	return err
 }

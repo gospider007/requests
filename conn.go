@@ -15,6 +15,8 @@ import (
 	"github.com/gospider007/tools"
 )
 
+var maxRetryCount = 10
+
 type Conn interface {
 	CloseWithError(err error) error
 	DoRequest(*http.Request, []string) (*http.Response, error)
@@ -130,13 +132,13 @@ func (obj *connecotr) CloseWithError(err error) error {
 
 func (obj *connecotr) wrapBody(task *reqTask) {
 	body := new(readWriteCloser)
-	obj.bodyCtx, obj.bodyCnl = context.WithCancelCause(task.req.Context())
-	body.body = task.res.Body
+	obj.bodyCtx, obj.bodyCnl = context.WithCancelCause(task.reqCtx.Context())
+	body.body = task.reqCtx.response.Body
 	body.conn = obj
-	task.res.Body = body
+	task.reqCtx.response.Body = body
 }
 func (obj *connecotr) httpReq(task *reqTask, done chan struct{}) {
-	if task.res, task.err = obj.Conn.DoRequest(task.req, task.option.OrderHeaders); task.res != nil && task.err == nil {
+	if task.reqCtx.response, task.err = obj.Conn.DoRequest(task.reqCtx.request, task.reqCtx.option.OrderHeaders); task.reqCtx.response != nil && task.err == nil {
 		obj.wrapBody(task)
 	} else if task.err != nil {
 		task.err = tools.WrapError(task.err, "roundTrip error")
@@ -146,8 +148,15 @@ func (obj *connecotr) httpReq(task *reqTask, done chan struct{}) {
 
 func (obj *connecotr) taskMain(task *reqTask) (retry bool) {
 	defer func() {
-		if task.err != nil && task.option.ErrCallBack != nil {
-			if err2 := task.option.ErrCallBack(task.ctx, task.option, nil, task.err); err2 != nil {
+		if retry {
+			task.retry++
+			if task.retry > maxRetryCount {
+				retry = false
+			}
+		}
+		if task.err != nil && task.reqCtx.option.ErrCallBack != nil {
+			task.reqCtx.err = task.err
+			if err2 := task.reqCtx.option.ErrCallBack(task.reqCtx); err2 != nil {
 				retry = false
 				task.err = err2
 			}
@@ -155,12 +164,12 @@ func (obj *connecotr) taskMain(task *reqTask) (retry bool) {
 		if retry {
 			task.err = nil
 			obj.CloseWithError(errors.New("taskMain retry close"))
-			if task.res != nil && task.res.Body != nil {
-				task.res.Body.Close()
+			if task.reqCtx.response != nil && task.reqCtx.response.Body != nil {
+				task.reqCtx.response.Body.Close()
 			}
 		} else {
 			task.cnl()
-			if task.err == nil && task.res != nil && task.res.Body != nil {
+			if task.err == nil && task.reqCtx.response != nil && task.reqCtx.response.Body != nil {
 				select {
 				case <-obj.bodyCtx.Done(): //wait body close
 					if task.err = context.Cause(obj.bodyCtx); !errors.Is(task.err, errGospiderBodyClose) {
@@ -168,16 +177,16 @@ func (obj *connecotr) taskMain(task *reqTask) (retry bool) {
 					} else {
 						task.err = nil
 					}
-				case <-task.req.Context().Done(): //wait request close
-					task.err = tools.WrapError(context.Cause(task.req.Context()), "requestCtx close")
+				case <-task.reqCtx.Context().Done(): //wait request close
+					task.err = tools.WrapError(context.Cause(task.reqCtx.Context()), "requestCtx close")
 				case <-obj.forceCtx.Done(): //force conn close
 					task.err = tools.WrapError(context.Cause(obj.forceCtx), "connecotr force close")
 				}
 			}
 			if task.err != nil {
 				obj.CloseWithError(task.err)
-				if task.res != nil && task.res.Body != nil {
-					task.res.Body.Close()
+				if task.reqCtx.response != nil && task.reqCtx.response.Body != nil {
+					task.reqCtx.response.Body.Close()
 				}
 			}
 		}
@@ -199,16 +208,16 @@ func (obj *connecotr) taskMain(task *reqTask) (retry bool) {
 		if task.err != nil {
 			return task.suppertRetry()
 		}
-		if task.res == nil {
+		if task.reqCtx.response == nil {
 			task.err = context.Cause(task.ctx)
 			if task.err == nil {
 				task.err = errors.New("response is nil")
 			}
 			return task.suppertRetry()
 		}
-		if task.option.Logger != nil {
-			task.option.Logger(Log{
-				Id:   task.option.requestId,
+		if task.reqCtx.option.Logger != nil {
+			task.reqCtx.option.Logger(Log{
+				Id:   task.reqCtx.requestId,
 				Time: time.Now(),
 				Type: LogType_ResponseHeader,
 				Msg:  "response header",

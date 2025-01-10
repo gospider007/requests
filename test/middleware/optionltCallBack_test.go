@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"testing"
 
 	"github.com/gospider007/requests"
@@ -11,8 +10,8 @@ func TestOptionCallBack(t *testing.T) {
 	resp, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{
 		ClientOption: requests.ClientOption{
 
-			OptionCallBack: func(ctx context.Context, option *requests.RequestOption) error {
-				option.Params = map[string]string{"name": "test"}
+			OptionCallBack: func(ctx *requests.Response) error {
+				ctx.Option().Params = map[string]string{"name": "test"}
 				return nil
 			},
 		},

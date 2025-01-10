@@ -1,9 +1,7 @@
 package main
 
 import (
-	"context"
 	"errors"
-	"net/http"
 	"strings"
 	"testing"
 
@@ -13,8 +11,8 @@ import (
 func TestRequestCallBack(t *testing.T) {
 	_, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{
 		ClientOption: requests.ClientOption{
-
-			RequestCallBack: func(ctx context.Context, request *http.Request, response *http.Response) error {
+			RequestCallBack: func(ctx *requests.Response) error {
+				response := ctx.Response()
 				if response != nil {
 					if response.ContentLength > 100 {
 						return errors.New("max length")

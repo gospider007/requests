@@ -19,24 +19,9 @@ import (
 	"github.com/gospider007/websocket"
 )
 
-type contextKey string
-
-const gospiderContextKey contextKey = "GospiderContextKey"
-
 var errFatal = errors.New("ErrFatal")
 
 var ErrUseLastResponse = http.ErrUseLastResponse
-
-func CreateReqCtx(ctx context.Context, option *RequestOption) context.Context {
-	return context.WithValue(ctx, gospiderContextKey, option)
-}
-func GetRequestOption(ctx context.Context) *RequestOption {
-	option, ok := ctx.Value(gospiderContextKey).(*RequestOption)
-	if ok {
-		return option
-	}
-	return new(RequestOption)
-}
 
 // sends a GET request and returns the response.
 func Get(ctx context.Context, href string, options ...RequestOption) (resp *Response, err error) {
@@ -149,7 +134,7 @@ func (obj *Client) Request(ctx context.Context, method string, href string, opti
 	if err != nil {
 		return nil, err
 	}
-	optionBak.requestId = tools.NaoId()
+	requestId := tools.NaoId()
 	if optionBak.Method == "" {
 		optionBak.Method = method
 	}
@@ -160,80 +145,84 @@ func (obj *Client) Request(ctx context.Context, method string, href string, opti
 			return
 		}
 	}
-	for maxRetries := 0; maxRetries <= optionBak.MaxRetries; maxRetries++ {
+	for ; optionBak.MaxRetries >= 0; optionBak.MaxRetries-- {
 		option := optionBak
 		option.Url = cloneUrl(uhref)
-		option.client = obj
-		response, err = obj.request(ctx, &option)
+		response = NewResponse(ctx, option)
+		response.client = obj
+		response.requestId = requestId
+		err = obj.request(response)
 		if err == nil || errors.Is(err, errFatal) || option.once {
 			return
 		}
+		optionBak.MaxRetries = option.MaxRedirect
 	}
 	return
 }
-func (obj *Client) request(ctx context.Context, option *RequestOption) (response *Response, err error) {
-	response = new(Response)
+func (obj *Client) request(ctx *Response) (err error) {
+
 	defer func() {
 		//read body
-		if err == nil && !response.IsWebSocket() && !response.IsSSE() && !response.IsStream() {
-			err = response.ReadBody()
+		if err == nil && !ctx.IsWebSocket() && !ctx.IsSSE() && !ctx.IsStream() {
+			err = ctx.ReadBody()
 		}
 		//result callback
-		if err == nil && option.ResultCallBack != nil {
-			err = option.ResultCallBack(ctx, option, response)
+
+		if err == nil && ctx.option.ResultCallBack != nil {
+			err = ctx.option.ResultCallBack(ctx)
 		}
 		if err != nil { //err callback, must close body
-			response.CloseBody()
-			if option.ErrCallBack != nil {
-				if err2 := option.ErrCallBack(ctx, option, response, err); err2 != nil {
+			ctx.CloseBody()
+			if ctx.option.ErrCallBack != nil {
+				ctx.err = err
+				if err2 := ctx.option.ErrCallBack(ctx); err2 != nil {
 					err = tools.WrapError(errFatal, err2)
 				}
 			}
 		}
 	}()
-	if option.OptionCallBack != nil {
-		if err = option.OptionCallBack(ctx, option); err != nil {
+	if ctx.option.OptionCallBack != nil {
+		if err = ctx.option.OptionCallBack(ctx); err != nil {
 			return
 		}
 	}
-	response.requestOption = option
 	//init headers and orderheaders,befor init ctxData
-	headers, err := option.initHeaders()
+	headers, err := ctx.option.initHeaders()
 	if err != nil {
-		return response, tools.WrapError(err, errors.New("tempRequest init headers error"), err)
+		return tools.WrapError(err, errors.New("tempRequest init headers error"), err)
 	}
-	if headers != nil && option.UserAgent != "" {
-		headers.Set("User-Agent", option.UserAgent)
+	if headers != nil && ctx.option.UserAgent != "" {
+		headers.Set("User-Agent", ctx.option.UserAgent)
 	}
 	//设置 h2 请求头顺序
-	if option.OrderHeaders != nil {
-		if !option.H2Ja3Spec.IsSet() {
-			option.H2Ja3Spec = ja3.DefaultH2Spec()
-			option.H2Ja3Spec.OrderHeaders = option.OrderHeaders
-		} else if option.H2Ja3Spec.OrderHeaders == nil {
-			option.H2Ja3Spec.OrderHeaders = option.OrderHeaders
+	if ctx.option.OrderHeaders != nil {
+		if !ctx.option.H2Ja3Spec.IsSet() {
+			ctx.option.H2Ja3Spec = ja3.DefaultH2Spec()
+			ctx.option.H2Ja3Spec.OrderHeaders = ctx.option.OrderHeaders
+		} else if ctx.option.H2Ja3Spec.OrderHeaders == nil {
+			ctx.option.H2Ja3Spec.OrderHeaders = ctx.option.OrderHeaders
 		}
 	}
 	//init tls timeout
-	if option.TlsHandshakeTimeout == 0 {
-		option.TlsHandshakeTimeout = time.Second * 15
+	if ctx.option.TlsHandshakeTimeout == 0 {
+		ctx.option.TlsHandshakeTimeout = time.Second * 15
 	}
 	//init proxy
-	if option.Proxy != "" {
-		tempProxy, err := gtls.VerifyProxy(option.Proxy)
+	if ctx.option.Proxy != "" {
+		tempProxy, err := gtls.VerifyProxy(ctx.option.Proxy)
 		if err != nil {
-			return nil, tools.WrapError(errFatal, errors.New("tempRequest init proxy error"), err)
+			return tools.WrapError(errFatal, errors.New("tempRequest init proxy error"), err)
 		}
-		option.proxy = tempProxy
+		ctx.proxys = []*url.URL{tempProxy}
 	}
-	if l := len(option.Proxys); l > 0 {
-		option.proxys = make([]*url.URL, l)
-		for i, proxy := range option.Proxys {
+	if l := len(ctx.option.Proxys); l > 0 {
+		ctx.proxys = make([]*url.URL, l)
+		for i, proxy := range ctx.option.Proxys {
 			tempProxy, err := gtls.VerifyProxy(proxy)
 			if err != nil {
-				return response, tools.WrapError(errFatal, errors.New("tempRequest init proxy error"), err)
+				return tools.WrapError(errFatal, errors.New("tempRequest init proxy error"), err)
 			}
-			option.proxys[i] = tempProxy
+			ctx.proxys[i] = tempProxy
 		}
 	}
 	//init headers
@@ -241,35 +230,35 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		headers = defaultHeaders()
 	}
 	//设置 h1 请求头顺序
-	if option.OrderHeaders == nil {
-		option.OrderHeaders = ja3.DefaultOrderHeaders()
+	if ctx.option.OrderHeaders == nil {
+		ctx.option.OrderHeaders = ja3.DefaultOrderHeaders()
 	}
 	//init ctx,cnl
-	if option.Timeout > 0 { //超时
-		response.ctx, response.cnl = context.WithTimeout(CreateReqCtx(ctx, option), option.Timeout)
+	if ctx.option.Timeout > 0 { //超时
+		ctx.ctx, ctx.cnl = context.WithTimeout(ctx.Context(), ctx.option.Timeout)
 	} else {
-		response.ctx, response.cnl = context.WithCancel(CreateReqCtx(ctx, option))
+		ctx.ctx, ctx.cnl = context.WithCancel(ctx.Context())
 	}
 	//init Scheme
-	switch option.Url.Scheme {
+	switch ctx.option.Url.Scheme {
 	case "file":
-		response.filePath = re.Sub(`^/+`, "", option.Url.Path)
-		response.content, err = os.ReadFile(response.filePath)
+		ctx.filePath = re.Sub(`^/+`, "", ctx.option.Url.Path)
+		ctx.content, err = os.ReadFile(ctx.filePath)
 		if err != nil {
 			err = tools.WrapError(errFatal, errors.New("read filePath data error"), err)
 		}
 		return
 	case "ws":
-		option.ForceHttp1 = true
-		option.Url.Scheme = "http"
-		websocket.SetClientHeadersWithOption(headers, option.WsOption)
+		ctx.option.ForceHttp1 = true
+		ctx.option.Url.Scheme = "http"
+		websocket.SetClientHeadersWithOption(headers, ctx.option.WsOption)
 	case "wss":
-		option.ForceHttp1 = true
-		option.Url.Scheme = "https"
-		websocket.SetClientHeadersWithOption(headers, option.WsOption)
+		ctx.option.ForceHttp1 = true
+		ctx.option.Url.Scheme = "https"
+		websocket.SetClientHeadersWithOption(headers, ctx.option.WsOption)
 	}
 	//init url
-	href, err := option.initParams()
+	href, err := ctx.option.initParams()
 	if err != nil {
 		err = tools.WrapError(err, "url init error")
 		return
@@ -278,30 +267,30 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 		headers.Set("Authorization", "Basic "+tools.Base64Encode(href.User.String()))
 	}
 	//init body
-	body, err := option.initBody(response.ctx)
+	body, err := ctx.option.initBody(ctx.ctx)
 	if err != nil {
-		return response, tools.WrapError(err, errors.New("tempRequest init body error"), err)
+		return tools.WrapError(err, errors.New("tempRequest init body error"), err)
 	}
 	//create request
-	reqs, err := NewRequestWithContext(response.ctx, option.Method, href, body)
+	reqs, err := NewRequestWithContext(ctx.Context(), ctx.option.Method, href, body)
 	if err != nil {
-		return response, tools.WrapError(errFatal, errors.New("tempRequest 构造request失败"), err)
+		return tools.WrapError(errFatal, errors.New("tempRequest 构造request失败"), err)
 	}
 	reqs.Header = headers
 	//add Referer
 
-	if reqs.Header.Get("Referer") == "" && option.Referer != "" {
-		reqs.Header.Set("Referer", option.Referer)
+	if reqs.Header.Get("Referer") == "" && ctx.option.Referer != "" {
+		reqs.Header.Set("Referer", ctx.option.Referer)
 	}
 
 	//set ContentType
-	if option.ContentType != "" && reqs.Header.Get("Content-Type") == "" {
-		reqs.Header.Set("Content-Type", option.ContentType)
+	if ctx.option.ContentType != "" && reqs.Header.Get("Content-Type") == "" {
+		reqs.Header.Set("Content-Type", ctx.option.ContentType)
 	}
 
 	//add host
-	if option.Host != "" {
-		reqs.Host = option.Host
+	if ctx.option.Host != "" {
+		reqs.Host = ctx.option.Host
 	} else if reqs.Header.Get("Host") != "" {
 		reqs.Host = reqs.Header.Get("Host")
 	} else {
@@ -309,43 +298,44 @@ func (obj *Client) request(ctx context.Context, option *RequestOption) (response
 	}
 
 	//init cookies
-	cookies, err := option.initCookies()
+	cookies, err := ctx.option.initCookies()
 	if err != nil {
-		return response, tools.WrapError(err, errors.New("tempRequest init cookies error"), err)
+		return tools.WrapError(err, errors.New("tempRequest init cookies error"), err)
 	}
 	if cookies != nil {
 		addCookie(reqs, cookies)
 	}
+	ctx.request = reqs
 	//send req
-	response.response, err = obj.do(reqs, option)
+	err = obj.do(ctx)
 	if err != nil && err != ErrUseLastResponse {
 		err = tools.WrapError(err, "client do error")
 		return
 	}
-	if response.response == nil {
+	if ctx.response == nil {
 		err = errors.New("response is nil")
 		return
 	}
-	if response.Body() != nil {
-		response.rawConn = response.Body().(*readWriteCloser)
+	if ctx.Body() != nil {
+		ctx.rawConn = ctx.Body().(*readWriteCloser)
 	}
-	if !response.requestOption.DisUnZip {
-		response.requestOption.DisUnZip = response.response.Uncompressed
+	if !ctx.option.DisUnZip {
+		ctx.option.DisUnZip = ctx.response.Uncompressed
 	}
-	if response.response.StatusCode == 101 {
-		response.webSocket = websocket.NewClientConn(response.rawConn.Conn(), websocket.GetResponseHeaderOption(response.response.Header))
-	} else if strings.Contains(response.response.Header.Get("Content-Type"), "text/event-stream") {
-		response.sse = newSSE(response)
-	} else if !response.requestOption.DisUnZip {
+	if ctx.response.StatusCode == 101 {
+		ctx.webSocket = websocket.NewClientConn(ctx.rawConn.Conn(), websocket.GetResponseHeaderOption(ctx.response.Header))
+	} else if strings.Contains(ctx.response.Header.Get("Content-Type"), "text/event-stream") {
+		ctx.sse = newSSE(ctx)
+	} else if !ctx.option.DisUnZip {
 		var unCompressionBody io.ReadCloser
-		unCompressionBody, err = tools.CompressionDecode(response.Body(), response.ContentEncoding())
+		unCompressionBody, err = tools.CompressionDecode(ctx.Body(), ctx.ContentEncoding())
 		if err != nil {
 			if err != io.ErrUnexpectedEOF && err != io.EOF {
 				return
 			}
 		}
 		if unCompressionBody != nil {
-			response.response.Body = unCompressionBody
+			ctx.response.Body = unCompressionBody
 		}
 	}
 	return
