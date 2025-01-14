@@ -26,51 +26,41 @@ const (
 func WriteUdpAddr(w io.Writer, addr Address) error {
 	if addr.IP != nil {
 		if ip4 := addr.IP.To4(); ip4 != nil {
-			_, err := w.Write([]byte{ipv4Address})
-			if err != nil {
-				return err
-			}
-			_, err = w.Write(ip4)
-			if err != nil {
-				return err
-			}
+			con := make([]byte, 1+4+2)
+			con[0] = ipv4Address
+			copy(con[1:], ip4)
+			binary.BigEndian.PutUint16(con[1+4:], uint16(addr.Port))
+			_, err := w.Write(con)
+			return err
 		} else if ip6 := addr.IP.To16(); ip6 != nil {
-			_, err := w.Write([]byte{ipv6Address})
-			if err != nil {
-				return err
-			}
-			_, err = w.Write(ip6)
-			if err != nil {
-				return err
-			}
+			con := make([]byte, 1+16+2)
+			con[0] = ipv6Address
+			copy(con[1:], ip6)
+			binary.BigEndian.PutUint16(con[1+16:], uint16(addr.Port))
+			_, err := w.Write(con)
+			return err
 		} else {
-			_, err := w.Write([]byte{ipv4Address, 0, 0, 0, 0})
-			if err != nil {
-				return err
-			}
+			con := make([]byte, 1+4+2)
+			con[0] = ipv4Address
+			copy(con[1:], net.IPv4(0, 0, 0, 0))
+			binary.BigEndian.PutUint16(con[1+4:], uint16(addr.Port))
+			_, err := w.Write(con)
+			return err
 		}
 	} else if addr.Name != "" {
 		if len(addr.Name) > 255 {
 			return errors.New("errStringTooLong")
 		}
-		_, err := w.Write([]byte{fqdnAddress, byte(len(addr.Name))})
-		if err != nil {
-			return err
-		}
-		_, err = w.Write([]byte(addr.Name))
-		if err != nil {
-			return err
-		}
+		con := make([]byte, 2+len(addr.Name))
+		con[0] = fqdnAddress
+		con[1] = byte(len(addr.Name))
+		copy(con[1:], []byte(addr.Name))
+		_, err := w.Write(con)
+		return err
 	} else {
 		_, err := w.Write([]byte{ipv4Address, 0, 0, 0, 0})
-		if err != nil {
-			return err
-		}
+		return err
 	}
-	var p [2]byte
-	binary.BigEndian.PutUint16(p[:], uint16(addr.Port))
-	_, err := w.Write(p[:])
-	return err
 }
 
 type Address struct {
