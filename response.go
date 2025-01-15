@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"time"
 
 	"net/http"
 
@@ -354,14 +353,6 @@ func (obj *Response) ReadBody() (err error) {
 	case <-obj.ctx.Done():
 		err = obj.ctx.Err()
 	case <-done:
-	}
-	if obj.option.Logger != nil {
-		obj.option.Logger(Log{
-			Id:   obj.requestId,
-			Time: time.Now(),
-			Type: LogType_ResponseBody,
-			Msg:  "response body",
-		})
 	}
 	if err != nil {
 		obj.ForceCloseConn()

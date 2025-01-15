@@ -182,6 +182,14 @@ func (obj *connecotr) taskMain(task *reqTask) (retry bool) {
 				case <-obj.forceCtx.Done(): //force conn close
 					task.err = tools.WrapError(context.Cause(obj.forceCtx), "connecotr force close")
 				}
+				if task.reqCtx.option.Logger != nil {
+					task.reqCtx.option.Logger(Log{
+						Id:   task.reqCtx.requestId,
+						Time: time.Now(),
+						Type: LogType_ResponseBody,
+						Msg:  "response body",
+					})
+				}
 			}
 			if task.err != nil {
 				obj.CloseWithError(task.err)
