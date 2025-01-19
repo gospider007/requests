@@ -155,7 +155,7 @@ func (obj *Client) Request(ctx context.Context, method string, href string, opti
 		if err == nil || errors.Is(err, errFatal) || option.once {
 			return
 		}
-		optionBak.MaxRetries = option.MaxRedirect
+		optionBak.MaxRetries = option.MaxRetries
 	}
 	return
 }
