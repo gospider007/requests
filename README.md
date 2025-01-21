@@ -13,13 +13,12 @@
     <img src="https://img.shields.io/badge/language-golang-brightgreen">
 </a>
 </p>
-<center>
+<p align="center">
 
 ## A request library designed specifically for web crawlers
+</p>
 
-</center>
-
-## Requests is a fully featured HTTP client library for Golang. Network requests can be completed with just a few lines of code. Unified support for http1, http2, http3, websocket, sse protocols
+## Requests is a fully featured HTTP client library for Golang. Network requests can be completed with just a few lines of code. Unified support for http1, http2, http3, websocket, sse, utls, uquic
 ---
 ## Innovative Features
 
@@ -29,7 +28,7 @@
 | HTTP/3 fingerprint spoofing protection | Not supported  |
 | Arbitrary closure of underlying connections | Not supported |
 | Genuine request-level proxy settings | Not supported   |
-| Unique transport layer management mechanism, fully unifying HTTP/1, HTTP/2, HTTP/3, WebSocket, and SSE protocol handling | Not supported |
+| Unique transport layer management mechanism, fully unifying HTTP/1, HTTP/2, HTTP/3, WebSocket, SSE, UTLS, QUIC protocol handling | Not supported |
 
 ## Features
   * [Simple for settings and Request](https://github.com/gospider007/requests#quickly-send-requests)

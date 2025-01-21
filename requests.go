@@ -146,6 +146,11 @@ func (obj *Client) Request(ctx context.Context, method string, href string, opti
 		}
 	}
 	for ; optionBak.MaxRetries >= 0; optionBak.MaxRetries-- {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
 		option := optionBak
 		option.Url = cloneUrl(uhref)
 		response = NewResponse(ctx, option)
