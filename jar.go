@@ -29,31 +29,31 @@ func NewJar() *jar {
 
 // get cookies
 func (obj *Client) GetCookies(href *url.URL) Cookies {
-	if obj.option.Jar == nil {
+	if obj.ClientOption.Jar == nil {
 		return nil
 	}
-	return obj.option.Jar.GetCookies(href)
+	return obj.ClientOption.Jar.GetCookies(href)
 }
 
 // set cookies
 func (obj *Client) SetCookies(href *url.URL, cookies ...any) error {
-	if obj.option.Jar == nil {
+	if obj.ClientOption.Jar == nil {
 		return nil
 	}
 	cooks, err := any2cookies(href, cookies...)
 	if err != nil {
 		return err
 	}
-	obj.option.Jar.SetCookies(href, cooks)
+	obj.ClientOption.Jar.SetCookies(href, cooks)
 	return nil
 }
 
 // clear cookies
 func (obj *Client) ClearCookies() {
-	if obj.option.Jar == nil {
+	if obj.ClientOption.Jar == nil {
 		return
 	}
-	obj.option.Jar.ClearCookies()
+	obj.ClientOption.Jar.ClearCookies()
 }
 
 // Get cookies

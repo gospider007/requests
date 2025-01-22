@@ -211,7 +211,7 @@ func (obj *RequestOption) initParams() (*url.URL, error) {
 	return baseUrl, nil
 }
 func (obj *Client) newRequestOption(option RequestOption) (RequestOption, error) {
-	err := tools.Merge(&option, obj.option)
+	err := tools.Merge(&option, obj.ClientOption)
 	//end
 	if option.MaxRetries < 0 {
 		option.MaxRetries = 0
@@ -223,7 +223,7 @@ func (obj *Client) newRequestOption(option RequestOption) (RequestOption, error)
 		option.UJa3Spec = ja3.DefaultUSpec()
 	}
 	if option.UserAgent == "" {
-		option.UserAgent = obj.option.UserAgent
+		option.UserAgent = obj.ClientOption.UserAgent
 	}
 	if option.DisCookie {
 		option.Jar = nil

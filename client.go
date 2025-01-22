@@ -14,11 +14,11 @@ import (
 
 // Connection Management
 type Client struct {
-	option    ClientOption
-	transport *roundTripper
-	ctx       context.Context
-	cnl       context.CancelFunc
-	closed    bool
+	ClientOption ClientOption
+	transport    *roundTripper
+	ctx          context.Context
+	cnl          context.CancelFunc
+	closed       bool
 }
 
 var defaultClient, _ = NewClient(context.TODO())
@@ -35,15 +35,15 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	result := new(Client)
 	result.ctx, result.cnl = context.WithCancel(preCtx)
 	result.transport = newRoundTripper(result.ctx)
-	result.option = option
-	if result.option.TlsConfig == nil {
-		result.option.TlsConfig = &tls.Config{
+	result.ClientOption = option
+	if result.ClientOption.TlsConfig == nil {
+		result.ClientOption.TlsConfig = &tls.Config{
 			InsecureSkipVerify: true,
 			ClientSessionCache: tls.NewLRUClientSessionCache(0),
 		}
 	}
-	if result.option.UtlsConfig == nil {
-		result.option.UtlsConfig = &utls.Config{
+	if result.ClientOption.UtlsConfig == nil {
+		result.ClientOption.UtlsConfig = &utls.Config{
 			InsecureSkipVerify:                 true,
 			ClientSessionCache:                 utls.NewLRUClientSessionCache(0),
 			InsecureSkipTimeVerify:             true,
@@ -52,37 +52,16 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 		}
 	}
 	//cookiesjar
-	if !result.option.DisCookie {
-		if result.option.Jar == nil {
-			result.option.Jar = NewJar()
+	if !result.ClientOption.DisCookie {
+		if result.ClientOption.Jar == nil {
+			result.ClientOption.Jar = NewJar()
 		}
 	}
 	var err error
-	if result.option.Proxy != "" {
-		_, err = gtls.VerifyProxy(result.option.Proxy)
+	if result.ClientOption.Proxy != "" {
+		_, err = gtls.VerifyProxy(result.ClientOption.Proxy)
 	}
 	return result, err
-}
-
-// Modifying the client's proxy
-func (obj *Client) SetProxy(proxyUrl string) (err error) {
-	_, err = gtls.VerifyProxy(proxyUrl)
-	if err == nil {
-		obj.option.Proxy = proxyUrl
-	}
-	return
-}
-
-// Modifying the client's proxy
-func (obj *Client) SetProxys(proxyUrls []string) (err error) {
-	for _, proxy := range proxyUrls {
-		_, err = gtls.VerifyProxy(proxy)
-		if err != nil {
-			return
-		}
-	}
-	obj.option.Proxys = proxyUrls
-	return
 }
 
 // Close idle connections. If the connection is in use, wait until it ends before closing
