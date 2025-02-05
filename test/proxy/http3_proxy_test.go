@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"log"
 	"testing"
@@ -122,4 +123,30 @@ func TestHttp3Proxy(t *testing.T) {
 	time.Sleep(time.Second * 3)
 	// client()
 	client2()
+}
+func TestHttp3Proxy2(t *testing.T) {
+	go proxyServer(proxyHost)
+	for range 5 {
+		resp, err := requests.Get(context.TODO(), "https://cloudflare-quic.com/", requests.RequestOption{
+
+			ClientOption: requests.ClientOption{
+				H3: true,
+				// Logger: func(l requests.Log) {
+				// 	log.Print(l)
+				// },
+				Proxys: []string{
+					// "http://" + proxyHost,
+					"socks5://" + proxyHost,
+				},
+			},
+			Body: []byte("hello, server!"),
+		})
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		fmt.Println(resp.StatusCode())
+		fmt.Println(resp.Proto())
+		time.Sleep(time.Second)
+	}
 }

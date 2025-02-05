@@ -54,7 +54,7 @@ func WriteUdpAddr(w io.Writer, addr Address) error {
 		con := make([]byte, 2+len(addr.Name))
 		con[0] = fqdnAddress
 		con[1] = byte(len(addr.Name))
-		copy(con[1:], []byte(addr.Name))
+		copy(con[2:], []byte(addr.Name))
 		_, err := w.Write(con)
 		return err
 	} else {
