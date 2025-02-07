@@ -48,17 +48,23 @@ func WriteUdpAddr(w io.Writer, addr Address) error {
 			return err
 		}
 	} else if addr.Name != "" {
-		if len(addr.Name) > 255 {
+		l := len(addr.Name)
+		if l > 255 {
 			return errors.New("errStringTooLong")
 		}
-		con := make([]byte, 2+len(addr.Name))
+		con := make([]byte, 2+l+2)
 		con[0] = fqdnAddress
-		con[1] = byte(len(addr.Name))
+		con[1] = byte(l)
 		copy(con[2:], []byte(addr.Name))
+		binary.BigEndian.PutUint16(con[2+l:], uint16(addr.Port))
 		_, err := w.Write(con)
 		return err
 	} else {
-		_, err := w.Write([]byte{ipv4Address, 0, 0, 0, 0})
+		con := make([]byte, 1+4+2)
+		con[0] = ipv4Address
+		copy(con[1:], net.IPv4(0, 0, 0, 0))
+		binary.BigEndian.PutUint16(con[1+4:], uint16(addr.Port))
+		_, err := w.Write(con)
 		return err
 	}
 }
