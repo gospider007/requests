@@ -7,9 +7,9 @@ require (
 	github.com/gospider007/bs4 v0.0.0-20250110063952-3322ee09a952
 	github.com/gospider007/gson v0.0.0-20250110063619-6fd4001287da
 	github.com/gospider007/gtls v0.0.0-20250107100054-2a14fa6fc9c5
-	github.com/gospider007/http2 v0.0.0-20250207021514-297281e9c12e
+	github.com/gospider007/http2 v0.0.0-20250207030845-273f87c86932
 	github.com/gospider007/http3 v0.0.0-20250205052534-1c6f533bb5c8
-	github.com/gospider007/ja3 v0.0.0-20250107091445-e294e50de314
+	github.com/gospider007/ja3 v0.0.0-20250207030950-8f6930d13763
 	github.com/gospider007/proxy v0.0.0-20250114011401-cd5ee0138e0e
 	github.com/gospider007/re v0.0.0-20241216142712-efbef8d55ea2
 	github.com/gospider007/tools v0.0.0-20250107090942-5b406ab8a72b
@@ -40,7 +40,7 @@ require (
 	github.com/google/pprof v0.0.0-20250202011525-fc3143867406 // indirect
 	github.com/gospider007/blog v0.0.0-20241205091827-6bcaf48620d4 // indirect
 	github.com/gospider007/kinds v0.0.0-20240929092451-8f867acde255 // indirect
-	github.com/gospider007/net v0.0.0-20250114011219-3eebda16272d // indirect
+	github.com/gospider007/net v0.0.0-20250207031315-05571927d356 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
