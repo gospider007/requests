@@ -12,7 +12,7 @@ require (
 	github.com/gospider007/ja3 v0.0.0-20250207030950-8f6930d13763
 	github.com/gospider007/proxy v0.0.0-20250114011401-cd5ee0138e0e
 	github.com/gospider007/re v0.0.0-20241216142712-efbef8d55ea2
-	github.com/gospider007/tools v0.0.0-20250107090942-5b406ab8a72b
+	github.com/gospider007/tools v0.0.0-20250208030917-26051a107d8c
 	github.com/gospider007/websocket v0.0.0-20250107091829-c78035a103b2
 	github.com/quic-go/quic-go v0.49.0
 	github.com/refraction-networking/uquic v0.0.6

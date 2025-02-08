@@ -120,8 +120,8 @@ github.com/gospider007/proxy v0.0.0-20250114011401-cd5ee0138e0e h1:5lvt+1JK8fLoo
 github.com/gospider007/proxy v0.0.0-20250114011401-cd5ee0138e0e/go.mod h1:058+64s2TFP/IoAjsLMpjNa8tduvhDfUP68W6xH82XU=
 github.com/gospider007/re v0.0.0-20241216142712-efbef8d55ea2 h1:ixXFS1DqP0NnHna+b0JKaPqMRYRmahzUADZn7PawQq0=
 github.com/gospider007/re v0.0.0-20241216142712-efbef8d55ea2/go.mod h1:kr9bUaC42FS019Ak23fSctbTRB2JpfPPg/pSVjQmsws=
-github.com/gospider007/tools v0.0.0-20250107090942-5b406ab8a72b h1:iiAxiufROgDsuQInI6dAx1CG3m7nMMj3C0SAE84oY7g=
-github.com/gospider007/tools v0.0.0-20250107090942-5b406ab8a72b/go.mod h1:mTtocamaDuVtgdEXu72OGw6uOhDIOCr98zcvZyBLiro=
+github.com/gospider007/tools v0.0.0-20250208030917-26051a107d8c h1:5ea20FyPjhgvsfqo6RyC9fHzWYE73Un/Yypgh2mWTaU=
+github.com/gospider007/tools v0.0.0-20250208030917-26051a107d8c/go.mod h1:3XiIGH1l8oxqe6bHzd0tutZi15fEFyMYXOYrub/whsg=
 github.com/gospider007/websocket v0.0.0-20250107091829-c78035a103b2 h1:hp8IZHhmq4tAkJRFZ3QXRoRwwNyvAeYyqecV/JvFPYc=
 github.com/gospider007/websocket v0.0.0-20250107091829-c78035a103b2/go.mod h1:0DHN5ImV48fYE0NkMKynEQLTo+CxMUMCqvIMUE8qUQI=
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
