@@ -324,16 +324,13 @@ func (obj *Client) request(ctx *Response) (err error) {
 	if ctx.Body() != nil {
 		ctx.rawConn = ctx.Body().(*readWriteCloser)
 	}
-	if !ctx.option.DisUnZip {
-		ctx.option.DisUnZip = ctx.response.Uncompressed
-	}
 	if ctx.response.StatusCode == 101 {
 		ctx.webSocket = websocket.NewClientConn(ctx.rawConn.Conn(), websocket.GetResponseHeaderOption(ctx.response.Header))
 	} else if strings.Contains(ctx.response.Header.Get("Content-Type"), "text/event-stream") {
 		ctx.sse = newSSE(ctx)
-	} else if !ctx.option.DisUnZip {
+	} else if !ctx.response.Uncompressed {
 		var unCompressionBody io.ReadCloser
-		unCompressionBody, err = tools.CompressionDecode(ctx.Body(), ctx.ContentEncoding())
+		unCompressionBody, err = tools.CompressionDecode(ctx.Context(), ctx.Body(), ctx.ContentEncoding())
 		if err != nil {
 			if err != io.ErrUnexpectedEOF && err != io.EOF {
 				return

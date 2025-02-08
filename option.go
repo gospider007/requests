@@ -58,7 +58,6 @@ type ClientOption struct {
 	Ja3                   bool                                  //enable ja3 fingerprint
 	DisCookie             bool                                  //disable cookies
 	DisDecode             bool                                  //disable auto decode
-	DisUnZip              bool                                  //disable auto zip decode
 	Bar                   bool                                  ////enable bar display
 	OptionCallBack        func(ctx *Response) error             //option callback,if error is returnd, break request
 	ResultCallBack        func(ctx *Response) error             //result callback,if error is returnd,next errCallback
