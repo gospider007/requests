@@ -13,15 +13,13 @@
     <img src="https://img.shields.io/badge/language-golang-brightgreen">
 </a>
 </p>
-<p align="center">
 
-## A request library designed specifically for web crawlers
-</p>
-
-## Requests is a fully featured HTTP client library for Golang. Network requests can be completed with just a few lines of code. Unified support for http1, http2, http3, websocket, sse, utls, uquic
 ---
-## Innovative Features
+<h2 align="center">A request library designed specifically for web crawlers</h2>
 
+<h2 align="center">Requests is a fully featured HTTP client library for Golang. Network requests can be completed with just a few lines of code. Unified support for http1, http2, http3, websocket, sse, utls, uquic</h2>
+
+## Innovative Features
 | **gospider007/requests** | **Other Request Libraries** |
 |---------------------------|----------------------------|
 | Unlimited chained proxy   | Not supported             |
@@ -129,3 +127,7 @@ If you like and it really helps you, feel free to reward me with a cup of coffee
         </td>
     </tr>
 </table>
+
+## License  
+This project is licensed under the Mozilla Public License 2.0 (MPL-2.0) with additional author attribution requirements.  
+See the [LICENSE](./LICENSE) file for details.  
