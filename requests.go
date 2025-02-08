@@ -157,15 +157,14 @@ func (obj *Client) Request(ctx context.Context, method string, href string, opti
 		response.client = obj
 		response.requestId = requestId
 		err = obj.request(response)
-		if err == nil || errors.Is(err, errFatal) || option.once {
+		if err == nil || errors.Is(err, errFatal) || response.Option().once {
 			return
 		}
-		optionBak.MaxRetries = option.MaxRetries
+		optionBak.MaxRetries = response.Option().MaxRetries
 	}
 	return
 }
 func (obj *Client) request(ctx *Response) (err error) {
-
 	defer func() {
 		//read body
 		if err == nil && !ctx.IsWebSocket() && !ctx.IsSSE() && !ctx.IsStream() {
