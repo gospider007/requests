@@ -74,10 +74,10 @@ type Address struct {
 	Password string
 	Name     string
 	Host     string
-	IP       net.IP
-	Port     int
 	NetWork  string
 	Scheme   string
+	IP       net.IP
+	Port     int
 }
 
 func (a Address) String() string {
@@ -132,13 +132,13 @@ func ReadUdpAddr(r io.Reader) (Address, error) {
 }
 
 type UDPConn struct {
-	bufRead      [MaxUdpPacket]byte
-	bufWrite     [MaxUdpPacket]byte
 	proxyAddress net.Addr
-	// defaultTarget net.Addr
-	prefix []byte
 	net.PacketConn
 	UDPConn *net.UDPConn
+	// defaultTarget net.Addr
+	prefix   []byte
+	bufRead  [MaxUdpPacket]byte
+	bufWrite [MaxUdpPacket]byte
 }
 
 func NewUDPConn(packConn net.PacketConn, proxyAddress net.Addr) (*UDPConn, error) {

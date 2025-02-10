@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"errors"
+	"github.com/gospider007/tools"
 	"io"
 	"iter"
 	"net"
@@ -11,8 +12,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/gospider007/tools"
 )
 
 var maxRetryCount = 10
@@ -21,7 +20,6 @@ type Conn interface {
 	CloseWithError(err error) error
 	DoRequest(*http.Request, []string) (*http.Response, error)
 }
-
 type conn struct {
 	r         *bufio.Reader
 	w         *bufio.Writer
@@ -74,7 +72,6 @@ func (obj *conn) DoRequest(req *http.Request, orderHeaders []string) (*http.Resp
 }
 func (obj *conn) run() (err error) {
 	_, err = io.Copy(obj.pw, obj.conn)
-
 	return obj.CloseWithError(err)
 }
 func (obj *conn) Read(b []byte) (i int, err error) {
@@ -105,13 +102,11 @@ type connecotr struct {
 	forceCnl       context.CancelCauseFunc
 	safeCtx        context.Context //safe close
 	safeCnl        context.CancelCauseFunc
-
-	bodyCtx context.Context //body close
-	bodyCnl context.CancelCauseFunc
-
-	Conn   Conn
-	c      net.Conn
-	proxys []Address
+	bodyCtx        context.Context //body close
+	bodyCnl        context.CancelCauseFunc
+	Conn           Conn
+	c              net.Conn
+	proxys         []Address
 }
 
 func (obj *connecotr) withCancel(forceCtx context.Context, safeCtx context.Context) {
@@ -129,7 +124,6 @@ func (obj *connecotr) CloseWithError(err error) error {
 	}
 	return err
 }
-
 func (obj *connecotr) wrapBody(task *reqTask) {
 	body := new(readWriteCloser)
 	obj.bodyCtx, obj.bodyCnl = context.WithCancelCause(task.reqCtx.Context())
@@ -145,7 +139,6 @@ func (obj *connecotr) httpReq(task *reqTask, done chan struct{}) {
 	}
 	close(done)
 }
-
 func (obj *connecotr) taskMain(task *reqTask) (retry bool) {
 	defer func() {
 		if retry {
@@ -248,18 +241,15 @@ func (obj *connecotr) taskMain(task *reqTask) (retry bool) {
 }
 
 type connPool struct {
-	forceCtx context.Context
-	forceCnl context.CancelCauseFunc
-
-	safeCtx context.Context
-	safeCnl context.CancelCauseFunc
-
-	connKey   string
-	total     atomic.Int64
+	forceCtx  context.Context
+	safeCtx   context.Context
+	forceCnl  context.CancelCauseFunc
+	safeCnl   context.CancelCauseFunc
 	tasks     chan *reqTask
 	connPools *connPools
+	connKey   string
+	total     atomic.Int64
 }
-
 type connPools struct {
 	connPools sync.Map
 }
@@ -267,7 +257,6 @@ type connPools struct {
 func newConnPools() *connPools {
 	return new(connPools)
 }
-
 func (obj *connPools) get(key string) *connPool {
 	val, ok := obj.connPools.Load(key)
 	if !ok {
@@ -275,11 +264,9 @@ func (obj *connPools) get(key string) *connPool {
 	}
 	return val.(*connPool)
 }
-
 func (obj *connPools) set(key string, pool *connPool) {
 	obj.connPools.Store(key, pool)
 }
-
 func (obj *connPools) del(key string) {
 	obj.connPools.Delete(key)
 }
@@ -290,14 +277,12 @@ func (obj *connPools) Range() iter.Seq2[string, *connPool] {
 		})
 	}
 }
-
 func (obj *connPool) notice(task *reqTask) {
 	select {
 	case obj.tasks <- task:
 	case task.emptyPool <- struct{}{}:
 	}
 }
-
 func (obj *connPool) rwMain(done chan struct{}, conn *connecotr) {
 	conn.withCancel(obj.forceCtx, obj.safeCtx)
 	defer func() {
@@ -332,7 +317,6 @@ func (obj *connPool) forceClose() {
 	obj.safeClose()
 	obj.forceCnl(errors.New("connPool forceClose"))
 }
-
 func (obj *connPool) safeClose() {
 	obj.connPools.del(obj.connKey)
 	obj.safeCnl(errors.New("connPool close"))

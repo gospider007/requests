@@ -4,20 +4,18 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"io"
-
-	"net/http"
-
 	"github.com/gospider007/gtls"
 	utls "github.com/refraction-networking/utls"
+	"io"
+	"net/http"
 )
 
 // Connection Management
 type Client struct {
-	ClientOption ClientOption
-	transport    *roundTripper
 	ctx          context.Context
+	transport    *roundTripper
 	cnl          context.CancelFunc
+	ClientOption ClientOption
 	closed       bool
 }
 
@@ -80,7 +78,6 @@ func (obj *Client) Close() {
 	obj.ForceCloseConns()
 	obj.cnl()
 }
-
 func (obj *Client) do(ctx *Response) (err error) {
 	var redirectNum int
 	for {

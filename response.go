@@ -5,20 +5,18 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"io"
-	"iter"
-	"net/url"
-	"strconv"
-	"strings"
-
-	"net/http"
-
 	"github.com/gospider007/bar"
 	"github.com/gospider007/bs4"
 	"github.com/gospider007/gson"
 	"github.com/gospider007/re"
 	"github.com/gospider007/tools"
 	"github.com/gospider007/websocket"
+	"io"
+	"iter"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
 )
 
 func NewResponse(ctx context.Context, option RequestOption) *Response {
@@ -27,7 +25,6 @@ func NewResponse(ctx context.Context, option RequestOption) *Response {
 		option: &option,
 	}
 }
-
 func (obj *Response) Err() error {
 	if obj.err != nil {
 		return obj.err
@@ -37,7 +34,6 @@ func (obj *Response) Err() error {
 	}
 	return obj.ctx.Err()
 }
-
 func (obj *Response) Request() *http.Request {
 	return obj.request
 }
@@ -59,25 +55,23 @@ func (obj *Response) Client() *Client {
 
 type Response struct {
 	err       error
+	ctx       context.Context
 	request   *http.Request
 	rawConn   *readWriteCloser
 	response  *http.Response
 	webSocket *websocket.Conn
 	sse       *SSE
-	ctx       context.Context
 	cnl       context.CancelFunc
 	option    *RequestOption
-	content   []byte
+	client    *Client
 	encoding  string
 	filePath  string
-	readBody  bool
-
-	client    *Client
 	requestId string
+	content   []byte
 	proxys    []*url.URL
+	readBody  bool
 	isNewConn bool
 }
-
 type SSE struct {
 	reader   *bufio.Reader
 	response *Response
@@ -86,8 +80,8 @@ type Event struct {
 	Data    string //data
 	Event   string //event
 	Id      string //id
-	Retry   int    //retry num
 	Comment string //comment info
+	Retry   int    //retry num
 }
 
 func newSSE(response *Response) *SSE {
@@ -108,7 +102,6 @@ func (obj *SSE) Recv() (Event, error) {
 			continue
 		}
 		reResult = re.Search(`event:\s?(.*)`, readStr)
-
 		if reResult != nil {
 			event.Event = reResult.Group(1)
 			continue
@@ -133,7 +126,6 @@ func (obj *SSE) Recv() (Event, error) {
 		return event, errors.New("content parse error:" + readStr)
 	}
 }
-
 func (obj *SSE) Range() iter.Seq2[Event, error] {
 	return func(yield func(Event, error) bool) {
 		defer obj.Close()
@@ -306,7 +298,6 @@ func (obj *barBody) Write(con []byte) (int, error) {
 func (obj *Response) defaultDecode() bool {
 	return strings.Contains(obj.ContentType(), "html")
 }
-
 func (obj *Response) Body() io.ReadCloser {
 	return obj.response.Body
 }

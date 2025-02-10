@@ -8,9 +8,9 @@ import (
 
 type readWriteCloser struct {
 	body     io.ReadCloser
+	err      error
 	conn     *connecotr
 	isClosed bool
-	err      error
 }
 
 func (obj *readWriteCloser) Conn() net.Conn {

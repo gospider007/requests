@@ -6,13 +6,13 @@ import (
 )
 
 type pipCon struct {
+	ctx     context.Context
 	reader  <-chan []byte
 	writer  chan<- []byte
 	readerI <-chan int
 	writerI chan<- int
-	lock    sync.Mutex
-	ctx     context.Context
 	cnl     context.CancelCauseFunc
+	lock    sync.Mutex
 }
 
 func (obj *pipCon) Read(b []byte) (n int, err error) {
@@ -55,12 +55,10 @@ func (obj *pipCon) CloseWitError(err error) error {
 func (obj *pipCon) Close() error {
 	return obj.CloseWitError(nil)
 }
-
 func pipe(preCtx context.Context) (*pipCon, *pipCon) {
 	ctx, cnl := context.WithCancelCause(preCtx)
 	readerCha := make(chan []byte)
 	writerCha := make(chan []byte)
-
 	readerI := make(chan int)
 	writerI := make(chan int)
 	localpipCon := &pipCon{

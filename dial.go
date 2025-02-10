@@ -5,34 +5,30 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"io"
-	"net"
-	"net/url"
-	"sync"
-	"time"
-
-	"net/http"
-
 	"github.com/gospider007/gtls"
 	"github.com/gospider007/ja3"
 	"github.com/gospider007/tools"
 	utls "github.com/refraction-networking/utls"
+	"io"
+	"net"
+	"net/http"
+	"net/url"
+	"sync"
+	"time"
 )
 
 type msgClient struct {
 	time time.Time
 	ip   net.IP
 }
-
 type DialOption struct {
-	DialTimeout time.Duration
-	KeepAlive   time.Duration
-	LocalAddr   *net.TCPAddr  //network card ip
-	AddrType    gtls.AddrType //first ip type
+	LocalAddr   *net.TCPAddr //network card ip
 	Dns         *net.UDPAddr
 	GetAddrType func(host string) gtls.AddrType
+	DialTimeout time.Duration
+	KeepAlive   time.Duration
+	AddrType    gtls.AddrType //first ip type
 }
-
 type dialer interface {
 	DialContext(ctx context.Context, network string, address string) (net.Conn, error)
 	LookupIPAddr(ctx context.Context, host string) ([]net.IPAddr, error)
@@ -53,7 +49,6 @@ func (d *myDialer) DialContext(ctx context.Context, network string, address stri
 func (d *myDialer) LookupIPAddr(ctx context.Context, host string) ([]net.IPAddr, error) {
 	return d.dialer.Resolver.LookupIPAddr(ctx, host)
 }
-
 func newDialer(option DialOption) dialer {
 	if option.KeepAlive == 0 {
 		option.KeepAlive = time.Second * 5
@@ -142,7 +137,6 @@ func (obj *Dialer) DialContext(ctx *Response, network string, addr Address) (net
 func (obj *Dialer) ProxyDialContext(ctx *Response, network string, addr Address) (net.Conn, error) {
 	return obj.dialContext(ctx, network, addr, true)
 }
-
 func (obj *Dialer) DialProxyContext(ctx *Response, network string, proxyTlsConfig *tls.Config, proxyUrls ...Address) (net.PacketConn, net.Conn, error) {
 	proxyLen := len(proxyUrls)
 	if proxyLen < 2 {
@@ -164,11 +158,9 @@ func (obj *Dialer) DialProxyContext(ctx *Response, network string, proxyTlsConfi
 	}
 	return packCon, conn, err
 }
-
 func (obj *Dialer) dialProxyContext(ctx *Response, network string, proxyUrl Address) (net.Conn, error) {
 	return obj.ProxyDialContext(ctx, network, proxyUrl)
 }
-
 func (obj *Dialer) verifyProxyToRemote(ctx *Response, conn net.Conn, proxyTlsConfig *tls.Config, proxyAddress Address, remoteAddress Address, isLast bool) (net.PacketConn, net.Conn, error) {
 	var err error
 	var packCon net.PacketConn
@@ -290,7 +282,6 @@ func (obj *Dialer) verifyTCPSocks5(conn net.Conn, proxyAddr Address, remoteAddr 
 	_, err = obj.verifySocks5(conn, "tcp", proxyAddr, remoteAddr)
 	return
 }
-
 func (obj *Dialer) verifyUDPSocks5(ctx context.Context, conn net.Conn, proxyAddr Address, remoteAddr Address) (wrapConn net.PacketConn, err error) {
 	remoteAddr.NetWork = "udp"
 	proxyAddress, err := obj.verifySocks5(conn, "udp", proxyAddr, remoteAddr)
