@@ -7,6 +7,7 @@ import (
 
 	"github.com/gospider007/ja3"
 	"github.com/gospider007/requests"
+	uquic "github.com/refraction-networking/uquic"
 )
 
 func TestHttp3(t *testing.T) {
@@ -32,7 +33,7 @@ func TestHttp3(t *testing.T) {
 func TestHttp32(t *testing.T) {
 	resp, err := requests.Get(context.TODO(), "https://cloudflare-quic.com/", requests.RequestOption{
 		ClientOption: requests.ClientOption{
-			UJa3Spec: ja3.CreateUSpecWithId(ja3.QUICChrome_115),
+			UJa3Spec: ja3.CreateUSpecWithId(uquic.QUICChrome_115),
 			H3:       true,
 		},
 	},

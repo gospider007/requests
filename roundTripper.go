@@ -14,7 +14,6 @@ import (
 	"github.com/gospider007/gtls"
 	"github.com/gospider007/http2"
 	"github.com/gospider007/http3"
-	"github.com/gospider007/ja3"
 	"github.com/gospider007/tools"
 	"github.com/quic-go/quic-go"
 	uquic "github.com/refraction-networking/uquic"
@@ -135,10 +134,7 @@ func (obj *roundTripper) ghttp3Dial(ctx *Response, remoteAddress Address, proxyA
 }
 
 func (obj *roundTripper) uhttp3Dial(ctx *Response, remoteAddress Address, proxyAddress ...Address) (conn *connecotr, err error) {
-	spec, err := ja3.CreateSpecWithUSpec(ctx.option.UJa3Spec)
-	if err != nil {
-		return nil, err
-	}
+
 	udpConn, err := obj.http3Dial(ctx, remoteAddress, proxyAddress...)
 	if err != nil {
 		return nil, err
@@ -156,6 +152,7 @@ func (obj *roundTripper) uhttp3Dial(ctx *Response, remoteAddress Address, proxyA
 	if ctx.option.UquicConfig != nil {
 		quicConfig = ctx.option.UquicConfig.Clone()
 	}
+	spec := uquic.QUICSpec(ctx.option.UJa3Spec)
 	netConn, err := (&uquic.UTransport{
 		Transport: &uquic.Transport{
 			Conn: udpConn,
@@ -185,28 +182,30 @@ func (obj *roundTripper) dial(ctx *Response) (conn *connecotr, err error) {
 			return obj.ghttp3Dial(ctx, remoteAddress, proxys...)
 		}
 	}
-	var netConn net.Conn
+	var rawNetConn net.Conn
 	if len(proxys) > 0 {
-		_, netConn, err = obj.dialer.DialProxyContext(ctx, "tcp", ctx.option.TlsConfig.Clone(), append(proxys, remoteAddress)...)
+		_, rawNetConn, err = obj.dialer.DialProxyContext(ctx, "tcp", ctx.option.TlsConfig.Clone(), append(proxys, remoteAddress)...)
 	} else {
 		var remoteAddress Address
 		remoteAddress, err = GetAddressWithUrl(ctx.request.URL)
 		if err != nil {
 			return nil, err
 		}
-		netConn, err = obj.dialer.DialContext(ctx, "tcp", remoteAddress)
+		rawNetConn, err = obj.dialer.DialContext(ctx, "tcp", remoteAddress)
 	}
 	defer func() {
-		if err != nil && netConn != nil {
-			netConn.Close()
+		if err != nil && rawNetConn != nil {
+			rawNetConn.Close()
 		}
 	}()
 	if err != nil {
 		return nil, err
 	}
 	var h2 bool
+	conne := obj.newConnecotr()
+	conne.proxys = proxys
 	if ctx.request.URL.Scheme == "https" {
-		netConn, h2, err = obj.dialAddTls(ctx.option, ctx.request, netConn)
+		conne.c, h2, err = obj.dialAddTls(ctx.option, ctx.request, rawNetConn)
 		if ctx.option.Logger != nil {
 			ctx.option.Logger(Log{
 				Id:   ctx.requestId,
@@ -218,10 +217,9 @@ func (obj *roundTripper) dial(ctx *Response) (conn *connecotr, err error) {
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		conne.c = rawNetConn
 	}
-	conne := obj.newConnecotr()
-	conne.proxys = proxys
-	conne.c = netConn
 	err = obj.dialConnecotr(ctx.option, ctx.request, conne, h2)
 	if err != nil {
 		return nil, err
