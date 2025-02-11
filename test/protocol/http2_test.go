@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"testing"
 
 	"github.com/gospider007/requests"
@@ -30,7 +31,15 @@ func TestHttp2(t *testing.T) {
 			t.Error("resp.Proto!= HTTP/2.0")
 		}
 	}
-	resp, err = requests.Post(context.TODO(), "https://mp.weixin.qq.com", requests.RequestOption{Body: "fasfasfsdfdssdsfasdfasdfsadfsdf对方是大翻身大翻身大翻身对方的身份"})
+	resp, err = requests.Post(context.TODO(), "https://mp.weixin.qq.com", requests.RequestOption{
+		Body: "fasfasfsdfdssdsfasdfasdfsadfsdf对方是大翻身大翻身大翻身对方的身份",
+		ClientOption: requests.ClientOption{
+			ErrCallBack: func(ctx *requests.Response) error {
+				log.Print(ctx.Err())
+				return nil
+			},
+		},
+	})
 	if err != nil {
 		t.Error(err)
 	}

@@ -9,7 +9,7 @@ require (
 	github.com/gospider007/gtls v0.0.0-20250107100054-2a14fa6fc9c5
 	github.com/gospider007/http2 v0.0.0-20250207072457-e5aee546e6ef
 	github.com/gospider007/http3 v0.0.0-20250207072522-fbe0ea54a292
-	github.com/gospider007/ja3 v0.0.0-20250207030950-8f6930d13763
+	github.com/gospider007/ja3 v0.0.0-20250210150438-a0b8d7729724
 	github.com/gospider007/proxy v0.0.0-20250114011401-cd5ee0138e0e
 	github.com/gospider007/re v0.0.0-20241216142712-efbef8d55ea2
 	github.com/gospider007/tools v0.0.0-20250208030917-26051a107d8c
@@ -17,8 +17,8 @@ require (
 	github.com/quic-go/quic-go v0.49.0
 	github.com/refraction-networking/uquic v0.0.6
 	github.com/refraction-networking/utls v1.6.7
-	golang.org/x/exp v0.0.0-20250207012021-f9890c6ad9f3
-	golang.org/x/net v0.34.0
+	golang.org/x/exp v0.0.0-20250210185358-939b2ce775ac
+	golang.org/x/net v0.35.0
 )
 
 require (
@@ -37,7 +37,7 @@ require (
 	github.com/gaukas/godicttls v0.0.4 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
-	github.com/google/pprof v0.0.0-20250202011525-fc3143867406 // indirect
+	github.com/google/pprof v0.0.0-20250208200701-d0013a598941 // indirect
 	github.com/gospider007/blog v0.0.0-20241205091827-6bcaf48620d4 // indirect
 	github.com/gospider007/kinds v0.0.0-20240929092451-8f867acde255 // indirect
 	github.com/gospider007/net v0.0.0-20250207031315-05571927d356 // indirect
@@ -78,5 +78,5 @@ require (
 	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
-	golang.org/x/tools v0.29.0 // indirect
+	golang.org/x/tools v0.30.0 // indirect
 )
