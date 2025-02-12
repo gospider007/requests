@@ -14,9 +14,11 @@ import (
 	"github.com/gospider007/gtls"
 	"github.com/gospider007/http2"
 	"github.com/gospider007/http3"
+	"github.com/gospider007/ja3"
 	"github.com/gospider007/tools"
 	"github.com/quic-go/quic-go"
 	uquic "github.com/refraction-networking/uquic"
+	utls "github.com/refraction-networking/utls"
 )
 
 type reqTask struct {
@@ -60,9 +62,11 @@ func newRoundTripper(preCtx context.Context) *roundTripper {
 	}
 	ctx, cnl := context.WithCancel(preCtx)
 	return &roundTripper{
-		ctx:       ctx,
-		cnl:       cnl,
-		dialer:    &Dialer{},
+		ctx: ctx,
+		cnl: cnl,
+		dialer: &Dialer{
+			specClient: ja3.NewClient(),
+		},
 		connPools: newConnPools(),
 	}
 }
@@ -134,7 +138,6 @@ func (obj *roundTripper) ghttp3Dial(ctx *Response, remoteAddress Address, proxyA
 }
 
 func (obj *roundTripper) uhttp3Dial(ctx *Response, remoteAddress Address, proxyAddress ...Address) (conn *connecotr, err error) {
-
 	udpConn, err := obj.http3Dial(ctx, remoteAddress, proxyAddress...)
 	if err != nil {
 		return nil, err
@@ -152,7 +155,14 @@ func (obj *roundTripper) uhttp3Dial(ctx *Response, remoteAddress Address, proxyA
 	if ctx.option.UquicConfig != nil {
 		quicConfig = ctx.option.UquicConfig.Clone()
 	}
-	spec := uquic.QUICSpec(ctx.option.UJa3Spec)
+	var spec uquic.QUICSpec
+	if ctx.option.UJa3Spec.Client != "" {
+		if spec, err = uquic.QUICID2Spec(ctx.option.UJa3Spec); err != nil {
+			return nil, err
+		}
+	} else {
+		spec = ja3.DefaultUSpec()
+	}
 	netConn, err := (&uquic.UTransport{
 		Transport: &uquic.Transport{
 			Conn: udpConn,
@@ -176,7 +186,7 @@ func (obj *roundTripper) dial(ctx *Response) (conn *connecotr, err error) {
 		return nil, err
 	}
 	if ctx.option.H3 {
-		if ctx.option.UJa3Spec.IsSet() {
+		if ctx.option.UJa3Spec.Client != "" || ctx.option.UJa3 {
 			return obj.uhttp3Dial(ctx, remoteAddress, proxys...)
 		} else {
 			return obj.ghttp3Dial(ctx, remoteAddress, proxys...)
@@ -246,8 +256,17 @@ func (obj *roundTripper) dialConnecotr(option *RequestOption, req *http.Request,
 func (obj *roundTripper) dialAddTls(option *RequestOption, req *http.Request, netConn net.Conn) (net.Conn, bool, error) {
 	ctx, cnl := context.WithTimeout(req.Context(), option.TlsHandshakeTimeout)
 	defer cnl()
-	if option.Ja3Spec.IsSet() {
-		if tlsConn, err := obj.dialer.addJa3Tls(ctx, netConn, getHost(req), !option.ForceHttp1, option.Ja3Spec, option.UtlsConfig.Clone()); err != nil {
+	if option.Ja3Spec != nil || option.Ja3 {
+		var spec utls.ClientHelloSpec
+		var err error
+		if option.Ja3Spec != nil {
+			if spec, err = ja3.CreateSpecWithClientHello(option.Ja3Spec); err != nil {
+				return nil, false, err
+			}
+		} else {
+			spec = ja3.DefaultSpec()
+		}
+		if tlsConn, err := obj.dialer.addJa3Tls(ctx, netConn, getHost(req), !option.ForceHttp1, spec, option.UtlsConfig.Clone()); err != nil {
 			return tlsConn, false, tools.WrapError(err, "add ja3 tls error")
 		} else {
 			return tlsConn, tlsConn.ConnectionState().NegotiatedProtocol == "h2", nil

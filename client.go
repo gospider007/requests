@@ -4,10 +4,11 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"github.com/gospider007/gtls"
-	utls "github.com/refraction-networking/utls"
 	"io"
 	"net/http"
+
+	"github.com/gospider007/gtls"
+	utls "github.com/refraction-networking/utls"
 )
 
 // Connection Management

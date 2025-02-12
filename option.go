@@ -3,15 +3,16 @@ package requests
 import (
 	"context"
 	"crypto/tls"
+	"io"
+	"net/url"
+	"time"
+
 	"github.com/gospider007/ja3"
 	"github.com/gospider007/tools"
 	"github.com/gospider007/websocket"
 	"github.com/quic-go/quic-go"
 	uquic "github.com/refraction-networking/uquic"
 	utls "github.com/refraction-networking/utls"
-	"io"
-	"net/url"
-	"time"
 )
 
 type LogType string
@@ -37,7 +38,7 @@ type Log struct {
 
 // Connection Management Options
 type ClientOption struct {
-	Ja3Spec               ja3.Spec //custom ja3Spec,use ja3.CreateSpecWithStr or ja3.CreateSpecWithId create
+	Ja3Spec               any //support utls.ClientHelloID, clienthello with hex string, clienthello with byte array
 	DialOption            DialOption
 	Headers               any                                   //default headers
 	Jar                   Jar                                   //custom cookies
@@ -52,7 +53,7 @@ type ClientOption struct {
 	UtlsConfig            *utls.Config
 	QuicConfig            *quic.Config
 	UquicConfig           *uquic.Config
-	UJa3Spec              ja3.USpec     //h3 fingerprint
+	UJa3Spec              uquic.QUICID
 	Proxy                 string        //proxy,support https,http,socks5
 	UserAgent             string        //headers User-Agent value
 	OrderHeaders          []string      //order headers
@@ -66,9 +67,10 @@ type ClientOption struct {
 	H3                    bool          //开启http3
 	ForceHttp1            bool          //force  use http1 send requests
 	Ja3                   bool          //enable ja3 fingerprint
-	DisCookie             bool          //disable cookies
-	DisDecode             bool          //disable auto decode
-	Bar                   bool          ////enable bar display
+	UJa3                  bool
+	DisCookie             bool //disable cookies
+	DisDecode             bool //disable auto decode
+	Bar                   bool ////enable bar display
 }
 
 // Options for sending requests
@@ -201,12 +203,6 @@ func (obj *Client) newRequestOption(option RequestOption) (RequestOption, error)
 	//end
 	if option.MaxRetries < 0 {
 		option.MaxRetries = 0
-	}
-	if !option.Ja3Spec.IsSet() && option.Ja3 {
-		option.Ja3Spec = ja3.DefaultSpec()
-	}
-	if !option.UJa3Spec.IsSet() && option.Ja3 {
-		option.UJa3Spec = ja3.DefaultUSpec()
 	}
 	if option.UserAgent == "" {
 		option.UserAgent = obj.ClientOption.UserAgent

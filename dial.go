@@ -5,16 +5,17 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"github.com/gospider007/gtls"
-	"github.com/gospider007/ja3"
-	"github.com/gospider007/tools"
-	utls "github.com/refraction-networking/utls"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/gospider007/gtls"
+	"github.com/gospider007/ja3"
+	"github.com/gospider007/tools"
+	utls "github.com/refraction-networking/utls"
 )
 
 type msgClient struct {
@@ -36,7 +37,8 @@ type dialer interface {
 
 // 自定义dialer
 type Dialer struct {
-	dnsIpData sync.Map
+	dnsIpData  sync.Map
+	specClient *ja3.Client
 	// dialer    dialer
 }
 type myDialer struct {
@@ -390,14 +392,13 @@ func (obj *Dialer) addTls(ctx context.Context, conn net.Conn, host string, h2 bo
 	tlsConn = tls.Client(conn, tlsConfig)
 	return tlsConn, tlsConn.HandshakeContext(ctx)
 }
-func (obj *Dialer) addJa3Tls(ctx context.Context, conn net.Conn, host string, h2 bool, spec ja3.Spec, tlsConfig *utls.Config) (*utls.UConn, error) {
-	tlsConfig.ServerName = gtls.GetServerName(host)
+func (obj *Dialer) addJa3Tls(ctx context.Context, conn net.Conn, host string, h2 bool, spec utls.ClientHelloSpec, tlsConfig *utls.Config) (*utls.UConn, error) {
 	if h2 {
 		tlsConfig.NextProtos = []string{"h2", "http/1.1"}
 	} else {
 		tlsConfig.NextProtos = []string{"http/1.1"}
 	}
-	return ja3.NewClient(ctx, conn, spec, h2, tlsConfig)
+	return obj.specClient.Client(ctx, conn, spec, h2, tlsConfig, gtls.GetServerName(host))
 }
 func (obj *Dialer) Socks5TcpProxy(ctx *Response, proxyAddr Address, remoteAddr Address) (conn net.Conn, err error) {
 	if conn, err = obj.DialContext(ctx, "tcp", proxyAddr); err != nil {
