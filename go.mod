@@ -9,8 +9,8 @@ require (
 	github.com/gospider007/gtls v0.0.0-20250107100054-2a14fa6fc9c5
 	github.com/gospider007/http2 v0.0.0-20250211075152-9b93ea5934a7
 	github.com/gospider007/http3 v0.0.0-20250211075910-8bad8da7d8cc
-	github.com/gospider007/ja3 v0.0.0-20250210150438-a0b8d7729724
-	github.com/gospider007/proxy v0.0.0-20250114011401-cd5ee0138e0e
+	github.com/gospider007/ja3 v0.0.0-20250213002809-fed6ef545daf
+	github.com/gospider007/proxy v0.0.0-20250212051747-ecb05461e726
 	github.com/gospider007/re v0.0.0-20241216142712-efbef8d55ea2
 	github.com/gospider007/tools v0.0.0-20250208030917-26051a107d8c
 	github.com/gospider007/websocket v0.0.0-20250107091829-c78035a103b2

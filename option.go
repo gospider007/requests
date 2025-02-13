@@ -38,7 +38,7 @@ type Log struct {
 
 // Connection Management Options
 type ClientOption struct {
-	Ja3Spec               any //support utls.ClientHelloID, clienthello with hex string, clienthello with byte array
+	Spec                  any //support []bytes,hex string,bool
 	DialOption            DialOption
 	Headers               any                                   //default headers
 	Jar                   Jar                                   //custom cookies
@@ -53,12 +53,12 @@ type ClientOption struct {
 	UtlsConfig            *utls.Config
 	QuicConfig            *quic.Config
 	UquicConfig           *uquic.Config
-	UJa3Spec              uquic.QUICID
+	USpec                 any           //support ja3.USpec,uquic.QUICID,bool
 	Proxy                 string        //proxy,support https,http,socks5
 	UserAgent             string        //headers User-Agent value
 	OrderHeaders          []string      //order headers
 	Proxys                []string      //proxy list,support https,http,socks5
-	H2Ja3Spec             ja3.H2Spec    //h2 fingerprint
+	HSpec                 ja3.HSpec     //h2 fingerprint
 	MaxRetries            int           //try num
 	MaxRedirect           int           //redirect num ,<0 no redirect,==0 no limit
 	Timeout               time.Duration //request timeout
@@ -66,11 +66,9 @@ type ClientOption struct {
 	TlsHandshakeTimeout   time.Duration //tls timeout,default:15
 	H3                    bool          //开启http3
 	ForceHttp1            bool          //force  use http1 send requests
-	Ja3                   bool          //enable ja3 fingerprint
-	UJa3                  bool
-	DisCookie             bool //disable cookies
-	DisDecode             bool //disable auto decode
-	Bar                   bool ////enable bar display
+	DisCookie             bool          //disable cookies
+	DisDecode             bool          //disable auto decode
+	Bar                   bool          ////enable bar display
 }
 
 // Options for sending requests

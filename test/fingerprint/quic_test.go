@@ -11,8 +11,8 @@ import (
 func TestHttp3(t *testing.T) {
 	resp, err := requests.Get(context.TODO(), "https://cloudflare-quic.com/", requests.RequestOption{
 		ClientOption: requests.ClientOption{
-			H3:  true,
-			Ja3: true,
+			H3:   true,
+			Spec: true,
 		},
 	},
 	)
@@ -31,8 +31,8 @@ func TestHttp3(t *testing.T) {
 func TestHttp32(t *testing.T) {
 	resp, err := requests.Get(context.TODO(), "https://cloudflare-quic.com/", requests.RequestOption{
 		ClientOption: requests.ClientOption{
-			UJa3: true,
-			H3:   true,
+			USpec: true,
+			H3:    true,
 		},
 	},
 	)

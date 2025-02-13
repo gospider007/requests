@@ -200,11 +200,11 @@ func (obj *Client) request(ctx *Response) (err error) {
 	}
 	//设置 h2 请求头顺序
 	if ctx.option.OrderHeaders != nil {
-		if !ctx.option.H2Ja3Spec.IsSet() {
-			ctx.option.H2Ja3Spec = ja3.DefaultH2Spec()
-			ctx.option.H2Ja3Spec.OrderHeaders = ctx.option.OrderHeaders
-		} else if ctx.option.H2Ja3Spec.OrderHeaders == nil {
-			ctx.option.H2Ja3Spec.OrderHeaders = ctx.option.OrderHeaders
+		if !ctx.option.HSpec.IsSet() {
+			ctx.option.HSpec = ja3.DefaultHSpec()
+			ctx.option.HSpec.OrderHeaders = ctx.option.OrderHeaders
+		} else if ctx.option.HSpec.OrderHeaders == nil {
+			ctx.option.HSpec.OrderHeaders = ctx.option.OrderHeaders
 		}
 	}
 	//init tls timeout
