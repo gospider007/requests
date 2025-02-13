@@ -64,7 +64,7 @@ type ClientOption struct {
 	Timeout               time.Duration //request timeout
 	ResponseHeaderTimeout time.Duration //ResponseHeaderTimeout ,default:300
 	TlsHandshakeTimeout   time.Duration //tls timeout,default:15
-	H3                    bool          //开启http3
+	ForceHttp3            bool          //force  use http3 send requests
 	ForceHttp1            bool          //force  use http1 send requests
 	DisCookie             bool          //disable cookies
 	DisDecode             bool          //disable auto decode

@@ -28,7 +28,7 @@ func client() {
 		resp, err := requests.Post(nil, "https://"+remoteHost, requests.RequestOption{
 			ClientOption: requests.ClientOption{
 
-				H3: true,
+				ForceHttp3: true,
 				Logger: func(l requests.Log) {
 					log.Print(l)
 				},
@@ -51,7 +51,7 @@ func client2() {
 		resp, err := requests.Post(nil, "https://"+remoteHost, requests.RequestOption{
 
 			ClientOption: requests.ClientOption{
-				H3: true,
+				ForceHttp3: true,
 				Logger: func(l requests.Log) {
 					log.Print(l)
 				},
@@ -130,7 +130,7 @@ func TestHttp3Proxy2(t *testing.T) {
 		resp, err := requests.Get(context.TODO(), "https://cloudflare-quic.com/", requests.RequestOption{
 
 			ClientOption: requests.ClientOption{
-				H3: true,
+				ForceHttp3: true,
 				// Logger: func(l requests.Log) {
 				// 	log.Print(l)
 				// },

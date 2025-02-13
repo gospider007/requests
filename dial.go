@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/gospider007/gtls"
-	"github.com/gospider007/ja3"
 	"github.com/gospider007/tools"
 	utls "github.com/refraction-networking/utls"
 )
@@ -37,9 +36,7 @@ type dialer interface {
 
 // 自定义dialer
 type Dialer struct {
-	dnsIpData  sync.Map
-	specClient *ja3.Client
-	// dialer    dialer
+	dnsIpData sync.Map
 }
 type myDialer struct {
 	dialer *net.Dialer
@@ -156,18 +153,18 @@ func (obj *Dialer) DialProxyContext(ctx *Response, network string, proxyTlsConfi
 				return packCon, conn, err
 			}
 		}
-		packCon, conn, err = obj.verifyProxyToRemote(ctx, conn, proxyTlsConfig, oneProxy, remoteUrl, index == proxyLen-2)
+		packCon, conn, err = obj.verifyProxyToRemote(ctx, conn, proxyTlsConfig, oneProxy, remoteUrl, index == proxyLen-2, true)
 	}
 	return packCon, conn, err
 }
 func (obj *Dialer) dialProxyContext(ctx *Response, network string, proxyUrl Address) (net.Conn, error) {
 	return obj.ProxyDialContext(ctx, network, proxyUrl)
 }
-func (obj *Dialer) verifyProxyToRemote(ctx *Response, conn net.Conn, proxyTlsConfig *tls.Config, proxyAddress Address, remoteAddress Address, isLast bool) (net.PacketConn, net.Conn, error) {
+func (obj *Dialer) verifyProxyToRemote(ctx *Response, conn net.Conn, proxyTlsConfig *tls.Config, proxyAddress Address, remoteAddress Address, isLast bool, forceHttp1 bool) (net.PacketConn, net.Conn, error) {
 	var err error
 	var packCon net.PacketConn
 	if proxyAddress.Scheme == "https" {
-		if conn, err = obj.addTls(ctx.Context(), conn, proxyAddress.Host, true, proxyTlsConfig); err != nil {
+		if conn, err = obj.addTls(ctx.Context(), conn, proxyAddress.Host, proxyTlsConfig, forceHttp1); err != nil {
 			return packCon, conn, err
 		}
 		if ctx.option.Logger != nil {
@@ -193,7 +190,7 @@ func (obj *Dialer) verifyProxyToRemote(ctx *Response, conn net.Conn, proxyTlsCon
 				})
 			}
 		case "socks5":
-			if isLast && ctx.option.H3 {
+			if isLast && ctx.option.ForceHttp3 {
 				packCon, err = obj.verifyUDPSocks5(ctx.Context(), conn, proxyAddress, remoteAddress)
 			} else {
 				err = obj.verifyTCPSocks5(conn, proxyAddress, remoteAddress)
@@ -381,24 +378,19 @@ func (obj *Dialer) lookupIPAddr(ips []net.IPAddr, addrType gtls.AddrType) (net.I
 	}
 	return nil, errors.New("dns parse host error")
 }
-func (obj *Dialer) addTls(ctx context.Context, conn net.Conn, host string, h2 bool, tlsConfig *tls.Config) (*tls.Conn, error) {
+func (obj *Dialer) addTls(ctx context.Context, conn net.Conn, host string, tlsConfig *tls.Config, forceHttp1 bool) (*tls.Conn, error) {
 	var tlsConn *tls.Conn
 	tlsConfig.ServerName = gtls.GetServerName(host)
-	if h2 {
-		tlsConfig.NextProtos = []string{"h2", "http/1.1"}
-	} else {
+	if forceHttp1 {
 		tlsConfig.NextProtos = []string{"http/1.1"}
+	} else {
+		tlsConfig.NextProtos = []string{"h2", "http/1.1"}
 	}
 	tlsConn = tls.Client(conn, tlsConfig)
 	return tlsConn, tlsConn.HandshakeContext(ctx)
 }
-func (obj *Dialer) addJa3Tls(ctx context.Context, conn net.Conn, host string, h2 bool, spec utls.ClientHelloSpec, tlsConfig *utls.Config) (*utls.UConn, error) {
-	if h2 {
-		tlsConfig.NextProtos = []string{"h2", "http/1.1"}
-	} else {
-		tlsConfig.NextProtos = []string{"http/1.1"}
-	}
-	return obj.specClient.Client(ctx, conn, spec, h2, tlsConfig, gtls.GetServerName(host))
+func (obj *Dialer) addJa3Tls(ctx context.Context, conn net.Conn, host string, spec utls.ClientHelloSpec, tlsConfig *utls.Config, forceHttp1 bool) (*utls.UConn, error) {
+	return specClient.Client(ctx, conn, spec, tlsConfig, gtls.GetServerName(host), forceHttp1)
 }
 func (obj *Dialer) Socks5TcpProxy(ctx *Response, proxyAddr Address, remoteAddr Address) (conn net.Conn, err error) {
 	if conn, err = obj.DialContext(ctx, "tcp", proxyAddr); err != nil {

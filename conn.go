@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"errors"
-	"github.com/gospider007/tools"
 	"io"
 	"iter"
 	"net"
@@ -12,6 +11,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/gospider007/tools"
 )
 
 var maxRetryCount = 10
