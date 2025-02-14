@@ -226,18 +226,18 @@ func (obj *roundTripper) dial(ctx *Response) (conn *connecotr, err error) {
 	} else {
 		conne.c = rawNetConn
 	}
-	err = obj.dialConnecotr(ctx.option, ctx.request, conne, h2)
+	err = obj.dialConnecotr(ctx, conne, h2)
 	if err != nil {
 		return nil, err
 	}
 	return conne, err
 }
-func (obj *roundTripper) dialConnecotr(option *RequestOption, req *http.Request, conne *connecotr, h2 bool) (err error) {
+func (obj *roundTripper) dialConnecotr(ctx *Response, conne *connecotr, h2 bool) (err error) {
 	if h2 {
-		if option.HSpec.OrderHeaders != nil {
-			option.OrderHeaders = option.HSpec.OrderHeaders
+		if ctx.option.HSpec.OrderHeaders != nil {
+			ctx.option.OrderHeaders = ctx.option.HSpec.OrderHeaders
 		}
-		if conne.Conn, err = http2.NewClientConn(req.Context(), conne.c, option.HSpec, func() {
+		if conne.Conn, err = http2.NewClientConn(ctx.Context(), conne.c, ctx.option.HSpec, func() {
 			conne.forceCnl(errors.New("http2 client close"))
 		}); err != nil {
 			return err

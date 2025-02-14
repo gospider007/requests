@@ -327,9 +327,9 @@ func (obj *Client) request(ctx *Response) (err error) {
 		ctx.webSocket = websocket.NewClientConn(ctx.rawConn.Conn(), websocket.GetResponseHeaderOption(ctx.response.Header))
 	} else if strings.Contains(ctx.response.Header.Get("Content-Type"), "text/event-stream") {
 		ctx.sse = newSSE(ctx)
-	} else if !ctx.response.Uncompressed {
+	} else if encoding := ctx.ContentEncoding(); encoding != "" {
 		var unCompressionBody io.ReadCloser
-		unCompressionBody, err = tools.CompressionDecode(ctx.Context(), ctx.Body(), ctx.ContentEncoding())
+		unCompressionBody, err = tools.CompressionHeadersDecode(ctx.Context(), ctx.Body(), encoding)
 		if err != nil {
 			if err != io.ErrUnexpectedEOF && err != io.EOF {
 				return

@@ -22,10 +22,9 @@ type Conn interface {
 	DoRequest(*http.Request, []string) (*http.Response, error)
 }
 type conn struct {
+	err       error
 	r         *bufio.Reader
 	w         *bufio.Writer
-	pr        *pipCon
-	pw        *pipCon
 	conn      net.Conn
 	closeFunc func()
 }
@@ -35,10 +34,16 @@ func newConn(ctx context.Context, con net.Conn, closeFunc func()) *conn {
 		conn:      con,
 		closeFunc: closeFunc,
 	}
-	c.pr, c.pw = pipe(ctx)
-	c.r = bufio.NewReader(c)
+	pr, pw := pipe(ctx)
+	c.r = bufio.NewReader(pr)
 	c.w = bufio.NewWriter(c)
-	go c.run()
+	go func() {
+		_, err := io.Copy(pw, c.conn)
+		if c.err == nil {
+			c.CloseWithError(err)
+		}
+		pr.CloseWitError(c.err)
+	}()
 	return c
 }
 func (obj *conn) Close() error {
@@ -46,15 +51,14 @@ func (obj *conn) Close() error {
 }
 func (obj *conn) CloseWithError(err error) error {
 	if err == nil {
-		err = errors.New("connecotr closeWithError close")
+		obj.err = errors.New("connecotr closeWithError close")
 	} else {
-		err = tools.WrapError(err, "connecotr closeWithError close")
+		obj.err = tools.WrapError(err, "connecotr closeWithError close")
 	}
 	if obj.closeFunc != nil {
 		obj.closeFunc()
 	}
-	obj.conn.Close()
-	return obj.pr.CloseWitError(err)
+	return obj.conn.Close()
 }
 func (obj *conn) DoRequest(req *http.Request, orderHeaders []string) (*http.Response, error) {
 	err := httpWrite(req, obj.w, orderHeaders)
@@ -71,12 +75,8 @@ func (obj *conn) DoRequest(req *http.Request, orderHeaders []string) (*http.Resp
 	}
 	return res, err
 }
-func (obj *conn) run() (err error) {
-	_, err = io.Copy(obj.pw, obj.conn)
-	return obj.CloseWithError(err)
-}
 func (obj *conn) Read(b []byte) (i int, err error) {
-	return obj.pr.Read(b)
+	return obj.r.Read(b)
 }
 func (obj *conn) Write(b []byte) (int, error) {
 	return obj.conn.Write(b)
