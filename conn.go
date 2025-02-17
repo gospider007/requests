@@ -34,15 +34,19 @@ func newConn(ctx context.Context, con net.Conn, closeFunc func()) *conn {
 		conn:      con,
 		closeFunc: closeFunc,
 	}
-	pr, pw := pipe(ctx)
+	pr, pw := io.Pipe()
 	c.r = bufio.NewReader(pr)
 	c.w = bufio.NewWriter(c)
 	go func() {
+		context.AfterFunc(ctx, func() {
+			pr.CloseWithError(ctx.Err())
+			pw.CloseWithError(ctx.Err())
+		})
 		_, err := io.Copy(pw, c.conn)
 		if c.err == nil {
 			c.CloseWithError(err)
 		}
-		pr.CloseWitError(c.err)
+		pr.CloseWithError(c.err)
 	}()
 	return c
 }

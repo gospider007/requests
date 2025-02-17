@@ -122,15 +122,19 @@ func (obj *OrderMap) parseForm(ctx context.Context) (io.Reader, string, bool, er
 		return nil, "", false, nil
 	}
 	if obj.isformPip() {
-		pr, pw := pipe(ctx)
+		pr, pw := io.Pipe()
 		writer := multipart.NewWriter(pw)
 		go func() {
+			context.AfterFunc(ctx, func() {
+				pr.CloseWithError(ctx.Err())
+				pw.CloseWithError(ctx.Err())
+			})
 			err := obj.formWriteMain(writer)
 			if err == nil {
 				err = io.EOF
 			}
-			pr.CloseWitError(err)
-			pw.CloseWitError(err)
+			pr.CloseWithError(err)
+			pw.CloseWithError(err)
 		}()
 		return pr, writer.FormDataContentType(), true, nil
 	}
