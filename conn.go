@@ -38,10 +38,11 @@ func newConn(ctx context.Context, con net.Conn, closeFunc func()) *conn {
 	c.r = bufio.NewReader(pr)
 	c.w = bufio.NewWriter(c)
 	go func() {
-		context.AfterFunc(ctx, func() {
+		stop := context.AfterFunc(ctx, func() {
 			pr.CloseWithError(ctx.Err())
 			pw.CloseWithError(ctx.Err())
 		})
+		defer stop()
 		_, err := io.Copy(pw, c.conn)
 		if c.err == nil {
 			c.CloseWithError(err)

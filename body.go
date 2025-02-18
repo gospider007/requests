@@ -125,10 +125,11 @@ func (obj *OrderMap) parseForm(ctx context.Context) (io.Reader, string, bool, er
 		pr, pw := io.Pipe()
 		writer := multipart.NewWriter(pw)
 		go func() {
-			context.AfterFunc(ctx, func() {
+			stop := context.AfterFunc(ctx, func() {
 				pr.CloseWithError(ctx.Err())
 				pw.CloseWithError(ctx.Err())
 			})
+			defer stop()
 			err := obj.formWriteMain(writer)
 			if err == nil {
 				err = io.EOF

@@ -3,17 +3,17 @@ module github.com/gospider007/requests
 go 1.24.0
 
 require (
-	github.com/gospider007/bar v0.0.0-20241205091858-06f3c7e16dd9
-	github.com/gospider007/bs4 v0.0.0-20250110063952-3322ee09a952
-	github.com/gospider007/gson v0.0.0-20250110063619-6fd4001287da
-	github.com/gospider007/gtls v0.0.0-20250107100054-2a14fa6fc9c5
-	github.com/gospider007/http2 v0.0.0-20250211075152-9b93ea5934a7
-	github.com/gospider007/http3 v0.0.0-20250211075910-8bad8da7d8cc
-	github.com/gospider007/ja3 v0.0.0-20250213002809-fed6ef545daf
-	github.com/gospider007/proxy v0.0.0-20250212051747-ecb05461e726
-	github.com/gospider007/re v0.0.0-20241216142712-efbef8d55ea2
-	github.com/gospider007/tools v0.0.0-20250208030917-26051a107d8c
-	github.com/gospider007/websocket v0.0.0-20250107091829-c78035a103b2
+	github.com/gospider007/bar v0.0.0-20250217074946-47896d8de2ba
+	github.com/gospider007/bs4 v0.0.0-20250217075024-ab8aec9c90d0
+	github.com/gospider007/gson v0.0.0-20250217075140-0a65c21185c4
+	github.com/gospider007/gtls v0.0.0-20250217075148-cad34209c0ae
+	github.com/gospider007/http2 v0.0.0-20250217100059-0dfc2d383448
+	github.com/gospider007/http3 v0.0.0-20250217075201-924e6c783810
+	github.com/gospider007/ja3 v0.0.0-20250217075217-36e4ffd863e8
+	github.com/gospider007/proxy v0.0.0-20250217075345-8b7075005569
+	github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c
+	github.com/gospider007/tools v0.0.0-20250217075502-a830b402190c
+	github.com/gospider007/websocket v0.0.0-20250217075551-6bd98eaabb07
 	github.com/quic-go/quic-go v0.49.0
 	github.com/refraction-networking/uquic v0.0.6
 	github.com/refraction-networking/utls v1.6.7
@@ -38,9 +38,9 @@ require (
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/google/pprof v0.0.0-20250208200701-d0013a598941 // indirect
-	github.com/gospider007/blog v0.0.0-20241205091827-6bcaf48620d4 // indirect
-	github.com/gospider007/kinds v0.0.0-20240929092451-8f867acde255 // indirect
-	github.com/gospider007/net v0.0.0-20250207031315-05571927d356 // indirect
+	github.com/gospider007/blog v0.0.0-20250217075004-fbd89cbd4147 // indirect
+	github.com/gospider007/kinds v0.0.0-20250217075226-10f199f7215d // indirect
+	github.com/gospider007/net v0.0.0-20250217075332-457b643a0d40 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
@@ -79,5 +79,4 @@ require (
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
 	golang.org/x/tools v0.30.0 // indirect
-	google.golang.org/protobuf v1.36.2 // indirect
 )
