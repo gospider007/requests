@@ -5,18 +5,20 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/gospider007/bar"
-	"github.com/gospider007/bs4"
-	"github.com/gospider007/gson"
-	"github.com/gospider007/re"
-	"github.com/gospider007/tools"
-	"github.com/gospider007/websocket"
 	"io"
 	"iter"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
+
+	"github.com/gospider007/bar"
+	"github.com/gospider007/bs4"
+	"github.com/gospider007/gson"
+	"github.com/gospider007/re"
+	"github.com/gospider007/tools"
+	"github.com/gospider007/websocket"
 )
 
 func NewResponse(ctx context.Context, option RequestOption) *Response {
@@ -54,23 +56,24 @@ func (obj *Response) Client() *Client {
 }
 
 type Response struct {
-	err       error
-	ctx       context.Context
-	request   *http.Request
-	rawConn   *readWriteCloser
-	response  *http.Response
-	webSocket *websocket.Conn
-	sse       *SSE
-	cnl       context.CancelFunc
-	option    *RequestOption
-	client    *Client
-	encoding  string
-	filePath  string
-	requestId string
-	content   []byte
-	proxys    []*url.URL
-	readBody  bool
-	isNewConn bool
+	err          error
+	ctx          context.Context
+	request      *http.Request
+	rawConn      *readWriteCloser
+	response     *http.Response
+	webSocket    *websocket.Conn
+	sse          *SSE
+	cnl          context.CancelFunc
+	option       *RequestOption
+	client       *Client
+	encoding     string
+	filePath     string
+	requestId    string
+	content      []byte
+	proxys       []*url.URL
+	readBody     bool
+	readBodyLock sync.Mutex
+	isNewConn    bool
 }
 type SSE struct {
 	reader   *bufio.Reader
@@ -317,16 +320,19 @@ func (obj *Response) IsSSE() bool {
 
 // read body
 func (obj *Response) ReadBody() (err error) {
-	if obj.readBody {
-		return nil
-	}
+	obj.readBodyLock.Lock()
+	defer obj.readBodyLock.Unlock()
 	if obj.IsWebSocket() && obj.IsSSE() {
 		return errors.New("can not read stream")
+	}
+	if obj.readBody {
+		return nil
 	}
 	obj.readBody = true
 	bBody := bytes.NewBuffer(nil)
 	done := make(chan struct{})
 	go func() {
+		defer close(done)
 		if obj.option.Bar && obj.ContentLength() > 0 {
 			_, err = io.Copy(&barBody{
 				bar:  bar.NewClient(obj.response.ContentLength),
@@ -338,7 +344,6 @@ func (obj *Response) ReadBody() (err error) {
 		if err == io.ErrUnexpectedEOF {
 			err = nil
 		}
-		close(done)
 	}()
 	select {
 	case <-obj.ctx.Done():

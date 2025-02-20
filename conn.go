@@ -20,21 +20,33 @@ var maxRetryCount = 10
 type Conn interface {
 	CloseWithError(err error) error
 	DoRequest(*http.Request, []string) (*http.Response, error)
+	CloseCtx() context.Context
 }
 type conn struct {
-	err       error
-	r         *bufio.Reader
-	w         *bufio.Writer
-	conn      net.Conn
-	closeFunc func()
+	err      error
+	r        *bufio.Reader
+	w        *bufio.Writer
+	conn     net.Conn
+	bodyLock sync.Mutex
+
+	bodyRun   atomic.Bool
+	closeFunc func(error)
+	closeCtx  context.Context
+	closeCnl  context.CancelCauseFunc
 }
 
-func newConn(ctx context.Context, con net.Conn, closeFunc func()) *conn {
+var errIoCopyClosedOk = errors.New("io copy is closed ok")
+
+func newConn(ctx context.Context, con net.Conn, closeFunc func(error)) *conn {
 	c := &conn{
 		conn:      con,
 		closeFunc: closeFunc,
 	}
+	c.closeCtx, c.closeCnl = context.WithCancelCause(ctx)
 	pr, pw := io.Pipe()
+	// c.r = bufio.NewReader(pr)
+	// c.w = bufio.NewWriter(con)
+
 	c.r = bufio.NewReader(pr)
 	c.w = bufio.NewWriter(c)
 	go func() {
@@ -44,12 +56,21 @@ func newConn(ctx context.Context, con net.Conn, closeFunc func()) *conn {
 		})
 		defer stop()
 		_, err := io.Copy(pw, c.conn)
+		c.closeCnl(err)
 		if c.err == nil {
-			c.CloseWithError(err)
+			if err == nil {
+				c.CloseWithError(errIoCopyClosedOk)
+			} else {
+				c.CloseWithError(err)
+			}
 		}
 		pr.CloseWithError(c.err)
+		pw.CloseWithError(c.err)
 	}()
 	return c
+}
+func (obj *conn) CloseCtx() context.Context {
+	return obj.closeCtx
 }
 func (obj *conn) Close() error {
 	return obj.CloseWithError(nil)
@@ -61,15 +82,14 @@ func (obj *conn) CloseWithError(err error) error {
 		obj.err = tools.WrapError(err, "connecotr closeWithError close")
 	}
 	if obj.closeFunc != nil {
-		obj.closeFunc()
+		obj.closeFunc(obj.err)
 	}
 	return obj.conn.Close()
 }
 func (obj *conn) DoRequest(req *http.Request, orderHeaders []string) (*http.Response, error) {
-	err := httpWrite(req, obj.w, orderHeaders)
-	if err != nil {
-		return nil, err
-	}
+	go func() {
+		obj.httpWrite(req, orderHeaders)
+	}()
 	res, err := http.ReadResponse(obj.r, req)
 	if err != nil {
 		err = tools.WrapError(err, "http1 read error")
@@ -80,9 +100,11 @@ func (obj *conn) DoRequest(req *http.Request, orderHeaders []string) (*http.Resp
 	}
 	return res, err
 }
+
 func (obj *conn) Read(b []byte) (i int, err error) {
 	return obj.r.Read(b)
 }
+
 func (obj *conn) Write(b []byte) (int, error) {
 	return obj.conn.Write(b)
 }
@@ -111,8 +133,9 @@ type connecotr struct {
 	bodyCtx        context.Context //body close
 	bodyCnl        context.CancelCauseFunc
 	Conn           Conn
-	c              net.Conn
-	proxys         []Address
+
+	c      net.Conn
+	proxys []Address
 }
 
 func (obj *connecotr) withCancel(forceCtx context.Context, safeCtx context.Context) {
@@ -138,43 +161,39 @@ func (obj *connecotr) wrapBody(task *reqTask) {
 	task.reqCtx.response.Body = body
 }
 func (obj *connecotr) httpReq(task *reqTask, done chan struct{}) {
-	if task.reqCtx.response, task.err = obj.Conn.DoRequest(task.reqCtx.request, task.reqCtx.option.OrderHeaders); task.reqCtx.response != nil && task.err == nil {
+	defer close(done)
+	task.reqCtx.response, task.err = obj.Conn.DoRequest(task.reqCtx.request, task.reqCtx.option.OrderHeaders)
+	if task.reqCtx.response != nil {
 		obj.wrapBody(task)
-	} else if task.err != nil {
+	}
+	if task.err != nil {
 		task.err = tools.WrapError(task.err, "roundTrip error")
 	}
-	close(done)
 }
-func (obj *connecotr) taskMain(task *reqTask) (retry bool) {
+
+func (obj *connecotr) taskMain(task *reqTask) (isNotice bool) {
+	task.head = make(chan struct{})
 	defer func() {
-		if retry {
-			task.retry++
-			if task.retry > maxRetryCount {
-				retry = false
-			}
-		}
 		if task.err != nil && task.reqCtx.option.ErrCallBack != nil {
 			task.reqCtx.err = task.err
 			if err2 := task.reqCtx.option.ErrCallBack(task.reqCtx); err2 != nil {
-				retry = false
+				isNotice = false
+				task.disRetry = true
 				task.err = err2
 			}
 		}
-		if retry {
-			task.err = nil
+		if task.err != nil {
 			obj.CloseWithError(errors.New("taskMain retry close"))
 			if task.reqCtx.response != nil && task.reqCtx.response.Body != nil {
 				task.reqCtx.response.Body.Close()
 			}
 		} else {
-			task.cnl()
-			if task.err == nil && task.reqCtx.response != nil && task.reqCtx.response.Body != nil {
+			if task.reqCtx.response != nil && task.reqCtx.response.Body != nil {
+				task.cnl()
 				select {
 				case <-obj.bodyCtx.Done(): //wait body close
 					if task.err = context.Cause(obj.bodyCtx); !errors.Is(task.err, errGospiderBodyClose) {
 						task.err = tools.WrapError(task.err, "bodyCtx  close")
-					} else {
-						task.err = nil
 					}
 				case <-task.reqCtx.Context().Done(): //wait request close
 					task.err = tools.WrapError(context.Cause(task.reqCtx.Context()), "requestCtx close")
@@ -200,9 +219,15 @@ func (obj *connecotr) taskMain(task *reqTask) (retry bool) {
 	}()
 	select {
 	case <-obj.safeCtx.Done():
-		return true
+		task.err = obj.safeCtx.Err()
+		task.enableRetry = true
+		isNotice = true
+		return
 	case <-obj.forceCtx.Done(): //force conn close
-		return true
+		task.err = obj.forceCtx.Err()
+		task.enableRetry = true
+		isNotice = true
+		return
 	default:
 	}
 	done := make(chan struct{})
@@ -210,17 +235,12 @@ func (obj *connecotr) taskMain(task *reqTask) (retry bool) {
 	select {
 	case <-task.ctx.Done():
 		task.err = tools.WrapError(context.Cause(task.ctx), "task.ctx error: ")
-		return false
 	case <-done:
-		if task.err != nil {
-			return task.suppertRetry()
-		}
 		if task.reqCtx.response == nil {
 			task.err = context.Cause(task.ctx)
 			if task.err == nil {
 				task.err = errors.New("response is nil")
 			}
-			return task.suppertRetry()
 		}
 		if task.reqCtx.option.Logger != nil {
 			task.reqCtx.option.Logger(Log{
@@ -230,20 +250,10 @@ func (obj *connecotr) taskMain(task *reqTask) (retry bool) {
 				Msg:  "response header",
 			})
 		}
-		return false
 	case <-obj.forceCtx.Done(): //force conn close
-		err := context.Cause(obj.forceCtx)
-		task.err = tools.WrapError(err, "taskMain delete ctx error: ")
-		select {
-		case <-obj.parentForceCtx.Done():
-			return false
-		default:
-			if errors.Is(err, errConnectionForceClosed) {
-				return false
-			}
-			return true
-		}
+		task.err = tools.WrapError(context.Cause(obj.forceCtx), "taskMain delete ctx error: ")
 	}
+	return false
 }
 
 type connPool struct {
@@ -263,15 +273,15 @@ type connPools struct {
 func newConnPools() *connPools {
 	return new(connPools)
 }
-func (obj *connPools) get(key string) *connPool {
-	val, ok := obj.connPools.Load(key)
+func (obj *connPools) get(task *reqTask) *connPool {
+	val, ok := obj.connPools.Load(task.key)
 	if !ok {
 		return nil
 	}
 	return val.(*connPool)
 }
-func (obj *connPools) set(key string, pool *connPool) {
-	obj.connPools.Store(key, pool)
+func (obj *connPools) set(task *reqTask, pool *connPool) {
+	obj.connPools.Store(task.key, pool)
 }
 func (obj *connPools) del(key string) {
 	obj.connPools.Delete(key)
@@ -283,10 +293,14 @@ func (obj *connPools) Range() iter.Seq2[string, *connPool] {
 		})
 	}
 }
-func (obj *connPool) notice(task *reqTask) {
+
+func (obj *connPool) notices(task *reqTask) bool {
 	select {
 	case obj.tasks <- task:
-	case task.emptyPool <- struct{}{}:
+		return true
+	default:
+		task.isNotice = true
+		return false
 	}
 }
 func (obj *connPool) rwMain(done chan struct{}, conn *connecotr) {
@@ -309,9 +323,12 @@ func (obj *connPool) rwMain(done chan struct{}, conn *connecotr) {
 			if task == nil {
 				return
 			}
-			if conn.taskMain(task) {
-				obj.notice(task)
-				return
+			task.isNotice = false
+			task.disRetry = false
+			task.enableRetry = false
+			task.err = nil
+			if !conn.taskMain(task) || !obj.notices(task) {
+				task.cnl()
 			}
 			if task.err != nil {
 				return

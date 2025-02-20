@@ -1,30 +1,36 @@
 package requests
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net"
+	"sync/atomic"
+
+	"github.com/gospider007/tools"
 )
 
 type readWriteCloser struct {
 	body     io.ReadCloser
 	err      error
 	conn     *connecotr
-	isClosed bool
+	isClosed atomic.Bool
 }
 
 func (obj *readWriteCloser) Conn() net.Conn {
 	return obj.conn.Conn.(net.Conn)
 }
 func (obj *readWriteCloser) Read(p []byte) (n int, err error) {
-	if obj.isClosed {
+	if obj.isClosed.Load() {
 		return 0, obj.err
 	}
 	i, err := obj.body.Read(p)
-	if err == io.EOF {
-		obj.Close()
+	if err != nil {
+		obj.err = err
+		if err == io.EOF {
+			obj.Close()
+		}
 	}
-	obj.err = err
 	return i, err
 }
 func (obj *readWriteCloser) Proxys() []Address {
@@ -34,8 +40,21 @@ func (obj *readWriteCloser) Proxys() []Address {
 var errGospiderBodyClose = errors.New("gospider body close error")
 
 func (obj *readWriteCloser) Close() (err error) {
-	obj.isClosed = true
-	obj.conn.bodyCnl(errGospiderBodyClose)
+	return obj.CloseWithError(nil)
+}
+func (obj *readWriteCloser) ConnCloseCtx() context.Context {
+	return obj.conn.Conn.CloseCtx()
+}
+func (obj *readWriteCloser) CloseWithError(err error) error {
+	if err == nil {
+		err = errGospiderBodyClose
+		obj.err = io.EOF
+	} else {
+		err = tools.WrapError(obj.err, err)
+		obj.err = err
+	}
+	obj.isClosed.Store(true)
+	obj.conn.bodyCnl(err)
 	return obj.body.Close() //reuse conn
 }
 

@@ -1,11 +1,11 @@
 package requests
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/textproto"
@@ -217,7 +217,13 @@ func redirectBehavior(reqMethod string, resp *http.Response, ireq *http.Request)
 
 var filterHeaderKeys = ja3.DefaultOrderHeadersWithH2()
 
-func httpWrite(r *http.Request, w *bufio.Writer, orderHeaders []string) (err error) {
+func (obj *conn) httpWrite(r *http.Request, orderHeaders []string) (err error) {
+	obj.bodyLock.Lock()
+	defer obj.bodyLock.Unlock()
+	if obj.bodyRun.Load() {
+		log.Print("body already run")
+		return errors.New("body already run")
+	}
 	for i := range orderHeaders {
 		orderHeaders[i] = textproto.CanonicalMIMEHeaderKey(orderHeaders[i])
 	}
@@ -250,7 +256,7 @@ func httpWrite(r *http.Request, w *bufio.Writer, orderHeaders []string) (err err
 	if r.Header.Get("Content-Length") == "" && r.ContentLength != 0 && shouldSendContentLength(r) {
 		r.Header.Set("Content-Length", fmt.Sprint(r.ContentLength))
 	}
-	if _, err = w.WriteString(fmt.Sprintf("%s %s %s\r\n", r.Method, ruri, r.Proto)); err != nil {
+	if _, err = obj.w.WriteString(fmt.Sprintf("%s %s %s\r\n", r.Method, ruri, r.Proto)); err != nil {
 		return err
 	}
 	for _, k := range orderHeaders {
@@ -262,7 +268,7 @@ func httpWrite(r *http.Request, w *bufio.Writer, orderHeaders []string) (err err
 				continue
 			}
 			for _, v := range vs {
-				if _, err = w.WriteString(fmt.Sprintf("%s: %s\r\n", k, v)); err != nil {
+				if _, err = obj.w.WriteString(fmt.Sprintf("%s: %s\r\n", k, v)); err != nil {
 					return err
 				}
 			}
@@ -277,21 +283,31 @@ func httpWrite(r *http.Request, w *bufio.Writer, orderHeaders []string) (err err
 				continue
 			}
 			for _, v := range vs {
-				if _, err = w.WriteString(fmt.Sprintf("%s: %s\r\n", k, v)); err != nil {
+				if _, err = obj.w.WriteString(fmt.Sprintf("%s: %s\r\n", k, v)); err != nil {
 					return err
 				}
 			}
 		}
 	}
-	if _, err = w.WriteString("\r\n"); err != nil {
+	if _, err = obj.w.WriteString("\r\n"); err != nil {
 		return err
 	}
-	if r.Body != nil {
-		if _, err = io.Copy(w, r.Body); err != nil {
-			return err
-		}
+	if r.Body == nil {
+		return obj.w.Flush()
 	}
-	return w.Flush()
+	go func() {
+		obj.bodyRun.Store(true)
+		defer obj.bodyRun.Store(false)
+		if _, err = io.Copy(obj.w, r.Body); err != nil {
+			obj.CloseWithError(tools.WrapError(err, "failed to send request body"))
+			return
+		} else if err = obj.w.Flush(); err != nil {
+			obj.CloseWithError(tools.WrapError(err, "failed to flush request body"))
+			return
+		}
+	}()
+	return nil
+	// return obj.w.Flush()
 }
 
 type requestBody struct {

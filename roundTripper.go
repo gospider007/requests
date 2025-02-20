@@ -21,15 +21,25 @@ import (
 )
 
 type reqTask struct {
-	ctx       context.Context
-	cnl       context.CancelFunc
-	reqCtx    *Response
-	emptyPool chan struct{}
-	err       error
-	retry     int
+	head        chan struct{}
+	ctx         context.Context
+	cnl         context.CancelFunc
+	reqCtx      *Response
+	err         error
+	enableRetry bool
+	disRetry    bool
+
+	isNotice bool
+	key      string
 }
 
 func (obj *reqTask) suppertRetry() bool {
+	if obj.disRetry {
+		return false
+	}
+	if obj.enableRetry {
+		return true
+	}
 	if obj.reqCtx.request.Body == nil {
 		return true
 	} else if body, ok := obj.reqCtx.request.Body.(io.Seeker); ok {
@@ -69,9 +79,9 @@ func newRoundTripper(preCtx context.Context) *roundTripper {
 		connPools: newConnPools(),
 	}
 }
-func (obj *roundTripper) newConnPool(done chan struct{}, conn *connecotr, key string) *connPool {
+func (obj *roundTripper) newConnPool(done chan struct{}, conn *connecotr, task *reqTask) *connPool {
 	pool := new(connPool)
-	pool.connKey = key
+	pool.connKey = task.key
 	pool.forceCtx, pool.forceCnl = context.WithCancelCause(obj.ctx)
 	pool.safeCtx, pool.safeCnl = context.WithCancelCause(pool.forceCtx)
 	pool.tasks = make(chan *reqTask)
@@ -81,14 +91,14 @@ func (obj *roundTripper) newConnPool(done chan struct{}, conn *connecotr, key st
 	go pool.rwMain(done, conn)
 	return pool
 }
-func (obj *roundTripper) putConnPool(key string, conn *connecotr) {
-	pool := obj.connPools.get(key)
+func (obj *roundTripper) putConnPool(task *reqTask, conn *connecotr) {
+	pool := obj.connPools.get(task)
 	done := make(chan struct{})
 	if pool != nil {
 		pool.total.Add(1)
 		go pool.rwMain(done, conn)
 	} else {
-		obj.connPools.set(key, obj.newConnPool(done, conn, key))
+		obj.connPools.set(task, obj.newConnPool(done, conn, task))
 	}
 	<-done
 }
@@ -243,8 +253,8 @@ func (obj *roundTripper) dialConnecotr(ctx *Response, conne *connecotr, h2 bool)
 			return err
 		}
 	} else {
-		conne.Conn = newConn(conne.forceCtx, conne.c, func() {
-			conne.forceCnl(errors.New("http1 client close"))
+		conne.Conn = newConn(conne.forceCtx, conne.c, func(err error) {
+			conne.forceCnl(tools.WrapError(err, "http1 client close"))
 		})
 	}
 	return err
@@ -326,38 +336,48 @@ func (obj *roundTripper) initProxys(ctx *Response) ([]Address, error) {
 	return proxys, nil
 }
 
-func (obj *roundTripper) poolRoundTrip(pool *connPool, task *reqTask, key string) (isOk bool, err error) {
+func (obj *roundTripper) poolRoundTrip(task *reqTask) {
+	connPool := obj.connPools.get(task)
+	if connPool == nil {
+		obj.createPool(task)
+		if task.err != nil {
+			return
+		}
+		obj.poolRoundTrip(task)
+		return
+	}
 	task.ctx, task.cnl = context.WithTimeout(task.reqCtx.Context(), task.reqCtx.option.ResponseHeaderTimeout)
 	select {
-	case pool.tasks <- task:
-		select {
-		case <-task.emptyPool:
-			return false, nil
-		case <-task.ctx.Done():
-			if task.err == nil && task.reqCtx.response == nil {
-				task.err = context.Cause(task.ctx)
-			}
-			return true, task.err
+	case connPool.tasks <- task:
+		<-task.ctx.Done()
+		if task.err == nil && task.reqCtx.response == nil {
+			task.err = context.Cause(task.ctx)
 		}
 	default:
-		return obj.createPool(task, key)
+		obj.createPool(task)
+		if task.err != nil {
+			return
+		}
+		obj.poolRoundTrip(task)
 	}
 }
 
-func (obj *roundTripper) createPool(task *reqTask, key string) (isOk bool, err error) {
+func (obj *roundTripper) createPool(task *reqTask) {
 	task.reqCtx.isNewConn = true
 	conn, err := obj.dial(task.reqCtx)
 	if err != nil {
+		task.err = err
 		if task.reqCtx.option.ErrCallBack != nil {
 			task.reqCtx.err = err
 			if err2 := task.reqCtx.option.ErrCallBack(task.reqCtx); err2 != nil {
-				return true, err2
+				task.err = err2
 			}
 		}
-		return false, err
+		task.enableRetry = true
 	}
-	obj.putConnPool(key, conn)
-	return false, nil
+	if task.err == nil {
+		obj.putConnPool(task, conn)
+	}
 }
 
 func (obj *roundTripper) closeConns() {
@@ -378,7 +398,7 @@ func (obj *roundTripper) newReqTask(ctx *Response) *reqTask {
 	}
 	task := new(reqTask)
 	task.reqCtx = ctx
-	task.emptyPool = make(chan struct{})
+	task.key = getKey(ctx) //pool key
 	return task
 }
 func (obj *roundTripper) RoundTrip(ctx *Response) (err error) {
@@ -394,33 +414,27 @@ func (obj *roundTripper) RoundTrip(ctx *Response) (err error) {
 			return err
 		}
 	}
-	key := getKey(ctx) //pool key
 	task := obj.newReqTask(ctx)
-	var isOk bool
-	for {
+	currentRetry := 0
+	for currentRetry := 0; currentRetry <= maxRetryCount; currentRetry++ {
 		select {
 		case <-ctx.Context().Done():
 			return context.Cause(ctx.Context())
 		default:
 		}
-		if task.retry >= maxRetryCount {
+		obj.poolRoundTrip(task)
+		if task.err == nil || !task.suppertRetry() {
+			break
+		}
+		if task.isNotice {
+			currentRetry--
+		}
+	}
+	if currentRetry > maxRetryCount {
+		if task.err == nil {
 			task.err = fmt.Errorf("roundTrip retry %d times", maxRetryCount)
-			break
-		}
-		pool := obj.connPools.get(key)
-		if pool == nil {
-			isOk, err = obj.createPool(task, key)
 		} else {
-			isOk, err = obj.poolRoundTrip(pool, task, key)
-		}
-		if isOk {
-			if err != nil {
-				task.err = err
-			}
-			break
-		}
-		if err != nil {
-			task.retry++
+			task.err = tools.WrapError(err, fmt.Errorf("roundTrip retry %d times", maxRetryCount))
 		}
 	}
 	if task.err == nil && ctx.option.RequestCallBack != nil {
