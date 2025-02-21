@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"net"
 	"sync/atomic"
 
 	"github.com/gospider007/tools"
@@ -17,8 +16,8 @@ type readWriteCloser struct {
 	isClosed atomic.Bool
 }
 
-func (obj *readWriteCloser) Conn() net.Conn {
-	return obj.conn.Conn.(net.Conn)
+func (obj *readWriteCloser) connStream() io.ReadWriteCloser {
+	return obj.conn.Conn.Stream()
 }
 func (obj *readWriteCloser) Read(p []byte) (n int, err error) {
 	if obj.isClosed.Load() {
@@ -37,8 +36,6 @@ func (obj *readWriteCloser) Proxys() []Address {
 	return obj.conn.proxys
 }
 
-var errGospiderBodyClose = errors.New("gospider body close error")
-
 func (obj *readWriteCloser) Close() (err error) {
 	return obj.CloseWithError(nil)
 }
@@ -47,20 +44,19 @@ func (obj *readWriteCloser) ConnCloseCtx() context.Context {
 }
 func (obj *readWriteCloser) CloseWithError(err error) error {
 	if err == nil {
-		err = errGospiderBodyClose
 		obj.err = io.EOF
 	} else {
 		err = tools.WrapError(obj.err, err)
 		obj.err = err
 	}
 	obj.isClosed.Store(true)
-	obj.conn.bodyCnl(err)
+	// obj.conn.bodyCnl(err)
 	return obj.body.Close() //reuse conn
 }
 
 // safe close conn
 func (obj *readWriteCloser) CloseConn() {
-	obj.conn.bodyCnl(errors.New("readWriterCloser close conn"))
+	// obj.conn.bodyCnl(errors.New("readWriterCloser close conn"))
 	obj.conn.safeCnl(errors.New("readWriterCloser close conn"))
 }
 

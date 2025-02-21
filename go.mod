@@ -17,7 +17,6 @@ require (
 	github.com/quic-go/quic-go v0.49.0
 	github.com/refraction-networking/uquic v0.0.6
 	github.com/refraction-networking/utls v1.6.7
-	golang.org/x/exp v0.0.0-20250215185904-eff6e970281f
 	golang.org/x/net v0.35.0
 )
 
@@ -73,6 +72,7 @@ require (
 	go.uber.org/zap/exp v0.3.0 // indirect
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
 	golang.org/x/crypto v0.33.0 // indirect
+	golang.org/x/exp v0.0.0-20250215185904-eff6e970281f // indirect
 	golang.org/x/image v0.24.0 // indirect
 	golang.org/x/mod v0.23.0 // indirect
 	golang.org/x/sync v0.11.0 // indirect

@@ -126,16 +126,10 @@ func (obj *OrderMap) parseForm(ctx context.Context) (io.Reader, string, bool, er
 		writer := multipart.NewWriter(pw)
 		go func() {
 			stop := context.AfterFunc(ctx, func() {
-				pr.CloseWithError(ctx.Err())
 				pw.CloseWithError(ctx.Err())
 			})
 			defer stop()
-			err := obj.formWriteMain(writer)
-			if err == nil {
-				err = io.EOF
-			}
-			pr.CloseWithError(err)
-			pw.CloseWithError(err)
+			pw.CloseWithError(obj.formWriteMain(writer))
 		}()
 		return pr, writer.FormDataContentType(), true, nil
 	}

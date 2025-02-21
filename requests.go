@@ -13,7 +13,6 @@ import (
 	"net/http"
 
 	"github.com/gospider007/gtls"
-	"github.com/gospider007/ja3"
 	"github.com/gospider007/re"
 	"github.com/gospider007/tools"
 	"github.com/gospider007/websocket"
@@ -198,15 +197,6 @@ func (obj *Client) request(ctx *Response) (err error) {
 	if headers != nil && ctx.option.UserAgent != "" {
 		headers.Set("User-Agent", ctx.option.UserAgent)
 	}
-	//设置 h2 请求头顺序
-	if ctx.option.OrderHeaders != nil {
-		if !ctx.option.HSpec.IsSet() {
-			ctx.option.HSpec = ja3.DefaultHSpec()
-			ctx.option.HSpec.OrderHeaders = ctx.option.OrderHeaders
-		} else if ctx.option.HSpec.OrderHeaders == nil {
-			ctx.option.HSpec.OrderHeaders = ctx.option.OrderHeaders
-		}
-	}
 	//init tls timeout
 	if ctx.option.TlsHandshakeTimeout == 0 {
 		ctx.option.TlsHandshakeTimeout = time.Second * 15
@@ -232,10 +222,6 @@ func (obj *Client) request(ctx *Response) (err error) {
 	//init headers
 	if headers == nil {
 		headers = defaultHeaders()
-	}
-	//设置 h1 请求头顺序
-	if ctx.option.OrderHeaders == nil {
-		ctx.option.OrderHeaders = ja3.DefaultOrderHeaders()
 	}
 	//init ctx,cnl
 	if ctx.option.Timeout > 0 { //超时
@@ -324,7 +310,8 @@ func (obj *Client) request(ctx *Response) (err error) {
 		ctx.rawConn = ctx.Body().(*readWriteCloser)
 	}
 	if ctx.response.StatusCode == 101 {
-		ctx.webSocket = websocket.NewClientConn(ctx.rawConn.Conn(), websocket.GetResponseHeaderOption(ctx.response.Header))
+		ctx.Body()
+		ctx.webSocket = websocket.NewClientConn(newFakeConn(ctx.rawConn.connStream()), websocket.GetResponseHeaderOption(ctx.response.Header))
 	} else if strings.Contains(ctx.response.Header.Get("Content-Type"), "text/event-stream") {
 		ctx.sse = newSSE(ctx)
 	} else if encoding := ctx.ContentEncoding(); encoding != "" {
@@ -339,5 +326,6 @@ func (obj *Client) request(ctx *Response) (err error) {
 			ctx.response.Body = unCompressionBody
 		}
 	}
+
 	return
 }

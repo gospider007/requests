@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"strings"
 	"time"
@@ -21,16 +22,15 @@ import (
 )
 
 type reqTask struct {
-	head        chan struct{}
+	bodyCtx     context.Context
 	ctx         context.Context
 	cnl         context.CancelFunc
 	reqCtx      *Response
 	err         error
 	enableRetry bool
 	disRetry    bool
-
-	isNotice bool
-	key      string
+	isNotice    bool
+	key         string
 }
 
 func (obj *reqTask) suppertRetry() bool {
@@ -244,18 +244,18 @@ func (obj *roundTripper) dial(ctx *Response) (conn *connecotr, err error) {
 }
 func (obj *roundTripper) dialConnecotr(ctx *Response, conne *connecotr, h2 bool) (err error) {
 	if h2 {
-		if ctx.option.HSpec.OrderHeaders != nil {
-			ctx.option.OrderHeaders = ctx.option.HSpec.OrderHeaders
-		}
 		if conne.Conn, err = http2.NewClientConn(ctx.Context(), conne.c, ctx.option.HSpec, func() {
 			conne.forceCnl(errors.New("http2 client close"))
 		}); err != nil {
 			return err
 		}
 	} else {
-		conne.Conn = newConn(conne.forceCtx, conne.c, func(err error) {
+		conne.Conn = newConn2(conne.safeCtx, conne.c, func(err error) {
 			conne.forceCnl(tools.WrapError(err, "http1 client close"))
 		})
+		// conne.Conn = newRoudTrip(conne.forceCtx, conne.c, func(err error) {
+		// 	conne.forceCnl(tools.WrapError(err, "http1 client close"))
+		// })
 	}
 	return err
 }
@@ -339,11 +339,7 @@ func (obj *roundTripper) initProxys(ctx *Response) ([]Address, error) {
 func (obj *roundTripper) poolRoundTrip(task *reqTask) {
 	connPool := obj.connPools.get(task)
 	if connPool == nil {
-		obj.createPool(task)
-		if task.err != nil {
-			return
-		}
-		obj.poolRoundTrip(task)
+		obj.newRoudTrip(task)
 		return
 	}
 	task.ctx, task.cnl = context.WithTimeout(task.reqCtx.Context(), task.reqCtx.option.ResponseHeaderTimeout)
@@ -354,15 +350,12 @@ func (obj *roundTripper) poolRoundTrip(task *reqTask) {
 			task.err = context.Cause(task.ctx)
 		}
 	default:
-		obj.createPool(task)
-		if task.err != nil {
-			return
-		}
-		obj.poolRoundTrip(task)
+		obj.newRoudTrip(task)
+		return
 	}
 }
 
-func (obj *roundTripper) createPool(task *reqTask) {
+func (obj *roundTripper) newRoudTrip(task *reqTask) {
 	task.reqCtx.isNewConn = true
 	conn, err := obj.dial(task.reqCtx)
 	if err != nil {
@@ -377,6 +370,7 @@ func (obj *roundTripper) createPool(task *reqTask) {
 	}
 	if task.err == nil {
 		obj.putConnPool(task, conn)
+		obj.poolRoundTrip(task)
 	}
 }
 
@@ -398,6 +392,7 @@ func (obj *roundTripper) newReqTask(ctx *Response) *reqTask {
 	}
 	task := new(reqTask)
 	task.reqCtx = ctx
+	task.reqCtx.response = nil
 	task.key = getKey(ctx) //pool key
 	return task
 }
@@ -414,14 +409,15 @@ func (obj *roundTripper) RoundTrip(ctx *Response) (err error) {
 			return err
 		}
 	}
-	task := obj.newReqTask(ctx)
 	currentRetry := 0
-	for currentRetry := 0; currentRetry <= maxRetryCount; currentRetry++ {
+	var task *reqTask
+	for ; currentRetry <= maxRetryCount; currentRetry++ {
 		select {
 		case <-ctx.Context().Done():
 			return context.Cause(ctx.Context())
 		default:
 		}
+		task = obj.newReqTask(ctx)
 		obj.poolRoundTrip(task)
 		if task.err == nil || !task.suppertRetry() {
 			break
@@ -429,6 +425,7 @@ func (obj *roundTripper) RoundTrip(ctx *Response) (err error) {
 		if task.isNotice {
 			currentRetry--
 		}
+		log.Print(task.err, "  currentRetry: ", currentRetry, !task.suppertRetry())
 	}
 	if currentRetry > maxRetryCount {
 		if task.err == nil {
