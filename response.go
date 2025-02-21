@@ -7,7 +7,6 @@ import (
 	"errors"
 	"io"
 	"iter"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -262,10 +261,6 @@ func (obj *Response) Html() *bs4.Client {
 func (obj *Response) ContentType() string {
 	if obj.filePath != "" {
 		return http.DetectContentType(obj.content)
-	}
-	if obj.response.Header == nil {
-		log.Print(obj.response.Header == nil)
-
 	}
 	contentType := obj.response.Header.Get("Content-Type")
 	if contentType == "" {

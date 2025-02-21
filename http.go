@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"slices"
@@ -225,7 +224,6 @@ func (obj *conn2) run() (err error) {
 					var readErr error
 					defer task.readCnl(readErr)
 					_, readErr = io.Copy(pw, rawBody)
-					log.Print(readErr)
 					pw.CloseWithError(readErr)
 					if readErr != nil && readErr != io.EOF && readErr != io.ErrUnexpectedEOF {
 						task.err = tools.WrapError(readErr, "failed to read response body")

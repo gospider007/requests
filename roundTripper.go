@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"strings"
 	"time"
@@ -425,7 +424,6 @@ func (obj *roundTripper) RoundTrip(ctx *Response) (err error) {
 		if task.isNotice {
 			currentRetry--
 		}
-		log.Print(task.err, "  currentRetry: ", currentRetry, !task.suppertRetry())
 	}
 	if currentRetry > maxRetryCount {
 		if task.err == nil {
