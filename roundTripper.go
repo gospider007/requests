@@ -425,13 +425,6 @@ func (obj *roundTripper) RoundTrip(ctx *Response) (err error) {
 			currentRetry--
 		}
 	}
-	if currentRetry > maxRetryCount {
-		if task.err == nil {
-			task.err = fmt.Errorf("roundTrip retry %d times", maxRetryCount)
-		} else {
-			task.err = tools.WrapError(err, fmt.Errorf("roundTrip retry %d times", maxRetryCount))
-		}
-	}
 	if task.err == nil && ctx.option.RequestCallBack != nil {
 		if err = ctx.option.RequestCallBack(ctx); err != nil {
 			task.err = err

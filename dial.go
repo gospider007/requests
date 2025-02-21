@@ -260,19 +260,23 @@ func (obj *Dialer) addrToIp(host string, ips []net.IPAddr, addrType gtls.AddrTyp
 func (obj *Dialer) verifySocks5(conn net.Conn, network string, proxyAddr Address, remoteAddr Address) (proxyAddress Address, err error) {
 	err = obj.verifySocks5Auth(conn, proxyAddr)
 	if err != nil {
+		err = tools.WrapError(err, "verifySocks5Auth error")
 		return
 	}
 	err = obj.writeCmd(conn, network)
 	if err != nil {
+		err = tools.WrapError(err, "write cmd error")
 		return
 	}
 	remoteAddr.NetWork = network
 	err = WriteUdpAddr(conn, remoteAddr)
 	if err != nil {
+		err = tools.WrapError(err, "write addr error")
 		return
 	}
 	readCon := make([]byte, 3)
 	if _, err = io.ReadFull(conn, readCon); err != nil {
+		err = tools.WrapError(err, "read socks5 proxy error")
 		return
 	}
 	if readCon[0] != 5 {
@@ -301,10 +305,7 @@ func (obj *Dialer) verifyUDPSocks5(ctx context.Context, conn net.Conn, proxyAddr
 	if err != nil {
 		return nil, err
 	}
-	wrapConn, err = NewUDPConn(wrapConn, &net.UDPAddr{IP: proxyAddress.IP, Port: proxyAddress.Port})
-	if err != nil {
-		return wrapConn, err
-	}
+	wrapConn = NewUDPConn(wrapConn, &net.UDPAddr{IP: proxyAddress.IP, Port: proxyAddress.Port})
 	go func() {
 		var buf [1]byte
 		for {
