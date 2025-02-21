@@ -320,39 +320,44 @@ func (obj *Response) IsSSE() bool {
 
 // read body
 func (obj *Response) ReadBody() (err error) {
-	obj.readBodyLock.Lock()
-	defer obj.readBodyLock.Unlock()
 	if obj.IsWebSocket() && obj.IsSSE() {
 		return errors.New("can not read stream")
 	}
+	obj.readBodyLock.Lock()
+	defer func() {
+		if err != nil {
+			obj.ForceCloseConn()
+		}
+		obj.readBodyLock.Unlock()
+	}()
 	if obj.readBody {
 		return nil
 	}
 	obj.readBody = true
 	bBody := bytes.NewBuffer(nil)
 	done := make(chan struct{})
+	var readErr error
 	go func() {
 		defer close(done)
 		if obj.option.Bar && obj.ContentLength() > 0 {
-			_, err = io.Copy(&barBody{
+			_, readErr = io.Copy(&barBody{
 				bar:  bar.NewClient(obj.response.ContentLength),
 				body: bBody,
 			}, obj.Body())
 		} else {
-			_, err = io.Copy(bBody, obj.Body())
+			_, readErr = io.Copy(bBody, obj.Body())
 		}
-		if err == io.ErrUnexpectedEOF {
-			err = nil
+		if readErr == io.ErrUnexpectedEOF {
+			readErr = nil
 		}
 	}()
 	select {
 	case <-obj.ctx.Done():
-		err = obj.ctx.Err()
+		return tools.WrapError(obj.ctx.Err(), "response read ctx error")
 	case <-done:
-	}
-	if err != nil {
-		obj.ForceCloseConn()
-		return errors.New("response read content error: " + err.Error())
+		if readErr != nil {
+			return tools.WrapError(readErr, "response read content error")
+		}
 	}
 	if !obj.option.DisDecode && obj.defaultDecode() {
 		obj.content, obj.encoding, _ = tools.Charset(bBody.Bytes(), obj.ContentType())
