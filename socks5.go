@@ -176,3 +176,10 @@ func (c *UDPConn) WriteTo(p []byte, addr net.Addr) (n int, err error) {
 	}
 	return n, nil
 }
+
+func (c *UDPConn) SetReadBuffer(i int) error {
+	return c.PacketConn.(*net.UDPConn).SetReadBuffer(i)
+}
+func (c *UDPConn) SetWriteBuffer(i int) error {
+	return c.PacketConn.(*net.UDPConn).SetWriteBuffer(i)
+}
