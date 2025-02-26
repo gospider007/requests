@@ -6,58 +6,75 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"maps"
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
 	"net/url"
-	"reflect"
 
 	"github.com/gospider007/gson"
 	"github.com/gospider007/tools"
 )
 
-const (
-	readType = iota
-	mapType
-)
-
-type OrderMap struct {
-	data map[string]any
-	keys []string
-}
-
-func NewOrderMap() *OrderMap {
-	return &OrderMap{
-		data: make(map[string]any),
-		keys: []string{},
+type OrderData struct {
+	data []struct {
+		key string
+		val any
 	}
 }
 
-func (obj *OrderMap) Set(key string, val any) {
-	obj.Del(key)
-	obj.data[key] = val
-	obj.keys = append(obj.keys, key)
+func NewOrderData() *OrderData {
+	return &OrderData{
+		data: []struct {
+			key string
+			val any
+		}{},
+	}
 }
-func (obj *OrderMap) Del(key string) {
-	delete(obj.data, key)
-	obj.keys = tools.DelSliceVals(obj.keys, key)
+
+func (obj *OrderData) Add(key string, val any) {
+	obj.data = append(obj.data, struct {
+		key string
+		val any
+	}{key: key, val: val})
 }
-func (obj *OrderMap) Keys() []string {
-	return obj.keys
+func (obj *OrderData) Keys() []string {
+	keys := make([]string, len(obj.data))
+	for i, value := range obj.data {
+		keys[i] = value.key
+	}
+	return keys
 }
-func (obj *OrderMap) parseHeaders() (map[string][]string, []string) {
-	head := make(http.Header)
-	for _, kk := range obj.keys {
-		if vvs, ok := obj.data[kk].([]any); ok {
-			for _, vv := range vvs {
-				head.Add(kk, fmt.Sprint(vv))
-			}
-		} else {
-			head.Add(kk, fmt.Sprint(obj.data[kk]))
+
+type orderT struct {
+	key string
+	val any
+}
+
+func (obj orderT) Key() string {
+	return obj.key
+}
+func (obj orderT) Val() any {
+	return obj.val
+}
+
+func (obj *OrderData) Data() []interface {
+	Key() string
+	Val() any
+} {
+	if obj == nil {
+		return nil
+	}
+	keys := make([]interface {
+		Key() string
+		Val() any
+	}, len(obj.data))
+	for i, value := range obj.data {
+		keys[i] = orderT{
+			key: value.key,
+			val: value.val,
 		}
 	}
-	return head, obj.keys
+	return keys
 }
 
 func formWrite(writer *multipart.Writer, key string, val any) (err error) {
@@ -109,7 +126,10 @@ func formWrite(writer *multipart.Writer, key string, val any) (err error) {
 	case string:
 		err = writer.WriteField(key, value)
 	default:
-		con, _ := gson.Decode(val)
+		con, err := gson.Decode(val)
+		if err != nil {
+			return err
+		}
 		err = writer.WriteField(key, con.Raw())
 		if err != nil {
 			return err
@@ -117,65 +137,23 @@ func formWrite(writer *multipart.Writer, key string, val any) (err error) {
 	}
 	return
 }
-func (obj *OrderMap) parseForm(ctx context.Context) (io.Reader, string, bool, error) {
-	if len(obj.keys) == 0 || len(obj.data) == 0 {
-		return nil, "", false, nil
-	}
-	if obj.isformPip() {
-		pr, pw := io.Pipe()
-		writer := multipart.NewWriter(pw)
-		go func() {
-			stop := context.AfterFunc(ctx, func() {
-				pw.CloseWithError(ctx.Err())
-			})
-			defer stop()
-			pw.CloseWithError(obj.formWriteMain(writer))
-		}()
-		return pr, writer.FormDataContentType(), true, nil
-	}
-	body := bytes.NewBuffer(nil)
-	writer := multipart.NewWriter(body)
-	err := obj.formWriteMain(writer)
-	if err != nil {
-		return nil, writer.FormDataContentType(), false, err
-	}
-	return bytes.NewReader(body.Bytes()), writer.FormDataContentType(), false, err
-}
-func (obj *OrderMap) isformPip() bool {
-	if len(obj.keys) == 0 || len(obj.data) == 0 {
+func (obj *OrderData) isformPip() bool {
+	if len(obj.data) == 0 {
 		return false
 	}
-	for _, key := range obj.keys {
-		if vals, ok := obj.data[key].([]any); ok {
-			for _, val := range vals {
-				if file, ok := val.(File); ok {
-					if _, ok := file.Content.(io.Reader); ok {
-						return true
-					}
-				}
-			}
-		} else {
-			if file, ok := obj.data[key].(File); ok {
-				if _, ok := file.Content.(io.Reader); ok {
-					return true
-				}
+	for _, value := range obj.data {
+		if file, ok := value.val.(File); ok {
+			if _, ok := file.Content.(io.Reader); ok {
+				return true
 			}
 		}
 	}
 	return false
 }
-func (obj *OrderMap) formWriteMain(writer *multipart.Writer) (err error) {
-	for _, key := range obj.keys {
-		if vals, ok := obj.data[key].([]any); ok {
-			for _, val := range vals {
-				if err = formWrite(writer, key, val); err != nil {
-					return
-				}
-			}
-		} else {
-			if err = formWrite(writer, key, obj.data[key]); err != nil {
-				return
-			}
+func (obj *OrderData) formWriteMain(writer *multipart.Writer) (err error) {
+	for _, value := range obj.data {
+		if err = formWrite(writer, value.key, value.val); err != nil {
+			return
 		}
 	}
 	return writer.Close()
@@ -193,39 +171,19 @@ func paramsWrite(buf *bytes.Buffer, key string, val any) {
 		buf.WriteString(url.QueryEscape(fmt.Sprintf("%v", val)))
 	}
 }
-func (obj *OrderMap) parseParams() *bytes.Buffer {
-	buf := bytes.NewBuffer(nil)
-	for _, k := range obj.keys {
-		if vals, ok := obj.data[k].([]any); ok {
-			for _, v := range vals {
-				paramsWrite(buf, k, v)
-			}
-		} else {
-			paramsWrite(buf, k, obj.data[k])
-		}
-	}
-	return buf
-}
-func (obj *OrderMap) parseData() io.Reader {
-	val := obj.parseParams().Bytes()
-	if val == nil {
-		return nil
-	}
-	return bytes.NewReader(val)
-}
-func (obj *OrderMap) MarshalJSON() ([]byte, error) {
+func (obj *OrderData) MarshalJSON() ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
 	err := buf.WriteByte('{')
 	if err != nil {
 		return nil, err
 	}
-	for i, k := range obj.keys {
+	for i, value := range obj.data {
 		if i > 0 {
 			if err = buf.WriteByte(','); err != nil {
 				return nil, err
 			}
 		}
-		key, err := gson.Encode(k)
+		key, err := gson.Encode(value.key)
 		if err != nil {
 			return nil, err
 		}
@@ -235,7 +193,7 @@ func (obj *OrderMap) MarshalJSON() ([]byte, error) {
 		if err = buf.WriteByte(':'); err != nil {
 			return nil, err
 		}
-		val, err := gson.Encode(obj.data[k])
+		val, err := gson.Encode(value.val)
 		if err != nil {
 			return nil, err
 		}
@@ -248,107 +206,88 @@ func (obj *OrderMap) MarshalJSON() ([]byte, error) {
 	}
 	return buf.Bytes(), nil
 }
-
-func any2Map(val any) map[string]any {
-	if reflect.TypeOf(val).Kind() != reflect.Map {
-		return nil
-	}
-	mapValue := reflect.ValueOf(val)
-	result := make(map[string]any)
-	for _, key := range mapValue.MapKeys() {
-		valueData := mapValue.MapIndex(key).Interface()
-		sliceValue := reflect.ValueOf(valueData)
-		if sliceValue.Kind() == reflect.Slice {
-			valueData2 := []any{}
-			for i := 0; i < sliceValue.Len(); i++ {
-				valueData2 = append(valueData2, sliceValue.Index(i).Interface())
-			}
-			result[fmt.Sprint(key.Interface())] = valueData2
-		} else {
-			result[fmt.Sprint(key.Interface())] = valueData
+func (obj *RequestOption) newBody(val any) (io.Reader, *OrderData, bool, error) {
+	switch value := val.(type) {
+	case *OrderData:
+		return nil, value, true, nil
+	case io.ReadCloser:
+		obj.once = true
+		return value, nil, true, nil
+	case io.Reader:
+		obj.once = true
+		return value, nil, true, nil
+	case string:
+		return bytes.NewReader(tools.StringToBytes(value)), nil, true, nil
+	case []byte:
+		return bytes.NewReader(value), nil, true, nil
+	case map[string]any:
+		orderMap := NewOrderData()
+		for key, val := range value {
+			orderMap.Add(key, val)
 		}
+		return nil, orderMap, true, nil
+	default:
+		jsonData, err := gson.Decode(val)
+		if err != nil {
+			return nil, nil, false, errors.New("invalid body type")
+		}
+		orderMap := NewOrderData()
+		for kk, vv := range jsonData.Map() {
+			orderMap.Add(kk, vv.Value())
+		}
+		return nil, orderMap, false, nil
 	}
-	return result
 }
 
-func (obj *RequestOption) newBody(val any, valType int) (reader io.Reader, parseOrderMap *OrderMap, orderKey []string, err error) {
-	var isOrderMap bool
-	parseOrderMap, isOrderMap = val.(*OrderMap)
-	if isOrderMap {
-		if valType == readType {
-			readCon, err := parseOrderMap.MarshalJSON()
-			return bytes.NewReader(readCon), nil, nil, err
-		} else {
-			return nil, parseOrderMap, parseOrderMap.Keys(), nil
-		}
+func (obj *OrderData) parseParams() *bytes.Buffer {
+	buf := bytes.NewBuffer(nil)
+	for _, value := range obj.data {
+		paramsWrite(buf, value.key, value.val)
 	}
-	if valType == readType {
-		switch value := val.(type) {
-		case io.ReadCloser:
-			obj.once = true
-			return value, nil, nil, nil
-		case io.Reader:
-			obj.once = true
-			return value, nil, nil, nil
-		case string:
-			return bytes.NewReader(tools.StringToBytes(value)), nil, nil, nil
-		case []byte:
-			return bytes.NewReader(value), nil, nil, nil
-		default:
-			enData, err := gson.Encode(val)
-			if err != nil {
-				return nil, nil, nil, err
-			}
-			return bytes.NewReader(enData), nil, nil, nil
-		}
+	return buf
+}
+func (obj *OrderData) parseForm(ctx context.Context) (io.Reader, bool, error) {
+	if len(obj.data) == 0 {
+		return nil, false, nil
 	}
-	if mapData := any2Map(val); mapData != nil {
-		val = mapData
+	if obj.isformPip() {
+		pr, pw := io.Pipe()
+		writer := multipart.NewWriter(pw)
+		go func() {
+			stop := context.AfterFunc(ctx, func() {
+				pw.CloseWithError(ctx.Err())
+			})
+			defer stop()
+			pw.CloseWithError(obj.formWriteMain(writer))
+		}()
+		return pr, true, nil
 	}
-mapL:
-	switch value := val.(type) {
-	case *gson.Client:
-		if !value.IsObject() {
-			return nil, nil, nil, errors.New("body-type error")
-		}
-		orderMap := NewOrderMap()
-		for kk, vv := range value.Map() {
-			if vv.IsArray() {
-				valData := make([]any, len(vv.Array()))
-				for i, v := range vv.Array() {
-					valData[i] = v.Value()
-				}
-				orderMap.Set(kk, valData)
-			} else {
-				orderMap.Set(kk, vv.Value())
-			}
-		}
-		return nil, orderMap, nil, nil
-	case *OrderMap:
-		if mapData := any2Map(value.data); mapData != nil {
-			value.data = mapData
-		}
-		return nil, value, nil, nil
-	case map[string]any:
-		orderMap := NewOrderMap()
-		orderMap.data = value
-		orderMap.keys = make([]string, len(value))
-		i := 0
-		for key := range maps.Keys(value) {
-			orderMap.keys[i] = key
-			i++
-		}
-		return nil, orderMap, nil, nil
+	body := bytes.NewBuffer(nil)
+	writer := multipart.NewWriter(body)
+	err := obj.formWriteMain(writer)
+	if err != nil {
+		return nil, false, err
 	}
-	if val, err = gson.Decode(val); err != nil {
-		switch value := val.(type) {
-		case string:
-			return bytes.NewReader(tools.StringToBytes(value)), nil, nil, nil
-		case []byte:
-			return bytes.NewReader(value), nil, nil, nil
-		default:
-			return nil, nil, nil, err
-		}
+	return bytes.NewReader(body.Bytes()), false, err
+}
+func (obj *OrderData) parseData() io.Reader {
+	val := obj.parseParams().Bytes()
+	if val == nil {
+		return nil
 	}
-	goto mapL
+	return bytes.NewReader(val)
+}
+func (obj *OrderData) parseJson() (io.Reader, error) {
+	con, err := obj.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	return bytes.NewReader(con), nil
+}
+func (obj *OrderData) parseText() (io.Reader, error) {
+	con, err := obj.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	return bytes.NewReader(con), nil
 }

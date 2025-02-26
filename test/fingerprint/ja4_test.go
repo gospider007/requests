@@ -12,14 +12,14 @@ import (
 
 func TestOrderHeaders(t *testing.T) {
 
-	headers := requests.NewOrderMap()
-	headers.Set("Accept-Encoding", "gzip, deflate, br")
-	headers.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
-	headers.Set("User-Agent", tools.UserAgent)
-	headers.Set("Accept-Language", tools.AcceptLanguage)
-	headers.Set("Sec-Ch-Ua", tools.SecChUa)
-	headers.Set("Sec-Ch-Ua-Mobile", "?0")
-	headers.Set("Sec-Ch-Ua-Platform", `"Windows"`)
+	headers := requests.NewOrderData()
+	headers.Add("Accept-Encoding", "gzip, deflate, br")
+	headers.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
+	headers.Add("User-Agent", tools.UserAgent)
+	headers.Add("Accept-Language", tools.AcceptLanguage)
+	headers.Add("Sec-Ch-Ua", tools.SecChUa)
+	headers.Add("Sec-Ch-Ua-Mobile", "?0")
+	headers.Add("Sec-Ch-Ua-Platform", `"Windows"`)
 	resp, err := requests.Get(nil, "https://tools.scrapfly.io/api/fp/anything", requests.RequestOption{
 		ClientOption: requests.ClientOption{
 			Headers: headers,
@@ -76,8 +76,7 @@ func TestOrderHeaders2(t *testing.T) {
 	resp, err := requests.Get(nil, "https://tools.scrapfly.io/api/fp/anything", requests.RequestOption{
 		ClientOption: requests.ClientOption{
 
-			Headers:      headers,
-			OrderHeaders: orderHeaders,
+			Headers: headers,
 		},
 		// ForceHttp1: true,
 	})

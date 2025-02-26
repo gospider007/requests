@@ -1,14 +1,17 @@
 package requests
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gospider007/tools"
+	"gopkg.in/errgo.v2/fmt/errors"
 )
 
 func defaultHeaders() http.Header {
 	return http.Header{
 		"User-Agent":         []string{tools.UserAgent},
+		"Connection":         []string{"keep-alive"},
 		"Accept":             []string{"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"},
 		"Accept-Encoding":    []string{"gzip, deflate, br, zstd"},
 		"Accept-Language":    []string{tools.AcceptLanguage},
@@ -18,26 +21,29 @@ func defaultHeaders() http.Header {
 	}
 }
 
-func (obj *RequestOption) initHeaders() (http.Header, error) {
+func (obj *RequestOption) initOrderHeaders() (http.Header, error) {
 	if obj.Headers == nil {
-		return nil, nil
+		return defaultHeaders(), nil
 	}
 	switch headers := obj.Headers.(type) {
 	case http.Header:
-		return headers.Clone(), nil
-	case *OrderMap:
-		head, order := headers.parseHeaders()
-		obj.OrderHeaders = order
-		return head, nil
+		return headers, nil
+	case *OrderData:
+		obj.orderHeaders = headers
+		return make(http.Header), nil
+	case map[string]any:
+		results := make(http.Header)
+		for key, val := range headers {
+			results.Add(key, fmt.Sprintf("%v", val))
+		}
+		return results, nil
+	case map[string]string:
+		results := make(http.Header)
+		for key, val := range headers {
+			results.Add(key, val)
+		}
+		return results, nil
 	default:
-		_, dataMap, _, err := obj.newBody(headers, mapType)
-		if err != nil {
-			return nil, err
-		}
-		if dataMap == nil {
-			return nil, nil
-		}
-		head, _ := dataMap.parseHeaders()
-		return head, err
+		return nil, errors.New("headers type error")
 	}
 }

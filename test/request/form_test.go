@@ -90,10 +90,10 @@ func TestSendFormWithGson(t *testing.T) {
 	}
 }
 func TestSendFormWithOrderMap(t *testing.T) {
-	orderMap := requests.NewOrderMap()
-	orderMap.Set("name", "test")
-	orderMap.Set("age", 11)
-	orderMap.Set("sex", "boy")
+	orderMap := requests.NewOrderData()
+	orderMap.Add("name", "test")
+	orderMap.Add("age", 11)
+	orderMap.Add("sex", "boy")
 
 	resp, err := requests.Post(nil, "https://httpbin.org/anything", requests.RequestOption{
 		Form: orderMap,

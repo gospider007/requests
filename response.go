@@ -146,7 +146,7 @@ func (obj *SSE) Range() iter.Seq2[Event, error] {
 
 // close SSE
 func (obj *SSE) Close() {
-	obj.response.ForceCloseConn()
+	obj.response.CloseConn()
 }
 
 // return websocket client
@@ -320,19 +320,21 @@ func (obj *Response) IsSSE() bool {
 
 // read body
 func (obj *Response) ReadBody() (err error) {
-	if obj.IsWebSocket() && obj.IsSSE() {
-		return errors.New("can not read stream")
-	}
 	obj.readBodyLock.Lock()
-	defer func() {
-		if err != nil {
-			obj.ForceCloseConn()
-		}
-		obj.readBodyLock.Unlock()
-	}()
 	if obj.readBody {
 		return nil
 	}
+	defer func() {
+		if err != nil {
+			obj.CloseConn()
+		} else {
+			obj.Close()
+			if obj.response.StatusCode == 101 && obj.webSocket == nil {
+				obj.webSocket = websocket.NewClientConn(newFakeConn(obj.rawConn.connStream()), websocket.GetResponseHeaderOption(obj.response.Header))
+			}
+		}
+		obj.readBodyLock.Unlock()
+	}()
 	obj.readBody = true
 	bBody := bytes.NewBuffer(nil)
 	done := make(chan struct{})
@@ -364,7 +366,6 @@ func (obj *Response) ReadBody() (err error) {
 	} else {
 		obj.content = bBody.Bytes()
 	}
-	obj.CloseBody()
 	return
 }
 
@@ -381,39 +382,28 @@ func (obj *Response) Proxys() []Address {
 	return nil
 }
 
-// close body
-func (obj *Response) CloseBody() {
-	obj.close(false)
-}
-
-// safe close conn
-func (obj *Response) CloseConn() {
-	obj.close(true)
-}
-
 // close
-func (obj *Response) close(closeConn bool) {
+func (obj *Response) CloseConn() {
 	if obj.webSocket != nil {
 		obj.webSocket.Close()
 	}
 	if obj.sse != nil {
 		obj.sse.Close()
 	}
-	if obj.IsWebSocket() || obj.IsSSE() || !obj.readBody {
-		obj.ForceCloseConn()
-	} else if obj.rawConn != nil {
-		if closeConn {
-			obj.rawConn.CloseConn()
-		} else {
-			obj.rawConn.Close()
-		}
+	if obj.rawConn != nil {
+		obj.rawConn.CloseConn()
 	}
-	obj.cnl() //must later
 }
 
-// force close conn
-func (obj *Response) ForceCloseConn() {
+// close
+func (obj *Response) Close() {
+	if obj.webSocket != nil {
+		obj.webSocket.Close()
+	}
+	if obj.sse != nil {
+		obj.sse.Close()
+	}
 	if obj.rawConn != nil {
-		obj.rawConn.ForceCloseConn()
+		obj.rawConn.Close()
 	}
 }

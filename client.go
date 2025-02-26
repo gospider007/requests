@@ -63,20 +63,14 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	return result, err
 }
 
-// Close idle connections. If the connection is in use, wait until it ends before closing
 func (obj *Client) CloseConns() {
 	obj.transport.closeConns()
-}
-
-// Close the connection, even if it is in use, it will be closed
-func (obj *Client) ForceCloseConns() {
-	obj.transport.forceCloseConns()
 }
 
 // Close the client and cannot be used again after shutdown
 func (obj *Client) Close() {
 	obj.closed = true
-	obj.ForceCloseConns()
+	obj.CloseConns()
 	obj.cnl()
 }
 func (obj *Client) do(ctx *Response) (err error) {

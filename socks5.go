@@ -2,6 +2,7 @@ package requests
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"errors"
 	"io"
@@ -126,6 +127,7 @@ func ReadUdpAddr(r io.Reader) (Address, error) {
 }
 
 type UDPConn struct {
+	ctx          context.Context
 	proxyAddress net.Addr
 	net.PacketConn
 	prefix   []byte
@@ -133,8 +135,9 @@ type UDPConn struct {
 	bufWrite [MaxUdpPacket]byte
 }
 
-func NewUDPConn(packConn net.PacketConn, proxyAddress net.Addr) *UDPConn {
+func NewUDPConn(ctx context.Context, packConn net.PacketConn, proxyAddress net.Addr) *UDPConn {
 	return &UDPConn{
+		ctx:          ctx,
 		PacketConn:   packConn,
 		proxyAddress: proxyAddress,
 		prefix:       []byte{0, 0, 0},
@@ -182,4 +185,7 @@ func (c *UDPConn) SetReadBuffer(i int) error {
 }
 func (c *UDPConn) SetWriteBuffer(i int) error {
 	return c.PacketConn.(*net.UDPConn).SetWriteBuffer(i)
+}
+func (c *UDPConn) Context() context.Context {
+	return c.ctx
 }

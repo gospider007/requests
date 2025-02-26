@@ -32,7 +32,7 @@ func TestStream(t *testing.T) {
 		// t.Log(string(con))
 		// t.Log(resp.Text())
 		time.Sleep(2 * time.Second)
-		resp.CloseBody()
+		resp.CloseConn()
 		time.Sleep(2 * time.Second)
 		if resp.StatusCode() != 200 {
 			t.Fatal("resp.StatusCode()!= 200")

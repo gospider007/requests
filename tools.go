@@ -129,43 +129,6 @@ func removeZone(host string) string {
 	return host[:j] + host[i:]
 }
 
-func chunked(te []string) bool    { return len(te) > 0 && te[0] == "chunked" }
-func isIdentity(te []string) bool { return len(te) == 1 && te[0] == "identity" }
-func shouldSendContentLength(t *http.Request) bool {
-	if chunked(t.TransferEncoding) {
-		return false
-	}
-	if t.ContentLength > 0 {
-		return true
-	}
-	if t.ContentLength < 0 {
-		return false
-	}
-	// Many servers expect a Content-Length for these methods
-	if t.Method == "POST" || t.Method == "PUT" || t.Method == "PATCH" {
-		return true
-	}
-	if t.ContentLength == 0 && isIdentity(t.TransferEncoding) {
-		if t.Method == "GET" || t.Method == "HEAD" {
-			return false
-		}
-		return true
-	}
-
-	return false
-}
-
-func hasPort(s string) bool { return strings.LastIndex(s, ":") > strings.LastIndex(s, "]") }
-
-// removeEmptyPort strips the empty port in ":port" to ""
-// as mandated by RFC 3986 Section 6.2.3.
-func removeEmptyPort(host string) string {
-	if hasPort(host) {
-		return strings.TrimSuffix(host, ":")
-	}
-	return host
-}
-
 func outgoingLength(r *http.Request) int64 {
 	if r.Body == nil || r.Body == http.NoBody {
 		return 0
@@ -232,13 +195,11 @@ func NewRequestWithContext(ctx context.Context, method string, u *url.URL, body 
 	}
 	req.URL = u
 	req.Proto = "HTTP/1.1"
-	req.ProtoMajor = 1
-	req.ProtoMinor = 1
-	req.Host = u.Host
-	u.Host = removeEmptyPort(u.Host)
 	if body != nil {
 		if v, ok := body.(interface{ Len() int }); ok {
 			req.ContentLength = int64(v.Len())
+		} else {
+			req.ContentLength = -1
 		}
 		if _, ok := body.(io.Seeker); ok {
 			req.Body = &requestBody{body}
@@ -247,6 +208,8 @@ func NewRequestWithContext(ctx context.Context, method string, u *url.URL, body 
 		} else {
 			req.Body = io.NopCloser(body)
 		}
+	} else {
+		req.ContentLength = -1
 	}
 	return req, nil
 }

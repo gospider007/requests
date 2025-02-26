@@ -99,12 +99,12 @@ func TestSendJsonWithGson(t *testing.T) {
 	}
 }
 func TestSendJsonWithOrder(t *testing.T) {
-	orderMap := requests.NewOrderMap()
-	orderMap.Set("age", "1")
-	orderMap.Set("age4", "4")
-	orderMap.Set("Name", "test")
-	orderMap.Set("age2", "2")
-	orderMap.Set("age3", []string{"22", "121"})
+	orderMap := requests.NewOrderData()
+	orderMap.Add("age", "1")
+	orderMap.Add("age4", "4")
+	orderMap.Add("Name", "test")
+	orderMap.Add("age2", "2")
+	orderMap.Add("age3", []string{"22", "121"})
 
 	bodyJson, err := gson.Encode(orderMap)
 	if err != nil {

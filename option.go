@@ -1,10 +1,15 @@
 package requests
 
 import (
+	"bytes"
 	"context"
+	"crypto/rand"
 	"crypto/tls"
+	"errors"
+	"fmt"
 	"io"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/gospider007/ja3"
@@ -56,7 +61,6 @@ type ClientOption struct {
 	USpec                 any           //support ja3.USpec,uquic.QUICID,bool
 	Proxy                 string        //proxy,support https,http,socks5
 	UserAgent             string        //headers User-Agent value
-	OrderHeaders          []string      //order headers
 	Proxys                []string      //proxy list,support https,http,socks5
 	HSpec                 ja3.HSpec     //h2 fingerprint
 	MaxRetries            int           //try num
@@ -88,9 +92,10 @@ type RequestOption struct {
 	Referer     string //set headers referer value
 	ContentType string //headers Content-Type value
 	ClientOption
-	Stream   bool //disable auto read
-	DisProxy bool //force disable proxy
-	once     bool
+	Stream       bool //disable auto read
+	DisProxy     bool //force disable proxy
+	once         bool
+	orderHeaders *OrderData //order headers
 }
 
 // Upload files with form-data,
@@ -100,77 +105,89 @@ type File struct {
 	ContentType string
 }
 
+func randomBoundary() string {
+	var buf [30]byte
+	io.ReadFull(rand.Reader, buf[:])
+	boundary := fmt.Sprintf("%x", buf[:])
+	if strings.ContainsAny(boundary, `()<>@,;:\"/[]?= `) {
+		boundary = `"` + boundary + `"`
+	}
+	return "multipart/form-data; boundary=" + boundary
+}
+
 func (obj *RequestOption) initBody(ctx context.Context) (io.Reader, error) {
 	if obj.Body != nil {
-		body, _, _, err := obj.newBody(obj.Body, readType)
-		if err != nil || body == nil {
-			return nil, err
-		}
-		return body, err
-	} else if obj.Form != nil {
-		var orderMap *OrderMap
-		_, orderMap, _, err := obj.newBody(obj.Form, mapType)
+		body, orderData, _, err := obj.newBody(obj.Body)
 		if err != nil {
 			return nil, err
-		}
-		if orderMap == nil {
-			return nil, nil
-		}
-		body, contentType, once, err := orderMap.parseForm(ctx)
-		if err != nil {
-			return nil, err
-		}
-		obj.once = once
-		if obj.ContentType == "" {
-			obj.ContentType = contentType
-		}
-		if body == nil {
-			return nil, nil
-		}
-		return body, nil
-	} else if obj.Data != nil {
-		body, orderMap, _, err := obj.newBody(obj.Data, mapType)
-		if err != nil {
-			return body, err
-		}
-		if obj.ContentType == "" {
-			obj.ContentType = "application/x-www-form-urlencoded"
 		}
 		if body != nil {
 			return body, nil
 		}
-		if orderMap == nil {
-			return nil, nil
-		}
-		body2 := orderMap.parseData()
-		if body2 == nil {
-			return nil, nil
-		}
-		return body2, nil
-	} else if obj.Json != nil {
-		body, _, _, err := obj.newBody(obj.Json, readType)
+		con, err := orderData.MarshalJSON()
 		if err != nil {
 			return nil, err
 		}
+		return bytes.NewReader(con), nil
+	} else if obj.Form != nil {
+		if obj.ContentType == "" {
+			obj.ContentType = randomBoundary()
+		}
+		body, orderData, ok, err := obj.newBody(obj.Body)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, errors.New("not support type")
+		}
+		if body != nil {
+			return body, nil
+		}
+		body, once, err := orderData.parseForm(ctx)
+		if err != nil {
+			return nil, err
+		}
+		obj.once = once
+		return body, err
+	} else if obj.Data != nil {
+		if obj.ContentType == "" {
+			obj.ContentType = "application/x-www-form-urlencoded"
+		}
+		body, orderData, ok, err := obj.newBody(obj.Body)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, errors.New("not support type")
+		}
+		if body != nil {
+			return body, nil
+		}
+		return orderData.parseData(), nil
+	} else if obj.Json != nil {
 		if obj.ContentType == "" {
 			obj.ContentType = "application/json"
 		}
-		if body == nil {
-			return nil, nil
-		}
-		return body, nil
-	} else if obj.Text != nil {
-		body, _, _, err := obj.newBody(obj.Text, readType)
+		body, orderData, _, err := obj.newBody(obj.Json)
 		if err != nil {
 			return nil, err
 		}
+		if body != nil {
+			return body, nil
+		}
+		return orderData.parseJson()
+	} else if obj.Text != nil {
 		if obj.ContentType == "" {
 			obj.ContentType = "text/plain"
 		}
-		if body == nil {
-			return nil, nil
+		body, orderData, _, err := obj.newBody(obj.Text)
+		if err != nil {
+			return nil, err
 		}
-		return body, nil
+		if body != nil {
+			return body, nil
+		}
+		return orderData.parseText()
 	} else {
 		return nil, nil
 	}
@@ -180,11 +197,23 @@ func (obj *RequestOption) initParams() (*url.URL, error) {
 	if obj.Params == nil {
 		return baseUrl, nil
 	}
-	_, dataMap, _, err := obj.newBody(obj.Params, mapType)
+	body, dataData, ok, err := obj.newBody(obj.Params)
 	if err != nil {
 		return nil, err
 	}
-	query := dataMap.parseParams().String()
+	if !ok {
+		return nil, errors.New("not support type")
+	}
+	var query string
+	if body != nil {
+		paramsBytes, err := io.ReadAll(body)
+		if err != nil {
+			return nil, err
+		}
+		query = tools.BytesToString(paramsBytes)
+	} else {
+		query = dataData.parseParams().String()
+	}
 	if query == "" {
 		return baseUrl, nil
 	}

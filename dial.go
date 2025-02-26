@@ -291,25 +291,21 @@ func (obj *Dialer) verifyUDPSocks5(ctx context.Context, conn net.Conn, proxyAddr
 	remoteAddr.NetWork = "udp"
 	proxyAddress, err := obj.verifySocks5(conn, "udp", proxyAddr, remoteAddr)
 	if err != nil {
-		return nil, err
+		return
 	}
 	var listener net.ListenConfig
 	wrapConn, err = listener.ListenPacket(ctx, "udp", ":0")
 	if err != nil {
-		return nil, err
+		return
 	}
-	wrapConn = NewUDPConn(wrapConn, &net.UDPAddr{IP: proxyAddress.IP, Port: proxyAddress.Port})
+	var cnl context.CancelFunc
+	udpCtx, cnl := context.WithCancel(context.TODO())
+	wrapConn = NewUDPConn(udpCtx, wrapConn, &net.UDPAddr{IP: proxyAddress.IP, Port: proxyAddress.Port})
 	go func() {
-		var buf [1]byte
-		for {
-			_, err := conn.Read(buf[:])
-			if err != nil {
-				wrapConn.Close()
-				break
-			}
-		}
+		io.Copy(io.Discard, conn)
+		cnl()
 	}()
-	return wrapConn, nil
+	return
 }
 func (obj *Dialer) writeCmd(conn net.Conn, network string) (err error) {
 	var cmd byte

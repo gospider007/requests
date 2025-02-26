@@ -51,7 +51,7 @@ func TestSse(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer response.CloseBody()
+	defer response.CloseConn()
 	sseCli := response.SSE()
 	defer sseCli.Close()
 	if sseCli == nil {

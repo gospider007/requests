@@ -18,6 +18,7 @@ require (
 	github.com/refraction-networking/uquic v0.0.6
 	github.com/refraction-networking/utls v1.6.7
 	golang.org/x/net v0.35.0
+	gopkg.in/errgo.v2 v2.1.0
 )
 
 require (

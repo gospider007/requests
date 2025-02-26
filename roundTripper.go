@@ -82,7 +82,6 @@ func (obj *roundTripper) newConnPool(done chan struct{}, conn *connecotr, task *
 	pool := new(connPool)
 	pool.connKey = task.key
 	pool.forceCtx, pool.forceCnl = context.WithCancelCause(obj.ctx)
-	pool.safeCtx, pool.safeCnl = context.WithCancelCause(pool.forceCtx)
 	pool.tasks = make(chan *reqTask)
 
 	pool.connPools = obj.connPools
@@ -103,7 +102,7 @@ func (obj *roundTripper) putConnPool(task *reqTask, conn *connecotr) {
 }
 func (obj *roundTripper) newConnecotr() *connecotr {
 	conne := new(connecotr)
-	conne.withCancel(obj.ctx, obj.ctx)
+	conne.withCancel(obj.ctx)
 	return conne
 }
 
@@ -137,9 +136,18 @@ func (obj *roundTripper) ghttp3Dial(ctx *Response, remoteAddress Address, proxyA
 	if ctx.option.UquicConfig != nil {
 		quicConfig = ctx.option.QuicConfig.Clone()
 	}
+	var udpCtx context.Context
+	if ct, ok := udpConn.(interface {
+		Context() context.Context
+	}); ok {
+		udpCtx = ct.Context()
+	}
 	netConn, err := quic.DialEarly(ctx.Context(), udpConn, &net.UDPAddr{IP: remoteAddress.IP, Port: remoteAddress.Port}, tlsConfig, quicConfig)
+	if err != nil {
+		return nil, err
+	}
 	conn = obj.newConnecotr()
-	conn.Conn = http3.NewClient(netConn, func() {
+	conn.Conn, err = http3.NewClient(udpCtx, netConn, func() {
 		conn.forceCnl(errors.New("http3 client close"))
 	})
 	return
@@ -163,14 +171,24 @@ func (obj *roundTripper) uhttp3Dial(ctx *Response, spec uquic.QUICSpec, remoteAd
 	if ctx.option.UquicConfig != nil {
 		quicConfig = ctx.option.UquicConfig.Clone()
 	}
+
+	var udpCtx context.Context
+	if ct, ok := udpConn.(interface {
+		Context() context.Context
+	}); ok {
+		udpCtx = ct.Context()
+	}
 	netConn, err := (&uquic.UTransport{
 		Transport: &uquic.Transport{
 			Conn: udpConn,
 		},
 		QUICSpec: &spec,
 	}).DialEarly(ctx.Context(), &net.UDPAddr{IP: remoteAddress.IP, Port: remoteAddress.Port}, tlsConfig, quicConfig)
+	if err != nil {
+		return nil, err
+	}
 	conn = obj.newConnecotr()
-	conn.Conn = http3.NewUClient(netConn, func() {
+	conn.Conn, err = http3.NewClient(udpCtx, netConn, func() {
 		conn.forceCnl(errors.New("http3 client close"))
 	})
 	return
@@ -243,13 +261,13 @@ func (obj *roundTripper) dial(ctx *Response) (conn *connecotr, err error) {
 }
 func (obj *roundTripper) dialConnecotr(ctx *Response, conne *connecotr, h2 bool) (err error) {
 	if h2 {
-		if conne.Conn, err = http2.NewClientConn(ctx.Context(), conne.c, ctx.option.HSpec, func() {
-			conne.forceCnl(errors.New("http2 client close"))
+		if conne.Conn, err = http2.NewClientConn(ctx.Context(), conne.c, ctx.option.HSpec, func(err error) {
+			conne.forceCnl(tools.WrapError(err, "http2 client close"))
 		}); err != nil {
 			return err
 		}
 	} else {
-		conne.Conn = newConn2(conne.safeCtx, conne.c, func(err error) {
+		conne.Conn = newConn2(conne.forceCtx, conne.c, func(err error) {
 			conne.forceCnl(tools.WrapError(err, "http1 client close"))
 		})
 		// conne.Conn = newRoudTrip(conne.forceCtx, conne.c, func(err error) {
@@ -375,16 +393,11 @@ func (obj *roundTripper) newRoudTrip(task *reqTask) {
 
 func (obj *roundTripper) closeConns() {
 	for key, pool := range obj.connPools.Range() {
-		pool.safeClose()
+		pool.close(errors.New("close all conn"))
 		obj.connPools.del(key)
 	}
 }
-func (obj *roundTripper) forceCloseConns() {
-	for key, pool := range obj.connPools.Range() {
-		pool.forceClose()
-		obj.connPools.del(key)
-	}
-}
+
 func (obj *roundTripper) newReqTask(ctx *Response) *reqTask {
 	if ctx.option.ResponseHeaderTimeout == 0 {
 		ctx.option.ResponseHeaderTimeout = time.Second * 300

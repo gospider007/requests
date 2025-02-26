@@ -8,8 +8,7 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"slices"
-	"sort"
+	"strings"
 	"time"
 
 	"github.com/gospider007/tools"
@@ -19,8 +18,11 @@ import (
 type httpTask struct {
 	req          *http.Request
 	res          *http.Response
-	orderHeaders []string
-	err          error
+	orderHeaders []interface {
+		Key() string
+		Val() any
+	}
+	err error
 
 	ctx context.Context
 	cnl context.CancelFunc
@@ -206,7 +208,9 @@ func (obj *conn2) keepSendClose() {
 var errLastTaskRuning = errors.New("last task is running")
 
 func (obj *conn2) run() (err error) {
-	defer obj.CloseWithError(err)
+	defer func() {
+		obj.CloseWithError(err)
+	}()
 	for {
 		select {
 		case <-obj.ctx.Done():
@@ -217,12 +221,14 @@ func (obj *conn2) run() (err error) {
 			obj.keepSendDisable()
 			go obj.httpWrite(task, task.req.Header.Clone())
 			task.res, task.err = http.ReadResponse(obj.r, nil)
-			if task.res != nil && task.res.Body != nil {
+			if task.res != nil && task.res.Body != nil && task.err == nil {
 				rawBody := task.res.Body
 				pr, pw := io.Pipe()
 				go func() {
 					var readErr error
-					defer task.readCnl(readErr)
+					defer func() {
+						task.readCnl(readErr)
+					}()
 					_, readErr = io.Copy(pw, rawBody)
 					pw.CloseWithError(readErr)
 					if readErr != nil && readErr != io.EOF && readErr != io.ErrUnexpectedEOF {
@@ -235,6 +241,15 @@ func (obj *conn2) run() (err error) {
 					} else {
 						select {
 						case <-task.writeCtx.Done():
+							if task.res.StatusCode == 101 || strings.Contains(task.res.Header.Get("Content-Type"), "text/event-stream") {
+								obj.keepSendClose()
+								select {
+								case <-obj.ctx.Done():
+									return
+								case <-obj.closeCtx.Done():
+									return
+								}
+							}
 						default:
 							readErr = tools.WrapError(errLastTaskRuning, errors.New("last task not write done with read done"))
 							task.err = readErr
@@ -274,7 +289,10 @@ func (obj *conn2) CloseWithError(err error) error {
 	}
 	return obj.conn.Close()
 }
-func (obj *conn2) DoRequest(req *http.Request, orderHeaders []string) (*http.Response, context.Context, error) {
+func (obj *conn2) DoRequest(req *http.Request, orderHeaders []interface {
+	Key() string
+	Val() any
+}) (*http.Response, context.Context, error) {
 	readCtx, readCnl := context.WithCancelCause(obj.closeCtx)
 	writeCtx, writeCnl := context.WithCancel(obj.closeCtx)
 	ctx, cnl := context.WithCancel(req.Context())
@@ -296,6 +314,8 @@ func (obj *conn2) DoRequest(req *http.Request, orderHeaders []string) (*http.Res
 	case <-obj.closeCtx.Done():
 		return nil, task.readCtx, obj.closeCtx.Err()
 	case obj.tasks <- task:
+	default:
+		return nil, nil, errLastTaskRuning
 	}
 	select {
 	case <-obj.ctx.Done():
@@ -309,18 +329,40 @@ func (obj *conn2) DoRequest(req *http.Request, orderHeaders []string) (*http.Res
 	}
 	return task.res, task.readCtx, task.err
 }
+
+type websocketConn struct {
+	r   io.Reader
+	w   io.WriteCloser
+	cnl context.CancelCauseFunc
+}
+
+func (obj *websocketConn) Read(p []byte) (n int, err error) {
+	return obj.r.Read(p)
+}
+func (obj *websocketConn) Write(p []byte) (n int, err error) {
+	return obj.w.Write(p)
+}
+func (obj *websocketConn) Close() error {
+	obj.cnl(nil)
+	return obj.w.Close()
+}
+
 func (obj *conn2) Stream() io.ReadWriteCloser {
 	obj.keepSendClose()
-	return obj.conn
+	return &websocketConn{
+		cnl: obj.closeCnl,
+		r:   obj.r,
+		w:   obj.conn,
+	}
+	// return obj.conn
 }
 func (obj *conn2) httpWrite(task *httpTask, rawHeaders http.Header) {
-	defer task.writeCnl()
 	defer func() {
 		if task.err != nil {
 			obj.CloseWithError(tools.WrapError(task.err, "failed to send request body"))
 		}
+		task.writeCnl()
 	}()
-
 	host := task.req.Host
 	if host == "" {
 		host = task.req.URL.Host
@@ -330,39 +372,15 @@ func (obj *conn2) httpWrite(task *httpTask, rawHeaders http.Header) {
 		return
 	}
 	host = removeZone(host)
-
 	if rawHeaders.Get("Host") == "" {
 		rawHeaders.Set("Host", host)
 	}
-	if rawHeaders.Get("Connection") == "" {
-		rawHeaders.Set("Connection", "keep-alive")
+	contentL, chunked := tools.GetContentLength(task.req)
+	if contentL >= 0 {
+		rawHeaders.Set("Content-Length", fmt.Sprint(contentL))
+	} else if chunked {
+		rawHeaders.Set("Transfer-Encoding", "chunked")
 	}
-	if rawHeaders.Get("User-Agent") == "" {
-		rawHeaders.Set("User-Agent", tools.UserAgent)
-	}
-	if rawHeaders.Get("Content-Length") == "" && task.req.ContentLength != 0 && shouldSendContentLength(task.req) {
-		rawHeaders.Set("Content-Length", fmt.Sprint(task.req.ContentLength))
-	}
-	writeHeaders := [][2]string{}
-	for k, vs := range rawHeaders {
-		for _, v := range vs {
-			writeHeaders = append(writeHeaders, [2]string{k, v})
-		}
-	}
-	sort.Slice(writeHeaders, func(x, y int) bool {
-		xI := slices.Index(task.orderHeaders, writeHeaders[x][0])
-		yI := slices.Index(task.orderHeaders, writeHeaders[y][0])
-		if xI < 0 {
-			return false
-		}
-		if yI < 0 {
-			return true
-		}
-		if xI <= yI {
-			return true
-		}
-		return false
-	})
 	ruri := task.req.URL.RequestURI()
 	if task.req.Method == "CONNECT" && task.req.URL.Path == "" {
 		if task.req.URL.Opaque != "" {
@@ -374,7 +392,7 @@ func (obj *conn2) httpWrite(task *httpTask, rawHeaders http.Header) {
 	if _, task.err = obj.w.WriteString(fmt.Sprintf("%s %s %s\r\n", task.req.Method, ruri, task.req.Proto)); task.err != nil {
 		return
 	}
-	for _, kv := range writeHeaders {
+	for _, kv := range tools.NewHeadersWithH1(task.orderHeaders, rawHeaders) {
 		if _, task.err = obj.w.WriteString(fmt.Sprintf("%s: %s\r\n", kv[0], kv[1])); task.err != nil {
 			return
 		}
@@ -386,8 +404,47 @@ func (obj *conn2) httpWrite(task *httpTask, rawHeaders http.Header) {
 		task.err = obj.w.Flush()
 		return
 	}
-	if _, task.err = io.Copy(obj.w, task.req.Body); task.err != nil {
-		return
+	if chunked {
+		chunkedWriter := newChunkedWriter(obj.w)
+		if _, task.err = io.Copy(chunkedWriter, task.req.Body); task.err != nil {
+			return
+		}
+		if task.err = chunkedWriter.Close(); task.err != nil {
+			return
+		}
+	} else {
+		if _, task.err = io.Copy(obj.w, task.req.Body); task.err != nil {
+			return
+		}
 	}
 	task.err = obj.w.Flush()
+}
+
+func newChunkedWriter(w *bufio.Writer) io.WriteCloser {
+	return &chunkedWriter{w}
+}
+
+type chunkedWriter struct {
+	w *bufio.Writer
+}
+
+func (cw *chunkedWriter) Write(data []byte) (n int, err error) {
+	if len(data) == 0 {
+		return 0, nil
+	}
+	if _, err = fmt.Fprintf(cw.w, "%x\r\n", len(data)); err != nil {
+		return 0, err
+	}
+	if _, err = cw.w.Write(data); err != nil {
+		return
+	}
+	if _, err = io.WriteString(cw.w, "\r\n"); err != nil {
+		return
+	}
+	return len(data), cw.w.Flush()
+}
+
+func (cw *chunkedWriter) Close() error {
+	_, err := io.WriteString(cw.w, "0\r\n\r\n")
+	return err
 }

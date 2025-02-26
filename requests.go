@@ -166,7 +166,7 @@ func (obj *Client) Request(ctx context.Context, method string, href string, opti
 func (obj *Client) request(ctx *Response) (err error) {
 	defer func() {
 		//read body
-		if err == nil && !ctx.IsWebSocket() && !ctx.IsSSE() && !ctx.IsStream() {
+		if err == nil && !ctx.IsSSE() && !ctx.IsStream() {
 			err = ctx.ReadBody()
 		}
 		//result callback
@@ -175,7 +175,7 @@ func (obj *Client) request(ctx *Response) (err error) {
 			err = ctx.option.ResultCallBack(ctx)
 		}
 		if err != nil { //err callback, must close body
-			ctx.CloseBody()
+			ctx.CloseConn()
 			if ctx.option.ErrCallBack != nil {
 				ctx.err = err
 				if err2 := ctx.option.ErrCallBack(ctx); err2 != nil {
@@ -188,14 +188,6 @@ func (obj *Client) request(ctx *Response) (err error) {
 		if err = ctx.option.OptionCallBack(ctx); err != nil {
 			return
 		}
-	}
-	//init headers and orderheaders,befor init ctxData
-	headers, err := ctx.option.initHeaders()
-	if err != nil {
-		return tools.WrapError(err, errors.New("tempRequest init headers error"), err)
-	}
-	if headers != nil && ctx.option.UserAgent != "" {
-		headers.Set("User-Agent", ctx.option.UserAgent)
 	}
 	//init tls timeout
 	if ctx.option.TlsHandshakeTimeout == 0 {
@@ -219,16 +211,13 @@ func (obj *Client) request(ctx *Response) (err error) {
 			ctx.proxys[i] = tempProxy
 		}
 	}
-	//init headers
-	if headers == nil {
-		headers = defaultHeaders()
-	}
 	//init ctx,cnl
 	if ctx.option.Timeout > 0 { //超时
 		ctx.ctx, ctx.cnl = context.WithTimeout(ctx.Context(), ctx.option.Timeout)
 	} else {
 		ctx.ctx, ctx.cnl = context.WithCancel(ctx.Context())
 	}
+	var isWebsocket bool
 	//init Scheme
 	switch ctx.option.Url.Scheme {
 	case "file":
@@ -241,11 +230,11 @@ func (obj *Client) request(ctx *Response) (err error) {
 	case "ws":
 		ctx.option.ForceHttp1 = true
 		ctx.option.Url.Scheme = "http"
-		websocket.SetClientHeadersWithOption(headers, ctx.option.WsOption)
+		isWebsocket = true
 	case "wss":
 		ctx.option.ForceHttp1 = true
 		ctx.option.Url.Scheme = "https"
-		websocket.SetClientHeadersWithOption(headers, ctx.option.WsOption)
+		isWebsocket = true
 	}
 	//init url
 	href, err := ctx.option.initParams()
@@ -253,9 +242,7 @@ func (obj *Client) request(ctx *Response) (err error) {
 		err = tools.WrapError(err, "url init error")
 		return
 	}
-	if href.User != nil {
-		headers.Set("Authorization", "Basic "+tools.Base64Encode(href.User.String()))
-	}
+
 	//init body
 	body, err := ctx.option.initBody(ctx.ctx)
 	if err != nil {
@@ -266,27 +253,29 @@ func (obj *Client) request(ctx *Response) (err error) {
 	if err != nil {
 		return tools.WrapError(errFatal, errors.New("tempRequest 构造request失败"), err)
 	}
-	reqs.Header = headers
-	//add Referer
-
-	if reqs.Header.Get("Referer") == "" && ctx.option.Referer != "" {
+	//init headers
+	if reqs.Header, err = ctx.option.initOrderHeaders(); err != nil {
+		return tools.WrapError(err, errors.New("tempRequest init headers error"), err)
+	}
+	if isWebsocket && reqs.Header.Get("Sec-WebSocket-Key") == "" {
+		websocket.SetClientHeadersWithOption(reqs.Header, ctx.option.WsOption)
+	}
+	if href.User != nil && reqs.Header.Get("Authorization") == "" {
+		reqs.Header.Set("Authorization", "Basic "+tools.Base64Encode(href.User.String()))
+	}
+	if ctx.option.UserAgent != "" && reqs.Header.Get("User-Agent") == "" {
+		reqs.Header.Set("User-Agent", ctx.option.UserAgent)
+	}
+	if ctx.option.Referer != "" && reqs.Header.Get("Referer") == "" {
 		reqs.Header.Set("Referer", ctx.option.Referer)
 	}
-
-	//set ContentType
 	if ctx.option.ContentType != "" && reqs.Header.Get("Content-Type") == "" {
 		reqs.Header.Set("Content-Type", ctx.option.ContentType)
 	}
-
-	//add host
-	if ctx.option.Host != "" {
-		reqs.Host = ctx.option.Host
-	} else if reqs.Header.Get("Host") != "" {
-		reqs.Host = reqs.Header.Get("Host")
-	} else {
-		reqs.Host = reqs.URL.Host
+	if ctx.option.Host != "" && reqs.Header.Get("Host") == "" {
+		reqs.Header.Set("Host", ctx.option.Host)
 	}
-
+	//init headers ok
 	//init cookies
 	cookies, err := ctx.option.initCookies()
 	if err != nil {
@@ -309,10 +298,7 @@ func (obj *Client) request(ctx *Response) (err error) {
 	if ctx.Body() != nil {
 		ctx.rawConn = ctx.Body().(*readWriteCloser)
 	}
-	if ctx.response.StatusCode == 101 {
-		ctx.Body()
-		ctx.webSocket = websocket.NewClientConn(newFakeConn(ctx.rawConn.connStream()), websocket.GetResponseHeaderOption(ctx.response.Header))
-	} else if strings.Contains(ctx.response.Header.Get("Content-Type"), "text/event-stream") {
+	if strings.Contains(ctx.response.Header.Get("Content-Type"), "text/event-stream") {
 		ctx.sse = newSSE(ctx)
 	} else if encoding := ctx.ContentEncoding(); encoding != "" {
 		var unCompressionBody io.ReadCloser
