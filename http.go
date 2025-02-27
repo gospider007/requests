@@ -221,6 +221,9 @@ func (obj *conn2) run() (err error) {
 			obj.keepSendDisable()
 			go obj.httpWrite(task, task.req.Header.Clone())
 			task.res, task.err = http.ReadResponse(obj.r, nil)
+			if task.res != nil {
+				task.res.Request = task.req
+			}
 			if task.res != nil && task.res.Body != nil && task.err == nil {
 				rawBody := task.res.Body
 				pr, pw := io.Pipe()
@@ -354,7 +357,6 @@ func (obj *conn2) Stream() io.ReadWriteCloser {
 		r:   obj.r,
 		w:   obj.conn,
 	}
-	// return obj.conn
 }
 func (obj *conn2) httpWrite(task *httpTask, rawHeaders http.Header) {
 	defer func() {

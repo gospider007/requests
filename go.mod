@@ -7,12 +7,12 @@ require (
 	github.com/gospider007/bs4 v0.0.0-20250221153846-5f06efc2ebf1
 	github.com/gospider007/gson v0.0.0-20250221154009-98d1695297de
 	github.com/gospider007/gtls v0.0.0-20250217075148-cad34209c0ae
-	github.com/gospider007/http2 v0.0.0-20250221154021-1366bc240764
-	github.com/gospider007/http3 v0.0.0-20250221154026-be54f80e5184
+	github.com/gospider007/http2 v0.0.0-20250226135657-bd12c18bfa85
+	github.com/gospider007/http3 v0.0.0-20250226135718-f7f291b88480
 	github.com/gospider007/ja3 v0.0.0-20250221154036-c583ec1f60a4
 	github.com/gospider007/proxy v0.0.0-20250221154359-9d745b93f9f6
 	github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c
-	github.com/gospider007/tools v0.0.0-20250221154605-e0d63fd3e79b
+	github.com/gospider007/tools v0.0.0-20250226135821-5d2fbfa9054d
 	github.com/gospider007/websocket v0.0.0-20250221154625-dbca4eba1fab
 	github.com/quic-go/quic-go v0.50.0
 	github.com/refraction-networking/uquic v0.0.6
@@ -46,7 +46,7 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
-	github.com/klauspost/cpuid/v2 v2.2.9 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/libdns/libdns v0.2.3 // indirect
 	github.com/mholt/acmez/v3 v3.0.1 // indirect
@@ -66,13 +66,13 @@ require (
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/ulikunitz/xz v0.5.12 // indirect
 	github.com/zeebo/blake3 v0.2.4 // indirect
-	go.mongodb.org/mongo-driver v1.17.2 // indirect
+	go.mongodb.org/mongo-driver v1.17.3 // indirect
 	go.uber.org/mock v0.5.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	go.uber.org/zap/exp v0.3.0 // indirect
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
-	golang.org/x/crypto v0.34.0 // indirect
+	golang.org/x/crypto v0.35.0 // indirect
 	golang.org/x/exp v0.0.0-20250218142911-aa4b98e5adaa // indirect
 	golang.org/x/image v0.24.0 // indirect
 	golang.org/x/mod v0.23.0 // indirect

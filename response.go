@@ -321,6 +321,7 @@ func (obj *Response) IsSSE() bool {
 // read body
 func (obj *Response) ReadBody() (err error) {
 	obj.readBodyLock.Lock()
+	defer obj.readBodyLock.Unlock()
 	if obj.readBody {
 		return nil
 	}
@@ -333,7 +334,6 @@ func (obj *Response) ReadBody() (err error) {
 				obj.webSocket = websocket.NewClientConn(newFakeConn(obj.rawConn.connStream()), websocket.GetResponseHeaderOption(obj.response.Header))
 			}
 		}
-		obj.readBodyLock.Unlock()
 	}()
 	obj.readBody = true
 	bBody := bytes.NewBuffer(nil)

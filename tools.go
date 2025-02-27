@@ -198,8 +198,6 @@ func NewRequestWithContext(ctx context.Context, method string, u *url.URL, body 
 	if body != nil {
 		if v, ok := body.(interface{ Len() int }); ok {
 			req.ContentLength = int64(v.Len())
-		} else {
-			req.ContentLength = -1
 		}
 		if _, ok := body.(io.Seeker); ok {
 			req.Body = &requestBody{body}
@@ -208,8 +206,6 @@ func NewRequestWithContext(ctx context.Context, method string, u *url.URL, body 
 		} else {
 			req.Body = io.NopCloser(body)
 		}
-	} else {
-		req.ContentLength = -1
 	}
 	return req, nil
 }

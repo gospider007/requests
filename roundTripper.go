@@ -270,9 +270,6 @@ func (obj *roundTripper) dialConnecotr(ctx *Response, conne *connecotr, h2 bool)
 		conne.Conn = newConn2(conne.forceCtx, conne.c, func(err error) {
 			conne.forceCnl(tools.WrapError(err, "http1 client close"))
 		})
-		// conne.Conn = newRoudTrip(conne.forceCtx, conne.c, func(err error) {
-		// 	conne.forceCnl(tools.WrapError(err, "http1 client close"))
-		// })
 	}
 	return err
 }
@@ -376,7 +373,7 @@ func (obj *roundTripper) newRoudTrip(task *reqTask) {
 	task.reqCtx.isNewConn = true
 	conn, err := obj.dial(task.reqCtx)
 	if err != nil {
-		task.err = err
+		task.err = tools.WrapError(err, "newRoudTrip dial error")
 		if task.reqCtx.option.ErrCallBack != nil {
 			task.reqCtx.err = err
 			if err2 := task.reqCtx.option.ErrCallBack(task.reqCtx); err2 != nil {

@@ -133,10 +133,18 @@ func (obj *Dialer) dialContext(ctx *Response, network string, addr Address, isPr
 	return con, err
 }
 func (obj *Dialer) DialContext(ctx *Response, network string, addr Address) (net.Conn, error) {
-	return obj.dialContext(ctx, network, addr, false)
+	conn, err := obj.dialContext(ctx, network, addr, false)
+	if err != nil {
+		err = tools.WrapError(err, "DialContext error")
+	}
+	return conn, err
 }
 func (obj *Dialer) ProxyDialContext(ctx *Response, network string, addr Address) (net.Conn, error) {
-	return obj.dialContext(ctx, network, addr, true)
+	conn, err := obj.dialContext(ctx, network, addr, true)
+	if err != nil {
+		err = tools.WrapError(err, "ProxyDialContext error")
+	}
+	return conn, err
 }
 func (obj *Dialer) DialProxyContext(ctx *Response, network string, proxyTlsConfig *tls.Config, proxyUrls ...Address) (net.PacketConn, net.Conn, error) {
 	proxyLen := len(proxyUrls)
@@ -150,9 +158,8 @@ func (obj *Dialer) DialProxyContext(ctx *Response, network string, proxyTlsConfi
 		oneProxy := proxyUrls[index]
 		remoteUrl := proxyUrls[index+1]
 		if index == 0 {
-			conn, err = obj.dialProxyContext(ctx, network, oneProxy)
-			if err != nil {
-				return packCon, conn, err
+			if conn, err = obj.dialProxyContext(ctx, network, oneProxy); err != nil {
+				break
 			}
 		}
 		packCon, conn, err = obj.verifyProxyToRemote(ctx, conn, proxyTlsConfig, oneProxy, remoteUrl, index == proxyLen-2, true)
@@ -212,6 +219,9 @@ func (obj *Dialer) verifyProxyToRemote(ctx *Response, conn net.Conn, proxyTlsCon
 	case <-ctx.Context().Done():
 		return packCon, conn, context.Cause(ctx.Context())
 	case <-done:
+		if err != nil {
+			err = tools.WrapError(err, "verifyProxyToRemote error")
+		}
 		return packCon, conn, err
 	}
 }
