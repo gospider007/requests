@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"log"
+	"slices"
 	"strings"
 
 	"github.com/gospider007/http2"
@@ -29,8 +30,18 @@ func (obj *Spec) String() string {
 	return tools.BytesToString(obj.raw)
 }
 
+var defaultHeaderKeys = []string{
+	"Accept",
+	"Accept-Encoding",
+	"Accept-Language",
+	"Sec-Ch-Ua",
+	"Sec-Ch-Ua-Mobile",
+	"Sec-Ch-Ua-Platform",
+	"User-Agent",
+}
+
 type Spec struct {
-	OrderHeaders []string
+	OrderHeaders [][2]string
 	raw          []byte
 }
 
@@ -40,7 +51,7 @@ func ParseSpec(raw []byte) (*Spec, error) {
 		return nil, errors.New("not found \\r\\n")
 	}
 	rawContent := raw[:i]
-	orderHeaders := []string{}
+	orderHeaders := [][2]string{}
 	for i, line := range bytes.Split(rawContent, []byte("\r\n")) {
 		if i == 0 {
 			continue
@@ -49,7 +60,10 @@ func ParseSpec(raw []byte) (*Spec, error) {
 		if len(ols) < 2 {
 			return nil, errors.New("not found header")
 		}
-		orderHeaders = append(orderHeaders, string(ols[0]))
+		orderHeaders = append(orderHeaders, [2]string{
+			tools.BytesToString(ols[0]),
+			tools.BytesToString(bytes.Join(ols[1:], []byte(": "))),
+		})
 	}
 	return &Spec{
 		raw:          raw,
@@ -112,8 +126,12 @@ func (obj *RequestOption) initSpec() error {
 	if gospiderSpec.H1Spec != nil {
 		if obj.orderHeaders == nil {
 			orderData := NewOrderData()
-			for _, key := range gospiderSpec.H1Spec.OrderHeaders {
-				orderData.Add(key, nil)
+			for _, kv := range gospiderSpec.H1Spec.OrderHeaders {
+				if slices.Contains(defaultHeaderKeys, strings.ToLower(kv[0])) {
+					orderData.Add(kv[0], kv[1])
+				} else {
+					orderData.Add(kv[0], nil)
+				}
 			}
 			obj.orderHeaders = orderData
 		}
@@ -121,8 +139,12 @@ func (obj *RequestOption) initSpec() error {
 	if gospiderSpec.H2Spec != nil {
 		if obj.orderHeaders == nil {
 			orderData := NewOrderData()
-			for _, key := range gospiderSpec.H2Spec.OrderHeaders {
-				orderData.Add(key, nil)
+			for _, kv := range gospiderSpec.H2Spec.OrderHeaders {
+				if slices.Contains(defaultHeaderKeys, strings.ToLower(kv[0])) {
+					orderData.Add(kv[0], kv[1])
+				} else {
+					orderData.Add(kv[0], nil)
+				}
 			}
 			obj.orderHeaders = orderData
 		}
