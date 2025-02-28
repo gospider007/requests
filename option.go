@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gospider007/ja3"
 	"github.com/gospider007/tools"
 	"github.com/gospider007/websocket"
 	"github.com/quic-go/quic-go"
@@ -43,7 +42,7 @@ type Log struct {
 
 // Connection Management Options
 type ClientOption struct {
-	Spec                  any //support []bytes,hex string,bool
+	Spec                  string
 	DialOption            DialOption
 	Headers               any                                   //default headers
 	Jar                   Jar                                   //custom cookies
@@ -62,7 +61,6 @@ type ClientOption struct {
 	Proxy                 string        //proxy,support https,http,socks5
 	UserAgent             string        //headers User-Agent value
 	Proxys                []string      //proxy list,support https,http,socks5
-	HSpec                 ja3.HSpec     //h2 fingerprint
 	MaxRetries            int           //try num
 	MaxRedirect           int           //redirect num ,<0 no redirect,==0 no limit
 	Timeout               time.Duration //request timeout
@@ -96,6 +94,7 @@ type RequestOption struct {
 	DisProxy     bool //force disable proxy
 	once         bool
 	orderHeaders *OrderData //order headers
+	gospiderSpec *GospiderSpec
 }
 
 // Upload files with form-data,

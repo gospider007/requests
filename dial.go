@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gospider007/gtls"
+	"github.com/gospider007/ja3"
 	"github.com/gospider007/tools"
 	utls "github.com/refraction-networking/utls"
 )
@@ -398,7 +399,7 @@ func (obj *Dialer) addTls(ctx context.Context, conn net.Conn, host string, tlsCo
 	tlsConn = tls.Client(conn, tlsConfig)
 	return tlsConn, tlsConn.HandshakeContext(ctx)
 }
-func (obj *Dialer) addJa3Tls(ctx context.Context, conn net.Conn, host string, spec utls.ClientHelloSpec, tlsConfig *utls.Config, forceHttp1 bool) (*utls.UConn, error) {
+func (obj *Dialer) addJa3Tls(ctx context.Context, conn net.Conn, host string, spec *ja3.Spec, tlsConfig *utls.Config, forceHttp1 bool) (*utls.UConn, error) {
 	return specClient.Client(ctx, conn, spec, tlsConfig, gtls.GetServerName(host), forceHttp1)
 }
 func (obj *Dialer) Socks5TcpProxy(ctx *Response, proxyAddr Address, remoteAddr Address) (conn net.Conn, err error) {

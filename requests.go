@@ -284,7 +284,12 @@ func (obj *Client) request(ctx *Response) (err error) {
 	if cookies != nil {
 		addCookie(reqs, cookies)
 	}
+	if err = ctx.option.initSpec(); err != nil {
+		return err
+	}
 	ctx.request = reqs
+	//init spec
+
 	//send req
 	err = obj.do(ctx)
 	if err != nil && err != ErrUseLastResponse {

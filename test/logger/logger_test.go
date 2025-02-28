@@ -11,7 +11,6 @@ func TestLogger(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		response, err := requests.Get(nil, "https://www.httpbin.org", requests.RequestOption{
 			ClientOption: requests.ClientOption{
-				Spec: true,
 				Logger: func(l requests.Log) {
 					log.Print(l)
 				},

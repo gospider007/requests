@@ -261,7 +261,7 @@ func (obj *roundTripper) dial(ctx *Response) (conn *connecotr, err error) {
 }
 func (obj *roundTripper) dialConnecotr(ctx *Response, conne *connecotr, h2 bool) (err error) {
 	if h2 {
-		if conne.Conn, err = http2.NewClientConn(ctx.Context(), conne.c, ctx.option.HSpec, func(err error) {
+		if conne.Conn, err = http2.NewClientConn(ctx.Context(), conne.c, ctx.option.gospiderSpec.H2Spec, func(err error) {
 			conne.forceCnl(tools.WrapError(err, "http2 client close"))
 		}); err != nil {
 			return err
@@ -276,17 +276,11 @@ func (obj *roundTripper) dialConnecotr(ctx *Response, conne *connecotr, h2 bool)
 func (obj *roundTripper) dialAddTls(option *RequestOption, req *http.Request, netConn net.Conn) (net.Conn, bool, error) {
 	ctx, cnl := context.WithTimeout(req.Context(), option.TlsHandshakeTimeout)
 	defer cnl()
-	if option.Spec != nil {
-		spec, err := ja3.CreateSpec(option.Spec)
-		if err != nil {
-			return nil, false, err
-		}
-		if len(spec.Extensions) > 0 {
-			if tlsConn, err := obj.dialer.addJa3Tls(ctx, netConn, getHost(req), spec, option.UtlsConfig.Clone(), option.ForceHttp1); err != nil {
-				return tlsConn, false, tools.WrapError(err, "add ja3 tls error")
-			} else {
-				return tlsConn, tlsConn.ConnectionState().NegotiatedProtocol == "h2", nil
-			}
+	if option.gospiderSpec.TLSSpec != nil {
+		if tlsConn, err := obj.dialer.addJa3Tls(ctx, netConn, getHost(req), option.gospiderSpec.TLSSpec, option.UtlsConfig.Clone(), option.ForceHttp1); err != nil {
+			return tlsConn, false, tools.WrapError(err, "add ja3 tls error")
+		} else {
+			return tlsConn, tlsConn.ConnectionState().NegotiatedProtocol == "h2", nil
 		}
 	}
 	if tlsConn, err := obj.dialer.addTls(ctx, netConn, getHost(req), option.TlsConfig.Clone(), option.ForceHttp1); err != nil {
