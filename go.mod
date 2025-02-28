@@ -5,15 +5,15 @@ go 1.24.0
 require (
 	github.com/gospider007/bar v0.0.0-20250217074946-47896d8de2ba
 	github.com/gospider007/bs4 v0.0.0-20250221153846-5f06efc2ebf1
-	github.com/gospider007/gson v0.0.0-20250221154009-98d1695297de
-	github.com/gospider007/gtls v0.0.0-20250217075148-cad34209c0ae
-	github.com/gospider007/http2 v0.0.0-20250226135657-bd12c18bfa85
-	github.com/gospider007/http3 v0.0.0-20250226135718-f7f291b88480
-	github.com/gospider007/ja3 v0.0.0-20250221154036-c583ec1f60a4
-	github.com/gospider007/proxy v0.0.0-20250221154359-9d745b93f9f6
+	github.com/gospider007/gson v0.0.0-20250228010755-7240291925de
+	github.com/gospider007/gtls v0.0.0-20250228071701-afc54ee3bc2c
+	github.com/gospider007/http2 v0.0.0-20250228010822-19a882977f82
+	github.com/gospider007/http3 v0.0.0-20250228010827-4832f37a33e9
+	github.com/gospider007/ja3 v0.0.0-20250228010834-bacfbf309818
+	github.com/gospider007/proxy v0.0.0-20250228071714-3b8c3bc020de
 	github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c
-	github.com/gospider007/tools v0.0.0-20250226135821-5d2fbfa9054d
-	github.com/gospider007/websocket v0.0.0-20250221154625-dbca4eba1fab
+	github.com/gospider007/tools v0.0.0-20250227010821-58293f5ee758
+	github.com/gospider007/websocket v0.0.0-20250228011054-fe5460a12fd3
 	github.com/quic-go/quic-go v0.50.0
 	github.com/refraction-networking/uquic v0.0.6
 	github.com/refraction-networking/utls v1.6.7
@@ -40,7 +40,6 @@ require (
 	github.com/google/pprof v0.0.0-20250208200701-d0013a598941 // indirect
 	github.com/gospider007/blog v0.0.0-20250217075004-fbd89cbd4147 // indirect
 	github.com/gospider007/kinds v0.0.0-20250217075226-10f199f7215d // indirect
-	github.com/gospider007/net v0.0.0-20250221154115-3f297fc794c9 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect

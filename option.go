@@ -132,7 +132,7 @@ func (obj *RequestOption) initBody(ctx context.Context) (io.Reader, error) {
 		if obj.ContentType == "" {
 			obj.ContentType = randomBoundary()
 		}
-		body, orderData, ok, err := obj.newBody(obj.Body)
+		body, orderData, ok, err := obj.newBody(obj.Form)
 		if err != nil {
 			return nil, err
 		}
@@ -152,7 +152,7 @@ func (obj *RequestOption) initBody(ctx context.Context) (io.Reader, error) {
 		if obj.ContentType == "" {
 			obj.ContentType = "application/x-www-form-urlencoded"
 		}
-		body, orderData, ok, err := obj.newBody(obj.Body)
+		body, orderData, ok, err := obj.newBody(obj.Data)
 		if err != nil {
 			return nil, err
 		}
