@@ -108,7 +108,7 @@ func (obj *Client) do(ctx *Response) (err error) {
 			return nil
 		}
 		ctx.request.Response = ctx.response
-		ctx.request.Header = defaultHeaders()
+		ctx.request.Header = make(http.Header)
 		ctx.request.Header.Set("Referer", ctx.Request().URL.String())
 		for key := range ctx.request.Header {
 			if val := ctx.Request().Header.Get(key); val != "" {

@@ -468,7 +468,6 @@ func (obj *Dialer) Socks5UdpProxy(ctx *Response, proxyAddress Address, remoteAdd
 }
 func (obj *Dialer) clientVerifyHttps(ctx context.Context, conn net.Conn, proxyAddress Address, remoteAddress Address) (err error) {
 	hdr := make(http.Header)
-	hdr.Set("User-Agent", tools.UserAgent)
 	if proxyAddress.User != "" && proxyAddress.Password != "" {
 		hdr.Set("Proxy-Authorization", "Basic "+tools.Base64Encode(proxyAddress.User+":"+proxyAddress.Password))
 	}

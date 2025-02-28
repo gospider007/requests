@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
-	"log"
+	"net/textproto"
 	"slices"
 	"strings"
 
@@ -28,16 +28,6 @@ func (obj *Spec) Bytes() []byte {
 }
 func (obj *Spec) String() string {
 	return tools.BytesToString(obj.raw)
-}
-
-var defaultHeaderKeys = []string{
-	"Accept",
-	"Accept-Encoding",
-	"Accept-Language",
-	"Sec-Ch-Ua",
-	"Sec-Ch-Ua-Mobile",
-	"Sec-Ch-Ua-Platform",
-	"User-Agent",
 }
 
 type Spec struct {
@@ -91,7 +81,6 @@ func ParseGospiderSpec(value string) (*GospiderSpec, error) {
 		if spec.TLSSpec, err = ja3.ParseSpec(b); err != nil {
 			return nil, err
 		}
-		log.Print("发送请求：", spec.TLSSpec.CipherSuites)
 	}
 	if specs[1] != "" {
 		b, err := hex.DecodeString(specs[1])
@@ -127,7 +116,7 @@ func (obj *RequestOption) initSpec() error {
 		if obj.orderHeaders == nil {
 			orderData := NewOrderData()
 			for _, kv := range gospiderSpec.H1Spec.OrderHeaders {
-				if slices.Contains(defaultHeaderKeys, strings.ToLower(kv[0])) {
+				if slices.Contains(tools.DefaultHeaderKeys, kv[0]) {
 					orderData.Add(kv[0], kv[1])
 				} else {
 					orderData.Add(kv[0], nil)
@@ -140,10 +129,11 @@ func (obj *RequestOption) initSpec() error {
 		if obj.orderHeaders == nil {
 			orderData := NewOrderData()
 			for _, kv := range gospiderSpec.H2Spec.OrderHeaders {
-				if slices.Contains(defaultHeaderKeys, strings.ToLower(kv[0])) {
-					orderData.Add(kv[0], kv[1])
+				key := textproto.CanonicalMIMEHeaderKey(kv[0])
+				if slices.Contains(tools.DefaultHeaderKeys, key) {
+					orderData.Add(key, kv[1])
 				} else {
-					orderData.Add(kv[0], nil)
+					orderData.Add(key, nil)
 				}
 			}
 			obj.orderHeaders = orderData
