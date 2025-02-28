@@ -7,12 +7,12 @@ require (
 	github.com/gospider007/bs4 v0.0.0-20250221153846-5f06efc2ebf1
 	github.com/gospider007/gson v0.0.0-20250228010755-7240291925de
 	github.com/gospider007/gtls v0.0.0-20250228071701-afc54ee3bc2c
-	github.com/gospider007/http2 v0.0.0-20250228010822-19a882977f82
+	github.com/gospider007/http2 v0.0.0-20250228121454-11e7cc8b9f0d
 	github.com/gospider007/http3 v0.0.0-20250228010827-4832f37a33e9
 	github.com/gospider007/ja3 v0.0.0-20250228010834-bacfbf309818
 	github.com/gospider007/proxy v0.0.0-20250228071714-3b8c3bc020de
 	github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c
-	github.com/gospider007/tools v0.0.0-20250227010821-58293f5ee758
+	github.com/gospider007/tools v0.0.0-20250228130003-3f2ae475e3e4
 	github.com/gospider007/websocket v0.0.0-20250228011054-fe5460a12fd3
 	github.com/quic-go/quic-go v0.50.0
 	github.com/refraction-networking/uquic v0.0.6
