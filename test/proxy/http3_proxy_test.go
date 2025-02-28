@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"log"
+	"net"
 	"testing"
 
 	"fmt"
@@ -89,7 +90,7 @@ func server() {
 			fmt.Fprint(w, "method is not supported")
 		}
 	})
-	tlsCert, err := gtls.CreateProxyCertWithName("localhost")
+	tlsCert, err := gtls.CreateCertWithAddr(net.IP{127, 0, 0, 1})
 	if err != nil {
 		panic(err)
 	}

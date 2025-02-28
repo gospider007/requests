@@ -226,6 +226,14 @@ func (obj *Dialer) verifyProxyToRemote(ctx *Response, conn net.Conn, proxyTlsCon
 		return packCon, conn, err
 	}
 }
+
+func (obj *Dialer) LookupIPAddrWithCache(host string) net.IP {
+	msgDataAny, ok := obj.dnsIpData.Load(host)
+	if ok {
+		return msgDataAny.(msgClient).ip
+	}
+	return nil
+}
 func (obj *Dialer) loadHost(ctx *Response, host string) (net.IP, error) {
 	msgDataAny, ok := obj.dnsIpData.Load(host)
 	if ok {
