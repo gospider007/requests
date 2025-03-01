@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/gospider007/gtls"
 	utls "github.com/refraction-networking/utls"
 )
 
@@ -57,8 +56,8 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 		}
 	}
 	var err error
-	if result.ClientOption.Proxy != "" {
-		_, err = gtls.VerifyProxy(result.ClientOption.Proxy)
+	if result.ClientOption.Proxy != nil {
+		_, err = parseProxy(result.ClientOption.Proxy)
 	}
 	return result, err
 }

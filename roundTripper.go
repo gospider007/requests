@@ -11,7 +11,6 @@ import (
 
 	"net/http"
 
-	"github.com/gospider007/gtls"
 	"github.com/gospider007/http2"
 	"github.com/gospider007/http3"
 	"github.com/gospider007/ja3"
@@ -294,56 +293,30 @@ func (obj *roundTripper) dialAddTls(option *RequestOption, req *http.Request, ne
 	}
 }
 func (obj *roundTripper) initProxys(ctx *Response) ([]Address, error) {
-	var proxys []Address
 	if ctx.option.DisProxy {
 		return nil, nil
 	}
-	if len(ctx.proxys) > 0 {
-		proxys = make([]Address, len(ctx.proxys))
-		for i, proxy := range ctx.proxys {
-			proxyAddress, err := GetAddressWithUrl(proxy)
-			if err != nil {
-				return nil, err
-			}
-			proxys[i] = proxyAddress
+	pps := ctx.proxys
+	if len(pps) == 0 {
+		if ctx.option.GetProxy == nil {
+			return nil, nil
+		}
+		proxyA, err := ctx.option.GetProxy(ctx)
+		if err != nil || proxyA == nil {
+			return nil, err
+		}
+		pps, err = parseProxy(proxyA)
+		if err != nil || len(pps) == 0 {
+			return nil, err
 		}
 	}
-	if len(proxys) == 0 && ctx.option.GetProxy != nil {
-		proxyStr, err := ctx.option.GetProxy(ctx)
+	proxys := make([]Address, len(ctx.proxys))
+	for i, proxy := range pps {
+		proxyAddress, err := GetAddressWithUrl(proxy)
 		if err != nil {
-			return proxys, err
+			return nil, err
 		}
-		if proxyStr != "" {
-			proxy, err := gtls.VerifyProxy(proxyStr)
-			if err != nil {
-				return proxys, err
-			}
-			proxyAddress, err := GetAddressWithUrl(proxy)
-			if err != nil {
-				return nil, err
-			}
-			proxys = []Address{proxyAddress}
-		}
-	}
-	if len(proxys) == 0 && ctx.option.GetProxys != nil {
-		proxyStrs, err := ctx.option.GetProxys(ctx)
-		if err != nil {
-			return proxys, err
-		}
-		if l := len(proxyStrs); l > 0 {
-			proxys = make([]Address, l)
-			for i, proxyStr := range proxyStrs {
-				proxy, err := gtls.VerifyProxy(proxyStr)
-				if err != nil {
-					return proxys, err
-				}
-				proxyAddress, err := GetAddressWithUrl(proxy)
-				if err != nil {
-					return nil, err
-				}
-				proxys[i] = proxyAddress
-			}
-		}
+		proxys[i] = proxyAddress
 	}
 	return proxys, nil
 }

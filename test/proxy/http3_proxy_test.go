@@ -56,7 +56,7 @@ func client2() {
 				Logger: func(l requests.Log) {
 					log.Print(l)
 				},
-				Proxys: []string{
+				Proxy: []string{
 					"http://" + proxyHost,
 					"socks5://" + proxyHost,
 				},
@@ -135,7 +135,7 @@ func TestHttp3Proxy2(t *testing.T) {
 				// Logger: func(l requests.Log) {
 				// 	log.Print(l)
 				// },
-				Proxys: []string{
+				Proxy: []string{
 					// "http://" + proxyHost,
 					"socks5://" + proxyHost,
 				},

@@ -19,7 +19,7 @@ func TestProxy(t *testing.T) {
 }
 func TestGetProxy(t *testing.T) {
 	session, _ := requests.NewClient(nil, requests.ClientOption{
-		GetProxy: func(ctx *requests.Response) (string, error) { //Penalty when creating a new connection
+		GetProxy: func(ctx *requests.Response) (any, error) { //Penalty when creating a new connection
 			proxy := "" //set proxy,ex:"http://127.0.0.1:8080","https://127.0.0.1:8080","socks5://127.0.0.1:8080"
 			return proxy, nil
 		},

@@ -12,7 +12,6 @@ import (
 
 	"net/http"
 
-	"github.com/gospider007/gtls"
 	"github.com/gospider007/re"
 	"github.com/gospider007/tools"
 	"github.com/gospider007/websocket"
@@ -194,21 +193,10 @@ func (obj *Client) request(ctx *Response) (err error) {
 		ctx.option.TlsHandshakeTimeout = time.Second * 15
 	}
 	//init proxy
-	if ctx.option.Proxy != "" {
-		tempProxy, err := gtls.VerifyProxy(ctx.option.Proxy)
+	if ctx.option.Proxy != nil {
+		ctx.proxys, err = parseProxy(ctx.option.Proxy)
 		if err != nil {
 			return tools.WrapError(errFatal, errors.New("tempRequest init proxy error"), err)
-		}
-		ctx.proxys = []*url.URL{tempProxy}
-	}
-	if l := len(ctx.option.Proxys); l > 0 {
-		ctx.proxys = make([]*url.URL, l)
-		for i, proxy := range ctx.option.Proxys {
-			tempProxy, err := gtls.VerifyProxy(proxy)
-			if err != nil {
-				return tools.WrapError(errFatal, errors.New("tempRequest init proxy error"), err)
-			}
-			ctx.proxys[i] = tempProxy
 		}
 	}
 	//init ctx,cnl

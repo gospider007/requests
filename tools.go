@@ -255,3 +255,25 @@ func (obj *fakeConn) SetWriteDeadline(t time.Time) error {
 func newFakeConn(body io.ReadWriteCloser) *fakeConn {
 	return &fakeConn{body: body}
 }
+func parseProxy(value any) ([]*url.URL, error) {
+	switch proxy := value.(type) {
+	case string:
+		p, err := gtls.VerifyProxy(proxy)
+		if err != nil {
+			return nil, err
+		}
+		return []*url.URL{p}, nil
+	case []string:
+		proxies := make([]*url.URL, len(proxy))
+		for i, p := range proxy {
+			p, err := gtls.VerifyProxy(p)
+			if err != nil {
+				return nil, err
+			}
+			proxies[i] = p
+		}
+		return proxies, nil
+	default:
+		return nil, errors.New("invalid proxy type")
+	}
+}

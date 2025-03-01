@@ -44,23 +44,21 @@ type Log struct {
 type ClientOption struct {
 	Spec                  string //goSpiderSpec   origin : https://github.com/gospider007/fp
 	DialOption            DialOption
-	Headers               any                                   //default headers
-	Jar                   Jar                                   //custom cookies
-	Logger                func(Log)                             //debuggable
-	OptionCallBack        func(ctx *Response) error             //option callback,if error is returnd, break request
-	ResultCallBack        func(ctx *Response) error             //result callback,if error is returnd,next errCallback
-	ErrCallBack           func(ctx *Response) error             //error callback,if error is returnd,break request
-	RequestCallBack       func(ctx *Response) error             //request and response callback,if error is returnd,reponse is error
-	GetProxy              func(ctx *Response) (string, error)   //proxy callback:support https,http,socks5 proxy
-	GetProxys             func(ctx *Response) ([]string, error) //proxys callback:support https,http,socks5 proxy
+	Headers               any                              //default headers
+	Jar                   Jar                              //custom cookies
+	Logger                func(Log)                        //debuggable
+	OptionCallBack        func(ctx *Response) error        //option callback,if error is returnd, break request
+	ResultCallBack        func(ctx *Response) error        //result callback,if error is returnd,next errCallback
+	ErrCallBack           func(ctx *Response) error        //error callback,if error is returnd,break request
+	RequestCallBack       func(ctx *Response) error        //request and response callback,if error is returnd,reponse is error
+	GetProxy              func(ctx *Response) (any, error) //proxy callback:support https,http,socks5 proxy
 	TlsConfig             *tls.Config
 	UtlsConfig            *utls.Config
 	QuicConfig            *quic.Config
 	UquicConfig           *uquic.Config
 	USpec                 any           //support ja3.USpec,uquic.QUICID,bool
-	Proxy                 string        //proxy,support https,http,socks5
 	UserAgent             string        //headers User-Agent value
-	Proxys                []string      //proxy list,support https,http,socks5
+	Proxy                 any           //strong or []string, ,support https,http,socks5
 	MaxRetries            int           //try num
 	MaxRedirect           int           //redirect num ,<0 no redirect,==0 no limit
 	Timeout               time.Duration //request timeout
