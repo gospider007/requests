@@ -60,7 +60,6 @@ github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1/go.mod h1:vR7hzQXu2zJy9
 github.com/go-gl/glfw/v3.3/glfw v0.0.0-20191125211704-12ad95a8df72/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=
 github.com/go-logr/logr v1.4.2 h1:6pFjapn8bFcIbiKo3XT4j/BhANplGihG6tvd+8rYgrY=
 github.com/go-logr/logr v1.4.2/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
-github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 h1:tfuBGBXKqDEevZMzYi5KSi8KkcZtzBcTgAUUtapy0OI=
 github.com/go-task/slim-sprig/v3 v3.0.0 h1:sUs3vkvUymDpBKi3qH1YSqBQk9+9D/8M2mN1vB6EwHI=
 github.com/go-task/slim-sprig/v3 v3.0.0/go.mod h1:W848ghGpv3Qj3dhTPRyJypKRiqCdHZiAzKg9hl15HA8=
 github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b/go.mod h1:SBH7ygxi8pfUlaOkMMuAQtPIUF8ecWP5IEl/CR7VP2Q=
@@ -108,8 +107,6 @@ github.com/gospider007/gson v0.0.0-20250228010755-7240291925de h1:7gWsfofFsEOZvK
 github.com/gospider007/gson v0.0.0-20250228010755-7240291925de/go.mod h1:3qme4vU9wRm58hRcg8k9ZY+TrFbtemp4eDjbvW8zQgQ=
 github.com/gospider007/gtls v0.0.0-20250228071701-afc54ee3bc2c h1:Lf25uzp+nZ6J4oFZ68hyJjbZq5LGGGWj7d93KKBipc0=
 github.com/gospider007/gtls v0.0.0-20250228071701-afc54ee3bc2c/go.mod h1:4TkEobGF1lQN/1d0tVEtt98/SHWPrbZm/vG6V1OuHWU=
-github.com/gospider007/http2 v0.0.0-20250228010822-19a882977f82 h1:9Wq8D3SZC7+ZJfoHBIs1/EkldZSAyksADmLOugOrU7M=
-github.com/gospider007/http2 v0.0.0-20250228010822-19a882977f82/go.mod h1:c5QmnC5Li5j9L9GRsTEzeleOxytuiS0a5IMt9hHn4Gw=
 github.com/gospider007/http2 v0.0.0-20250228121454-11e7cc8b9f0d h1:Dw4xQBFV+eK5ldN4pLVIALAc+0QdYt8LazJq43bcPi8=
 github.com/gospider007/http2 v0.0.0-20250228121454-11e7cc8b9f0d/go.mod h1:c5QmnC5Li5j9L9GRsTEzeleOxytuiS0a5IMt9hHn4Gw=
 github.com/gospider007/http3 v0.0.0-20250228010827-4832f37a33e9 h1:rNUYNiGNoJaCGyqkdVnAH8a8XyMqhCr8zMXzjh7yvl4=
@@ -122,10 +119,8 @@ github.com/gospider007/proxy v0.0.0-20250228071714-3b8c3bc020de h1:uniVC31CRMddD
 github.com/gospider007/proxy v0.0.0-20250228071714-3b8c3bc020de/go.mod h1:QM/Nvb+gqOSNCLj/i1vFRG9Fu94dZlBrLrgNWzVQn9M=
 github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c h1:8/Cf+c2680tkWJ+ueZ9RLLK5R5R8nhE8pNBUPHjkvkM=
 github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c/go.mod h1:dd8aDIUG1vDPP5r+vHBtiUK0Zn6uk3SsWt1ZvmCCHLs=
-github.com/gospider007/tools v0.0.0-20250227010821-58293f5ee758 h1:aUiGtvM11HkKyukMffYY08VlpvIGaWYnw8Ttmz5fVgU=
-github.com/gospider007/tools v0.0.0-20250227010821-58293f5ee758/go.mod h1:7D9VPN+5ZUvoX0EnI5ksmaOrXfZpF+n2bKR9DlInBAU=
-github.com/gospider007/tools v0.0.0-20250228130003-3f2ae475e3e4 h1:NPtehe8Dt4pYkZmqpV48N+XwOPwKYHT2Bh1N5J+1mSw=
-github.com/gospider007/tools v0.0.0-20250228130003-3f2ae475e3e4/go.mod h1:7D9VPN+5ZUvoX0EnI5ksmaOrXfZpF+n2bKR9DlInBAU=
+github.com/gospider007/tools v0.0.0-20250301080306-db6e5ca6f81b h1:htJFCgEVppsfq37RnnDp3+lxiRpvsJHjsMXJl/P8rZw=
+github.com/gospider007/tools v0.0.0-20250301080306-db6e5ca6f81b/go.mod h1:7D9VPN+5ZUvoX0EnI5ksmaOrXfZpF+n2bKR9DlInBAU=
 github.com/gospider007/websocket v0.0.0-20250228011054-fe5460a12fd3 h1:vzYixxJ9CS6jJJ0fZsbdvfEi4iq/ZvO/+Z6bt1qRjek=
 github.com/gospider007/websocket v0.0.0-20250228011054-fe5460a12fd3/go.mod h1:7TfSh2+MgljpjYTZ+AZuqRENs/t+QpVzrUbCRvY3qu4=
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
@@ -160,7 +155,6 @@ github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=
 github.com/kr/text v0.2.0/go.mod h1:eLer722TekiGuMkidMxC/pM04lWEeraHUUmBw8l2grE=
 github.com/libdns/libdns v0.2.3 h1:ba30K4ObwMGB/QTmqUxf3H4/GmUrCAIkMWejeGl12v8=
 github.com/libdns/libdns v0.2.3/go.mod h1:4Bj9+5CQiNMVGf87wjX4CY3HQJypUHRuLvlsfsZqLWQ=
-github.com/mholt/acmez v1.2.0 h1:1hhLxSgY5FvH5HCnGUuwbKY2VQVo8IU7rxXKSnZ7F30=
 github.com/mholt/acmez/v3 v3.0.1 h1:4PcjKjaySlgXK857aTfDuRbmnM5gb3Ruz3tvoSJAUp8=
 github.com/mholt/acmez/v3 v3.0.1/go.mod h1:L1wOU06KKvq7tswuMDwKdcHeKpFFgkppZy/y0DFxagQ=
 github.com/mholt/archives v0.1.0 h1:FacgJyrjiuyomTuNA92X5GyRBRZjE43Y/lrzKIlF35Q=
@@ -271,8 +265,6 @@ golang.org/x/exp v0.0.0-20191030013958-a1ab85dbe136/go.mod h1:JXzH8nQsPlswgeRAPE
 golang.org/x/exp v0.0.0-20191129062945-2f5052295587/go.mod h1:2RIsYlXP63K8oxa1u096TMicItID8zy7Y6sNkU49FU4=
 golang.org/x/exp v0.0.0-20191227195350-da58074b4299/go.mod h1:2RIsYlXP63K8oxa1u096TMicItID8zy7Y6sNkU49FU4=
 golang.org/x/exp v0.0.0-20200207192155-f17229e696bd/go.mod h1:J/WKrq2StrnmMY6+EHIKF9dgMWnmCNThgcyBT1FY9mM=
-golang.org/x/exp v0.0.0-20250218142911-aa4b98e5adaa h1:t2QcU6V556bFjYgu4L6C+6VrCPyJZ+eyRsABUPs1mz4=
-golang.org/x/exp v0.0.0-20250218142911-aa4b98e5adaa/go.mod h1:BHOTPb3L19zxehTsLoJXVaTktb06DFgmdW6Wb9s8jqk=
 golang.org/x/exp v0.0.0-20250228200357-dead58393ab7 h1:aWwlzYV971S4BXRS9AmqwDLAD85ouC6X+pocatKY58c=
 golang.org/x/exp v0.0.0-20250228200357-dead58393ab7/go.mod h1:BHOTPb3L19zxehTsLoJXVaTktb06DFgmdW6Wb9s8jqk=
 golang.org/x/image v0.0.0-20190227222117-0694c2d4d067/go.mod h1:kZ7UVZpmo3dzQBMxlp+ypCbDeSB+sBbTgSJuh5dn5js=
