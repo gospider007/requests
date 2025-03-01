@@ -258,12 +258,18 @@ func newFakeConn(body io.ReadWriteCloser) *fakeConn {
 func parseProxy(value any) ([]*url.URL, error) {
 	switch proxy := value.(type) {
 	case string:
+		if proxy == "" {
+			return nil, nil
+		}
 		p, err := gtls.VerifyProxy(proxy)
 		if err != nil {
 			return nil, err
 		}
 		return []*url.URL{p}, nil
 	case []string:
+		if len(proxy) == 0 {
+			return nil, nil
+		}
 		proxies := make([]*url.URL, len(proxy))
 		for i, p := range proxy {
 			p, err := gtls.VerifyProxy(p)
