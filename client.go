@@ -3,9 +3,6 @@ package requests
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
-	"io"
-	"net/http"
 
 	utls "github.com/refraction-networking/utls"
 )
@@ -71,62 +68,6 @@ func (obj *Client) Close() {
 	obj.closed = true
 	obj.CloseConns()
 	obj.cnl()
-}
-func (obj *Client) do(ctx *Response) (err error) {
-	var redirectNum int
-	for {
-		redirectNum++
-		err = obj.send(ctx)
-		if ctx.Request().Body != nil {
-			ctx.Request().Body.Close()
-		}
-		if err != nil {
-			return
-		}
-		if ctx.Option().MaxRedirect < 0 { //dis redirect
-			return
-		}
-		if ctx.Option().MaxRedirect > 0 && redirectNum > ctx.Option().MaxRedirect {
-			return
-		}
-		loc := ctx.response.Header.Get("Location")
-		if loc == "" {
-			return nil
-		}
-		u, err := ctx.Request().URL.Parse(loc)
-		if err != nil {
-			return fmt.Errorf("failed to parse Location header %q: %v", loc, err)
-		}
-		ctx.request, err = NewRequestWithContext(ctx.Context(), http.MethodGet, u, nil)
-		if err != nil {
-			return err
-		}
-		var shouldRedirect bool
-		ctx.request.Method, shouldRedirect, _ = redirectBehavior(ctx.Request().Method, ctx.response, ctx.request)
-		if !shouldRedirect {
-			return nil
-		}
-		ctx.request.Response = ctx.response
-		ctx.request.Header = make(http.Header)
-		ctx.request.Header.Set("Referer", ctx.Request().URL.String())
-		for key := range ctx.request.Header {
-			if val := ctx.Request().Header.Get(key); val != "" {
-				ctx.request.Header.Set(key, val)
-			}
-		}
-		if getDomain(u) == getDomain(ctx.Request().URL) {
-			if Authorization := ctx.Request().Header.Get("Authorization"); Authorization != "" {
-				ctx.request.Header.Set("Authorization", Authorization)
-			}
-			cookies := Cookies(ctx.Request().Cookies()).String()
-			if cookies != "" {
-				ctx.request.Header.Set("Cookie", cookies)
-			}
-			addCookie(ctx.request, ctx.response.Cookies())
-		}
-		io.Copy(io.Discard, ctx.response.Body)
-		ctx.response.Body.Close()
-	}
 }
 func (obj *Client) send(ctx *Response) (err error) {
 	if ctx.Option().Jar != nil {

@@ -117,6 +117,54 @@ func (obj *Client) Trace(ctx context.Context, href string, options ...RequestOpt
 }
 
 // Define a function named Request that takes in four parameters:
+func (obj *Client) retryRequest(ctx context.Context, option RequestOption, uhref *url.URL, requestId string) (response *Response, err error) {
+	defer func() {
+		if errors.Is(err, errFatal) || response.Option().once {
+			response.Option().MaxRetries = -1
+		}
+	}()
+	var redirectNum int
+	var loc *url.URL
+	response = obj.newResponse(ctx, option, uhref, requestId)
+	for {
+		redirectNum++
+		select {
+		case <-ctx.Done():
+			err = ctx.Err()
+			return
+		default:
+		}
+		err = obj.request(response)
+		if err != nil || response.Option().MaxRedirect < 0 || (response.Option().MaxRedirect > 0 && redirectNum > response.Option().MaxRedirect) {
+			return
+		}
+		loc, err = response.Location()
+		if err != nil || loc == nil {
+			return
+		}
+		response.Close()
+		switch response.StatusCode() {
+		case 307, 308:
+			if response.Option().once {
+				return
+			}
+			response = obj.newResponse(ctx, option, loc, requestId)
+		default:
+			option.Method = http.MethodGet
+			option.disBody = true
+			option.Headers = nil
+			option.Referer = response.Url().String()
+			if getDomain(loc) == getDomain(response.Url()) {
+				if Authorization := response.Request().Header.Get("Authorization"); Authorization != "" {
+					option.Headers = map[string]any{"Authorization": Authorization}
+				}
+			}
+			response = obj.newResponse(ctx, option, loc, requestId)
+		}
+	}
+}
+
+// Define a function named Request that takes in four parameters:
 func (obj *Client) Request(ctx context.Context, method string, href string, options ...RequestOption) (response *Response, err error) {
 	if obj.closed {
 		return nil, errors.New("client is closed")
@@ -144,19 +192,9 @@ func (obj *Client) Request(ctx context.Context, method string, href string, opti
 		}
 	}
 	for ; optionBak.MaxRetries >= 0; optionBak.MaxRetries-- {
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		default:
-		}
-		option := optionBak
-		option.Url = cloneUrl(uhref)
-		response = NewResponse(ctx, option)
-		response.client = obj
-		response.requestId = requestId
-		err = obj.request(response)
-		if err == nil || errors.Is(err, errFatal) || response.Option().once {
-			return
+		response, err = obj.retryRequest(ctx, optionBak, uhref, requestId)
+		if err == nil {
+			break
 		}
 		optionBak.MaxRetries = response.Option().MaxRetries
 	}
@@ -181,6 +219,9 @@ func (obj *Client) request(ctx *Response) (err error) {
 					err = tools.WrapError(errFatal, err2)
 				}
 			}
+		}
+		if ctx.Request().Body != nil {
+			ctx.Request().Body.Close()
 		}
 	}()
 	if ctx.option.OptionCallBack != nil {
@@ -232,9 +273,13 @@ func (obj *Client) request(ctx *Response) (err error) {
 	}
 
 	//init body
-	body, err := ctx.option.initBody(ctx.ctx)
-	if err != nil {
-		return tools.WrapError(err, errors.New("tempRequest init body error"), err)
+	var body io.Reader
+	if ctx.option.disBody {
+		body = nil
+	} else {
+		if body, err = ctx.option.initBody(ctx.ctx); err != nil {
+			return tools.WrapError(err, errors.New("tempRequest init body error"), err)
+		}
 	}
 	//create request
 	reqs, err := NewRequestWithContext(ctx.Context(), ctx.option.Method, href, body)
@@ -279,7 +324,7 @@ func (obj *Client) request(ctx *Response) (err error) {
 	//init spec
 
 	//send req
-	err = obj.do(ctx)
+	err = obj.send(ctx)
 	if err != nil && err != ErrUseLastResponse {
 		err = tools.WrapError(err, "client do error")
 		return

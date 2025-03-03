@@ -210,9 +210,6 @@ func (obj *RequestOption) newBody(val any) (io.Reader, *OrderData, bool, error) 
 	switch value := val.(type) {
 	case *OrderData:
 		return nil, value, true, nil
-	case io.ReadCloser:
-		obj.once = true
-		return value, nil, true, nil
 	case io.Reader:
 		obj.once = true
 		return value, nil, true, nil
