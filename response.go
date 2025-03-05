@@ -59,7 +59,7 @@ type Response struct {
 	err          error
 	ctx          context.Context
 	request      *http.Request
-	rawConn      *readWriteCloser
+	body         *wrapBody
 	response     *http.Response
 	webSocket    *websocket.Conn
 	sse          *SSE
@@ -331,7 +331,7 @@ func (obj *Response) ReadBody() (err error) {
 		} else {
 			obj.Close()
 			if obj.response.StatusCode == 101 && obj.webSocket == nil {
-				obj.webSocket = websocket.NewClientConn(newFakeConn(obj.rawConn.connStream()), websocket.GetResponseHeaderOption(obj.response.Header))
+				obj.webSocket = websocket.NewConn(newFakeConn(obj.body.connStream()), true, obj.Headers().Get("Sec-WebSocket-Extensions"))
 			}
 		}
 	}()
@@ -376,8 +376,8 @@ func (obj *Response) IsNewConn() bool {
 
 // conn proxy
 func (obj *Response) Proxys() []Address {
-	if obj.rawConn != nil {
-		return obj.rawConn.Proxys()
+	if obj.body != nil {
+		return obj.body.Proxys()
 	}
 	return nil
 }
@@ -390,8 +390,8 @@ func (obj *Response) CloseConn() {
 	if obj.sse != nil {
 		obj.sse.Close()
 	}
-	if obj.rawConn != nil {
-		obj.rawConn.CloseConn()
+	if obj.body != nil {
+		obj.body.CloseConn()
 	}
 }
 
@@ -403,7 +403,7 @@ func (obj *Response) Close() {
 	if obj.sse != nil {
 		obj.sse.Close()
 	}
-	if obj.rawConn != nil {
-		obj.rawConn.Close()
+	if obj.body != nil {
+		obj.body.Close()
 	}
 }

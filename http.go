@@ -33,7 +33,7 @@ type httpTask struct {
 	readCtx context.Context
 	readCnl context.CancelCauseFunc
 }
-type conn2 struct {
+type clientConn struct {
 	err       error
 	tasks     chan *httpTask
 	conn      net.Conn
@@ -65,10 +65,10 @@ func (obj *httpBody) Close() error {
 	return obj.r.Close()
 }
 
-func newConn2(ctx context.Context, con net.Conn, closeFunc func(error)) *conn2 {
+func newClientConn(ctx context.Context, con net.Conn, closeFunc func(error)) *clientConn {
 	closeCtx, closeCnl := context.WithCancelCause(ctx)
 	keepCloseCtx, keepCloseCnl := context.WithCancel(closeCtx)
-	c := &conn2{
+	c := &clientConn{
 		closeCtx:         closeCtx,
 		closeCnl:         closeCnl,
 		ctx:              ctx,
@@ -89,7 +89,7 @@ func newConn2(ctx context.Context, con net.Conn, closeFunc func(error)) *conn2 {
 	return c
 }
 
-func (obj *conn2) CheckTCPAliveSafe() {
+func (obj *clientConn) CheckTCPAliveSafe() {
 	for {
 		select {
 		case <-obj.ctx.Done():
@@ -108,7 +108,7 @@ func (obj *conn2) CheckTCPAliveSafe() {
 		}
 	}
 }
-func (obj *conn2) CheckTCPAliveSafeEnable() (closed bool) {
+func (obj *clientConn) CheckTCPAliveSafeEnable() (closed bool) {
 	select {
 	case <-obj.ctx.Done():
 		return true
@@ -119,6 +119,7 @@ func (obj *conn2) CheckTCPAliveSafeEnable() (closed bool) {
 		return false
 	case <-obj.readCtx.Done():
 	}
+	totalPeek := 1
 	for {
 		select {
 		case <-obj.ctx.Done():
@@ -136,13 +137,15 @@ func (obj *conn2) CheckTCPAliveSafeEnable() (closed bool) {
 				obj.CloseWithError(err)
 				return true
 			}
-			if _, err = obj.r.Peek(1); err != nil {
+			if _, err = obj.r.Peek(totalPeek); err != nil {
 				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 					err = nil
 				} else {
 					obj.CloseWithError(err)
 					return true
 				}
+			} else {
+				totalPeek++
 			}
 			if err = obj.conn.SetReadDeadline(time.Time{}); err != nil {
 				obj.CloseWithError(err)
@@ -152,7 +155,7 @@ func (obj *conn2) CheckTCPAliveSafeEnable() (closed bool) {
 	}
 }
 
-func (obj *conn2) keepSendMsg() {
+func (obj *clientConn) keepSendMsg() {
 	select {
 	case obj.keepMsgNotice <- struct{}{}:
 	case <-obj.ctx.Done():
@@ -163,7 +166,7 @@ func (obj *conn2) keepSendMsg() {
 		return
 	}
 }
-func (obj *conn2) keepRecvMsg() {
+func (obj *clientConn) keepRecvMsg() {
 	select {
 	case <-obj.keepMsgNotice:
 	case <-obj.ctx.Done():
@@ -174,7 +177,7 @@ func (obj *conn2) keepRecvMsg() {
 		return
 	}
 }
-func (obj *conn2) keepSendEnable(task *httpTask) {
+func (obj *clientConn) keepSendEnable(task *httpTask) {
 	obj.readCtx = task.readCtx
 	select {
 	case obj.keepEnableNotice <- struct{}{}:
@@ -188,7 +191,7 @@ func (obj *conn2) keepSendEnable(task *httpTask) {
 
 	obj.keepRecvMsg()
 }
-func (obj *conn2) keepSendDisable() {
+func (obj *clientConn) keepSendDisable() {
 	select {
 	case obj.keepDisNotice <- struct{}{}:
 	case <-obj.ctx.Done():
@@ -201,13 +204,13 @@ func (obj *conn2) keepSendDisable() {
 
 	obj.keepRecvMsg()
 }
-func (obj *conn2) keepSendClose() {
+func (obj *clientConn) keepSendClose() {
 	obj.keepCloseCnl()
 }
 
 var errLastTaskRuning = errors.New("last task is running")
 
-func (obj *conn2) run() (err error) {
+func (obj *clientConn) run() (err error) {
 	defer func() {
 		obj.CloseWithError(err)
 	}()
@@ -273,14 +276,14 @@ func (obj *conn2) run() (err error) {
 		}
 	}
 }
-func (obj *conn2) CloseCtx() context.Context {
+func (obj *clientConn) CloseCtx() context.Context {
 	return obj.closeCtx
 }
 
-func (obj *conn2) Close() error {
+func (obj *clientConn) Close() error {
 	return obj.CloseWithError(nil)
 }
-func (obj *conn2) CloseWithError(err error) error {
+func (obj *clientConn) CloseWithError(err error) error {
 	obj.closeCnl(err)
 	if err == nil {
 		obj.err = tools.WrapError(obj.err, "connecotr closeWithError close")
@@ -292,7 +295,7 @@ func (obj *conn2) CloseWithError(err error) error {
 	}
 	return obj.conn.Close()
 }
-func (obj *conn2) DoRequest(req *http.Request, orderHeaders []interface {
+func (obj *clientConn) DoRequest(req *http.Request, orderHeaders []interface {
 	Key() string
 	Val() any
 }) (*http.Response, context.Context, error) {
@@ -343,6 +346,9 @@ func (obj *websocketConn) Read(p []byte) (n int, err error) {
 	return obj.r.Read(p)
 }
 func (obj *websocketConn) Write(p []byte) (n int, err error) {
+	// i, err := obj.w.Write(p)
+	// log.Print(err, "  write error  ", i, p)
+	// return i, err
 	return obj.w.Write(p)
 }
 func (obj *websocketConn) Close() error {
@@ -350,7 +356,7 @@ func (obj *websocketConn) Close() error {
 	return obj.w.Close()
 }
 
-func (obj *conn2) Stream() io.ReadWriteCloser {
+func (obj *clientConn) Stream() io.ReadWriteCloser {
 	obj.keepSendClose()
 	return &websocketConn{
 		cnl: obj.closeCnl,
@@ -358,7 +364,7 @@ func (obj *conn2) Stream() io.ReadWriteCloser {
 		w:   obj.conn,
 	}
 }
-func (obj *conn2) httpWrite(task *httpTask, rawHeaders http.Header) {
+func (obj *clientConn) httpWrite(task *httpTask, rawHeaders http.Header) {
 	defer func() {
 		if task.err != nil {
 			obj.CloseWithError(tools.WrapError(task.err, "failed to send request body"))

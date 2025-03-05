@@ -29,9 +29,8 @@ type connecotr struct {
 	forceCtx context.Context //force close
 	forceCnl context.CancelCauseFunc
 	Conn     Conn
-
-	c      net.Conn
-	proxys []Address
+	c        net.Conn
+	proxys   []Address
 }
 
 func (obj *connecotr) withCancel(forceCtx context.Context) {
@@ -47,10 +46,11 @@ func (obj *connecotr) CloseWithError(err error) error {
 	}
 	return err
 }
+
 func (obj *connecotr) wrapBody(task *reqTask) {
-	body := new(readWriteCloser)
+	body := new(wrapBody)
 	rawBody := task.reqCtx.response.Body
-	body.body = rawBody
+	body.rawBody = rawBody
 	body.conn = obj
 	task.reqCtx.response.Body = body
 }

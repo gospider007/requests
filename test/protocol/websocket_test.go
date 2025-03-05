@@ -41,6 +41,6 @@ func TestWebSocket(t *testing.T) {
 		if err = wsCli.WriteMessage(websocket.TextMessage, "test1122332211"); err != nil { // Send text message
 			log.Panic(err)
 		}
-		time.Sleep(time.Second)
+		time.Sleep(time.Second * 2)
 	}
 }

@@ -6,36 +6,36 @@ import (
 	"io"
 )
 
-type readWriteCloser struct {
-	body io.ReadCloser
-	conn *connecotr
+type wrapBody struct {
+	rawBody io.ReadCloser
+	conn    *connecotr
 }
 
-func (obj *readWriteCloser) connStream() io.ReadWriteCloser {
+func (obj *wrapBody) connStream() io.ReadWriteCloser {
 	return obj.conn.Conn.Stream()
 }
-func (obj *readWriteCloser) Read(p []byte) (n int, err error) {
-	return obj.body.Read(p)
+func (obj *wrapBody) Read(p []byte) (n int, err error) {
+	return obj.rawBody.Read(p)
 }
-func (obj *readWriteCloser) Proxys() []Address {
+func (obj *wrapBody) Proxys() []Address {
 	return obj.conn.proxys
 }
 
-func (obj *readWriteCloser) ConnCloseCtx() context.Context {
+func (obj *wrapBody) ConnCloseCtx() context.Context {
 	return obj.conn.Conn.CloseCtx()
 }
-func (obj *readWriteCloser) CloseWithError(err error) error {
+func (obj *wrapBody) CloseWithError(err error) error {
 	if err != nil {
 		obj.conn.CloseWithError(err)
 	}
-	return obj.body.Close() //reuse conn
+	return obj.rawBody.Close() //reuse conn
 }
-func (obj *readWriteCloser) Close() error {
+func (obj *wrapBody) Close() error {
 	return obj.CloseWithError(nil)
 }
 
 // safe close conn
-func (obj *readWriteCloser) CloseConn() {
+func (obj *wrapBody) CloseConn() {
 	obj.conn.forceCnl(errors.New("readWriterCloser close conn"))
 	obj.conn.CloseWithError(errConnectionForceClosed)
 }

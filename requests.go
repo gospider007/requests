@@ -334,7 +334,7 @@ func (obj *Client) request(ctx *Response) (err error) {
 		return
 	}
 	if ctx.Body() != nil {
-		ctx.rawConn = ctx.Body().(*readWriteCloser)
+		ctx.body = ctx.Body().(*wrapBody)
 	}
 	if strings.Contains(ctx.response.Header.Get("Content-Type"), "text/event-stream") {
 		ctx.sse = newSSE(ctx)
