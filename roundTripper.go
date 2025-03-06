@@ -310,7 +310,7 @@ func (obj *roundTripper) initProxys(ctx *Response) ([]Address, error) {
 			return nil, err
 		}
 	}
-	proxys := make([]Address, len(ctx.proxys))
+	proxys := make([]Address, len(pps))
 	for i, proxy := range pps {
 		proxyAddress, err := GetAddressWithUrl(proxy)
 		if err != nil {
