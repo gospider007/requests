@@ -18,6 +18,7 @@ func TestWebSocket(t *testing.T) {
 	defer response.CloseConn()
 	wsCli := response.WebSocket()
 	defer wsCli.Close()
+	log.Print(response.Headers())
 	if err = wsCli.WriteMessage(websocket.TextMessage, "test1122332211"); err != nil { // Send text message
 		log.Panic(err)
 	}
