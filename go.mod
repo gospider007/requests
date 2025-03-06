@@ -5,25 +5,25 @@ go 1.24.0
 require (
 	github.com/gospider007/bar v0.0.0-20250217074946-47896d8de2ba
 	github.com/gospider007/bs4 v0.0.0-20250221153846-5f06efc2ebf1
-	github.com/gospider007/gson v0.0.0-20250228010755-7240291925de
+	github.com/gospider007/gson v0.0.0-20250305031212-88e9f8cddb93
 	github.com/gospider007/gtls v0.0.0-20250228071701-afc54ee3bc2c
 	github.com/gospider007/http2 v0.0.0-20250228121454-11e7cc8b9f0d
 	github.com/gospider007/http3 v0.0.0-20250228010827-4832f37a33e9
 	github.com/gospider007/ja3 v0.0.0-20250302134218-c3a4d4cdfeb0
-	github.com/gospider007/proxy v0.0.0-20250302134228-31d40dd4db11
+	github.com/gospider007/proxy v0.0.0-20250305031300-6b187bb8107e
 	github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c
-	github.com/gospider007/tools v0.0.0-20250301080306-db6e5ca6f81b
-	github.com/gospider007/websocket v0.0.0-20250228011054-fe5460a12fd3
+	github.com/gospider007/tools v0.0.0-20250303064300-be5181433b18
+	github.com/gospider007/websocket v0.0.0-20250305031117-3fb6572c3f7f
 	github.com/quic-go/quic-go v0.50.0
 	github.com/refraction-networking/uquic v0.0.6
 	github.com/refraction-networking/utls v1.6.7
-	golang.org/x/net v0.35.0
+	golang.org/x/net v0.37.0
 	gopkg.in/errgo.v2 v2.1.0
 )
 
 require (
 	github.com/PuerkitoBio/goquery v1.10.2 // indirect
-	github.com/STARRY-S/zip v0.2.1 // indirect
+	github.com/STARRY-S/zip v0.2.2 // indirect
 	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/bodgit/plumbing v1.3.0 // indirect
@@ -36,6 +36,9 @@ require (
 	github.com/gaukas/clienthellod v0.4.2 // indirect
 	github.com/gaukas/godicttls v0.0.4 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
+	github.com/gobwas/httphead v0.1.0 // indirect
+	github.com/gobwas/pool v0.2.1 // indirect
+	github.com/gobwas/ws v1.4.0 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/google/pprof v0.0.0-20250302191652-9094ed2288e7 // indirect
 	github.com/gospider007/blog v0.0.0-20250302134054-8afc12c2a9a7 // indirect
@@ -55,7 +58,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/nwaples/rardecode/v2 v2.1.0 // indirect
-	github.com/onsi/ginkgo/v2 v2.22.2 // indirect
+	github.com/onsi/ginkgo/v2 v2.23.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/quic-go/qpack v0.5.1 // indirect
 	github.com/rogpeppe/go-internal v1.11.0 // indirect
@@ -73,12 +76,12 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	go.uber.org/zap/exp v0.3.0 // indirect
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
-	golang.org/x/crypto v0.35.0 // indirect
-	golang.org/x/exp v0.0.0-20250228200357-dead58393ab7 // indirect
-	golang.org/x/image v0.24.0 // indirect
-	golang.org/x/mod v0.23.0 // indirect
-	golang.org/x/sync v0.11.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
-	golang.org/x/text v0.22.0 // indirect
-	golang.org/x/tools v0.30.0 // indirect
+	golang.org/x/crypto v0.36.0 // indirect
+	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394 // indirect
+	golang.org/x/image v0.25.0 // indirect
+	golang.org/x/mod v0.24.0 // indirect
+	golang.org/x/sync v0.12.0 // indirect
+	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/text v0.23.0 // indirect
+	golang.org/x/tools v0.31.0 // indirect
 )
