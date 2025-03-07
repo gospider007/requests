@@ -119,7 +119,7 @@ func (obj *Client) Trace(ctx context.Context, href string, options ...RequestOpt
 // Define a function named Request that takes in four parameters:
 func (obj *Client) retryRequest(ctx context.Context, option RequestOption, uhref *url.URL, requestId string) (response *Response, err error) {
 	defer func() {
-		if errors.Is(err, errFatal) || response.Option().once {
+		if errors.Is(err, errFatal) || response.Option().readOne {
 			response.Option().MaxRetries = -1
 		}
 	}()
@@ -145,7 +145,7 @@ func (obj *Client) retryRequest(ctx context.Context, option RequestOption, uhref
 		response.Close()
 		switch response.StatusCode() {
 		case 307, 308:
-			if response.Option().once {
+			if response.Option().readOne {
 				return
 			}
 			response = obj.newResponse(ctx, option, loc, requestId)

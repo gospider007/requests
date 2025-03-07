@@ -183,14 +183,7 @@ func (obj *OrderData) MarshalJSON() ([]byte, error) {
 				return nil, err
 			}
 		}
-		key, err := gson.Encode(value.key)
-		if err != nil {
-			return nil, err
-		}
-		if _, err = buf.Write(key); err != nil {
-			return nil, err
-		}
-		if err = buf.WriteByte(':'); err != nil {
+		if _, err = buf.WriteString(`"` + value.key + `":`); err != nil {
 			return nil, err
 		}
 		val, err := gson.Encode(value.val)
@@ -211,7 +204,7 @@ func (obj *RequestOption) newBody(val any) (io.Reader, *OrderData, bool, error) 
 	case *OrderData:
 		return nil, value, true, nil
 	case io.Reader:
-		obj.once = true
+		obj.readOne = true
 		return value, nil, true, nil
 	case string:
 		return bytes.NewReader(tools.StringToBytes(value)), nil, true, nil

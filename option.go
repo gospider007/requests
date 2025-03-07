@@ -90,7 +90,7 @@ type RequestOption struct {
 	ClientOption
 	Stream       bool //disable auto read
 	DisProxy     bool //force disable proxy
-	once         bool
+	readOne      bool
 	orderHeaders *OrderData //order headers
 	gospiderSpec *GospiderSpec
 	disBody      bool
@@ -145,7 +145,7 @@ func (obj *RequestOption) initBody(ctx context.Context) (io.Reader, error) {
 		if err != nil {
 			return nil, err
 		}
-		obj.once = once
+		obj.readOne = once
 		return body, err
 	} else if obj.Data != nil {
 		if obj.ContentType == "" {
