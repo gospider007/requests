@@ -7,13 +7,13 @@ require (
 	github.com/gospider007/bs4 v0.0.0-20250221153846-5f06efc2ebf1
 	github.com/gospider007/gson v0.0.0-20250305031212-88e9f8cddb93
 	github.com/gospider007/gtls v0.0.0-20250228071701-afc54ee3bc2c
-	github.com/gospider007/http2 v0.0.0-20250228121454-11e7cc8b9f0d
+	github.com/gospider007/http2 v0.0.0-20250307152953-67c9f881b5be
 	github.com/gospider007/http3 v0.0.0-20250228010827-4832f37a33e9
-	github.com/gospider007/ja3 v0.0.0-20250302134218-c3a4d4cdfeb0
+	github.com/gospider007/ja3 v0.0.0-20250309093815-ea9cc2528120
 	github.com/gospider007/proxy v0.0.0-20250305031300-6b187bb8107e
 	github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c
 	github.com/gospider007/tools v0.0.0-20250303064300-be5181433b18
-	github.com/gospider007/websocket v0.0.0-20250305031117-3fb6572c3f7f
+	github.com/gospider007/websocket v0.0.0-20250306064730-90385d6147ad
 	github.com/quic-go/quic-go v0.50.0
 	github.com/refraction-networking/uquic v0.0.6
 	github.com/refraction-networking/utls v1.6.7
@@ -29,7 +29,7 @@ require (
 	github.com/bodgit/plumbing v1.3.0 // indirect
 	github.com/bodgit/sevenzip v1.6.0 // indirect
 	github.com/bodgit/windows v1.0.1 // indirect
-	github.com/caddyserver/certmagic v0.21.7 // indirect
+	github.com/caddyserver/certmagic v0.22.0 // indirect
 	github.com/caddyserver/zerossl v0.1.3 // indirect
 	github.com/cloudflare/circl v1.6.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20230904184137-39efe44ab707 // indirect
@@ -52,12 +52,12 @@ require (
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/libdns/libdns v0.2.3 // indirect
-	github.com/mholt/acmez/v3 v3.0.1 // indirect
+	github.com/mholt/acmez/v3 v3.1.0 // indirect
 	github.com/mholt/archives v0.1.0 // indirect
 	github.com/miekg/dns v1.1.63 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/nwaples/rardecode/v2 v2.1.0 // indirect
+	github.com/nwaples/rardecode/v2 v2.1.1 // indirect
 	github.com/onsi/ginkgo/v2 v2.23.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/quic-go/qpack v0.5.1 // indirect
