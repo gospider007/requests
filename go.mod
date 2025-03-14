@@ -4,15 +4,15 @@ go 1.24.0
 
 require (
 	github.com/gospider007/bar v0.0.0-20250217074946-47896d8de2ba
-	github.com/gospider007/bs4 v0.0.0-20250221153846-5f06efc2ebf1
-	github.com/gospider007/gson v0.0.0-20250305031212-88e9f8cddb93
+	github.com/gospider007/bs4 v0.0.0-20250310095132-86f4213a6c1a
+	github.com/gospider007/gson v0.0.0-20250310035055-50bf98aae917
 	github.com/gospider007/gtls v0.0.0-20250228071701-afc54ee3bc2c
 	github.com/gospider007/http2 v0.0.0-20250307152953-67c9f881b5be
 	github.com/gospider007/http3 v0.0.0-20250228010827-4832f37a33e9
 	github.com/gospider007/ja3 v0.0.0-20250309093815-ea9cc2528120
 	github.com/gospider007/proxy v0.0.0-20250305031300-6b187bb8107e
 	github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c
-	github.com/gospider007/tools v0.0.0-20250303064300-be5181433b18
+	github.com/gospider007/tools v0.0.0-20250314001755-8fd6f4fc62e2
 	github.com/gospider007/websocket v0.0.0-20250306064730-90385d6147ad
 	github.com/quic-go/quic-go v0.50.0
 	github.com/refraction-networking/uquic v0.0.6
