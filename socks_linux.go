@@ -3,6 +3,7 @@
 package requests
 
 import (
+	"net"
 	"syscall"
 )
 
@@ -11,5 +12,10 @@ func Control(network, address string, c syscall.RawConn) error {
 		syscall.SetsockoptInt(int(fd), syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1) // 启用地址重用
 		syscall.SetsockoptInt(int(fd), syscall.IPPROTO_TCP, syscall.TCP_NODELAY, 1)
 		syscall.SetsockoptLinger(int(fd), syscall.SOL_SOCKET, syscall.SO_LINGER, &syscall.Linger{Onoff: 1, Linger: 0})
+		syscall.SetNonblock(int(fd), true)
 	})
+}
+func ChangeControl(conn *net.TCPConn) error {
+	conn.SetNoDelay(true)
+	return nil
 }

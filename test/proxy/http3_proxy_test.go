@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"log"
-	"net"
 	"testing"
 
 	"fmt"
@@ -90,17 +89,12 @@ func server() {
 			fmt.Fprint(w, "method is not supported")
 		}
 	})
-	tlsCert, err := gtls.CreateCertWithAddr(net.IP{127, 0, 0, 1})
-	if err != nil {
-		panic(err)
-	}
 	server := http3.Server{
 		Addr:    "0.0.0.0:8080",
 		Handler: mux,
-		TLSConfig: &tls.Config{
-			Certificates: []tls.Certificate{tlsCert},
-			NextProtos:   []string{"http3-echo-example"},
-		},
+		TLSConfig: gtls.GetCertConfigForClient(&tls.Config{
+			NextProtos: []string{"http3-echo-example"},
+		}),
 	}
 	fmt.Println("Server is listening...")
 	fmt.Println(server.ListenAndServe())
