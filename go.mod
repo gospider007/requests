@@ -6,7 +6,7 @@ require (
 	github.com/gospider007/bar v0.0.0-20250217074946-47896d8de2ba
 	github.com/gospider007/bs4 v0.0.0-20250310095132-86f4213a6c1a
 	github.com/gospider007/gson v0.0.0-20250310035055-50bf98aae917
-	github.com/gospider007/gtls v0.0.0-20250228071701-afc54ee3bc2c
+	github.com/gospider007/gtls v0.0.0-20250315144323-ee784cf243ea
 	github.com/gospider007/http2 v0.0.0-20250307152953-67c9f881b5be
 	github.com/gospider007/http3 v0.0.0-20250228010827-4832f37a33e9
 	github.com/gospider007/ja3 v0.0.0-20250309093815-ea9cc2528120
@@ -40,7 +40,7 @@ require (
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.4.0 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
-	github.com/google/pprof v0.0.0-20250302191652-9094ed2288e7 // indirect
+	github.com/google/pprof v0.0.0-20250315033105-103756e64e1d // indirect
 	github.com/gospider007/blog v0.0.0-20250302134054-8afc12c2a9a7 // indirect
 	github.com/gospider007/kinds v0.0.0-20250217075226-10f199f7215d // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
