@@ -116,7 +116,7 @@ func (obj *connecotr) taskMain(task *reqTask) {
 		if task.reqCtx.response == nil {
 			task.err = context.Cause(task.ctx)
 			if task.err == nil {
-				task.err = errors.New("response is nil")
+				task.err = errors.New("body done response is nil")
 			}
 		}
 		if task.reqCtx.option.Logger != nil {

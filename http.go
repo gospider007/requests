@@ -9,7 +9,6 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gospider007/tools"
 	"golang.org/x/net/http/httpguts"
@@ -24,9 +23,6 @@ type httpTask struct {
 	}
 	err error
 
-	ctx context.Context
-	cnl context.CancelFunc
-
 	writeCtx context.Context
 	writeCnl context.CancelFunc
 
@@ -35,7 +31,7 @@ type httpTask struct {
 }
 type clientConn struct {
 	err       error
-	tasks     chan *httpTask
+	task      *httpTask
 	conn      net.Conn
 	r         *bufio.Reader
 	w         *bufio.Writer
@@ -44,15 +40,6 @@ type clientConn struct {
 
 	closeCtx context.Context
 	closeCnl context.CancelCauseFunc
-
-	keepMsgNotice    chan struct{}
-	keepEnableNotice chan struct{}
-	keepDisNotice    chan struct{}
-
-	keepCloseCtx context.Context
-	keepCloseCnl context.CancelFunc
-
-	readCtx context.Context
 }
 type httpBody struct {
 	r *io.PipeReader
@@ -67,215 +54,71 @@ func (obj *httpBody) Close() error {
 
 func newClientConn(ctx context.Context, con net.Conn, closeFunc func(error)) *clientConn {
 	closeCtx, closeCnl := context.WithCancelCause(ctx)
-	keepCloseCtx, keepCloseCnl := context.WithCancel(closeCtx)
+	reader, writer := io.Pipe()
 	c := &clientConn{
-		closeCtx:         closeCtx,
-		closeCnl:         closeCnl,
-		ctx:              ctx,
-		conn:             con,
-		closeFunc:        closeFunc,
-		r:                bufio.NewReader(con),
-		w:                bufio.NewWriter(con),
-		tasks:            make(chan *httpTask),
-		keepMsgNotice:    make(chan struct{}),
-		keepEnableNotice: make(chan struct{}),
-		keepDisNotice:    make(chan struct{}),
-
-		keepCloseCtx: keepCloseCtx,
-		keepCloseCnl: keepCloseCnl,
+		closeCtx:  closeCtx,
+		closeCnl:  closeCnl,
+		ctx:       ctx,
+		conn:      con,
+		closeFunc: closeFunc,
+		r:         bufio.NewReader(reader),
+		w:         bufio.NewWriter(con),
 	}
-	go c.run()
-	go c.CheckTCPAliveSafe()
+	go func() {
+		_, err := io.Copy(writer, con)
+		writer.CloseWithError(err)
+		c.CloseWithError(err)
+	}()
 	return c
-}
-
-func (obj *clientConn) CheckTCPAliveSafe() {
-	for {
-		select {
-		case <-obj.ctx.Done():
-			return
-		case <-obj.closeCtx.Done():
-			return
-		case <-obj.keepDisNotice:
-			obj.keepSendMsg()
-		case <-obj.keepCloseCtx.Done():
-			return
-		case <-obj.keepEnableNotice:
-			obj.keepSendMsg()
-			if obj.CheckTCPAliveSafeEnable() {
-				return
-			}
-		}
-	}
-}
-func (obj *clientConn) CheckTCPAliveSafeEnable() (closed bool) {
-	select {
-	case <-obj.ctx.Done():
-		return true
-	case <-obj.keepCloseCtx.Done():
-		return true
-	case <-obj.keepDisNotice:
-		obj.keepSendMsg()
-		return false
-	case <-obj.readCtx.Done():
-	}
-	totalPeek := 1
-	for {
-		select {
-		case <-obj.ctx.Done():
-			return true
-		case <-obj.closeCtx.Done():
-			return true
-		case <-obj.keepCloseCtx.Done():
-			return true
-		case <-obj.keepDisNotice:
-			obj.keepSendMsg()
-			return false
-		case <-time.After(time.Second * 30):
-			err := obj.conn.SetReadDeadline(time.Now().Add(2 * time.Millisecond))
-			if err != nil {
-				obj.CloseWithError(err)
-				return true
-			}
-			if _, err = obj.r.Peek(totalPeek); err != nil {
-				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-					err = nil
-				} else {
-					obj.CloseWithError(err)
-					return true
-				}
-			} else {
-				totalPeek++
-			}
-			if err = obj.conn.SetReadDeadline(time.Time{}); err != nil {
-				obj.CloseWithError(err)
-				return true
-			}
-		}
-	}
-}
-
-func (obj *clientConn) keepSendMsg() {
-	select {
-	case obj.keepMsgNotice <- struct{}{}:
-	case <-obj.ctx.Done():
-		return
-	case <-obj.closeCtx.Done():
-		return
-	case <-obj.keepCloseCtx.Done():
-		return
-	}
-}
-func (obj *clientConn) keepRecvMsg() {
-	select {
-	case <-obj.keepMsgNotice:
-	case <-obj.ctx.Done():
-		return
-	case <-obj.closeCtx.Done():
-		return
-	case <-obj.keepCloseCtx.Done():
-		return
-	}
-}
-func (obj *clientConn) keepSendEnable(task *httpTask) {
-	obj.readCtx = task.readCtx
-	select {
-	case obj.keepEnableNotice <- struct{}{}:
-	case <-obj.ctx.Done():
-		return
-	case <-obj.closeCtx.Done():
-		return
-	case <-obj.keepCloseCtx.Done():
-		return
-	}
-
-	obj.keepRecvMsg()
-}
-func (obj *clientConn) keepSendDisable() {
-	select {
-	case obj.keepDisNotice <- struct{}{}:
-	case <-obj.ctx.Done():
-		return
-	case <-obj.closeCtx.Done():
-		return
-	case <-obj.keepCloseCtx.Done():
-		return
-	}
-
-	obj.keepRecvMsg()
-}
-func (obj *clientConn) keepSendClose() {
-	obj.keepCloseCnl()
 }
 
 var errLastTaskRuning = errors.New("last task is running")
 
-func (obj *clientConn) run() (err error) {
-	defer func() {
-		obj.CloseWithError(err)
-	}()
-	for {
-		select {
-		case <-obj.ctx.Done():
-			return
-		case <-obj.closeCtx.Done():
-			return
-		case task := <-obj.tasks:
-			obj.keepSendDisable()
-			go obj.httpWrite(task, task.req.Header.Clone())
-			task.res, task.err = http.ReadResponse(obj.r, nil)
-			if task.res != nil {
-				task.res.Request = task.req
-			}
-			if task.res != nil && task.res.Body != nil && task.err == nil {
-				rawBody := task.res.Body
-				pr, pw := io.Pipe()
-				go func() {
-					var readErr error
-					defer func() {
-						task.readCnl(readErr)
-					}()
-					_, readErr = io.Copy(pw, rawBody)
-					pw.CloseWithError(readErr)
-					if readErr != nil && readErr != io.EOF && readErr != io.ErrUnexpectedEOF {
-						task.err = tools.WrapError(readErr, "failed to read response body")
-					} else {
-						readErr = nil
+func (obj *clientConn) send() {
+	go obj.httpWrite(obj.task, obj.task.req.Header.Clone())
+	obj.task.res, obj.task.err = http.ReadResponse(obj.r, obj.task.req)
+	if obj.task.res == nil || obj.task.err != nil || obj.task.res.Body == nil {
+		obj.task.readCnl(nil)
+		return
+	}
+	rawBody := obj.task.res.Body
+	pr, pw := io.Pipe()
+	go func() {
+		var readErr error
+		defer func() {
+			obj.task.readCnl(readErr)
+		}()
+		_, readErr = io.Copy(pw, rawBody)
+		pw.CloseWithError(readErr)
+		if readErr != nil && readErr != io.EOF && readErr != io.ErrUnexpectedEOF {
+			obj.task.err = tools.WrapError(readErr, "failed to read response body")
+		} else {
+			readErr = nil
+		}
+		if readErr != nil {
+			obj.CloseWithError(readErr)
+		} else {
+			select {
+			case <-obj.task.writeCtx.Done():
+				if obj.task.res.StatusCode == 101 || strings.Contains(obj.task.res.Header.Get("Content-Type"), "text/event-stream") {
+					select {
+					case <-obj.ctx.Done():
+						return
+					case <-obj.closeCtx.Done():
+						return
 					}
-					if readErr != nil {
-						obj.CloseWithError(readErr)
-					} else {
-						select {
-						case <-task.writeCtx.Done():
-							if task.res.StatusCode == 101 || strings.Contains(task.res.Header.Get("Content-Type"), "text/event-stream") {
-								obj.keepSendClose()
-								select {
-								case <-obj.ctx.Done():
-									return
-								case <-obj.closeCtx.Done():
-									return
-								}
-							}
-						default:
-							readErr = tools.WrapError(errLastTaskRuning, errors.New("last task not write done with read done"))
-							task.err = readErr
-							obj.CloseWithError(readErr)
-							return
-						}
-					}
-				}()
-				task.res.Body = &httpBody{r: pr}
-			} else {
-				task.readCnl(nil)
-			}
-			task.cnl()
-			if task.res == nil || task.err != nil {
+				}
+			default:
+				readErr = tools.WrapError(errLastTaskRuning, errors.New("last task not write done with read done"))
+				obj.task.err = readErr
+				obj.CloseWithError(readErr)
 				return
 			}
-			obj.keepSendEnable(task)
 		}
-	}
+	}()
+	obj.task.res.Body = &httpBody{r: pr}
 }
+
 func (obj *clientConn) CloseCtx() context.Context {
 	return obj.closeCtx
 }
@@ -299,10 +142,28 @@ func (obj *clientConn) DoRequest(req *http.Request, orderHeaders []interface {
 	Key() string
 	Val() any
 }) (*http.Response, context.Context, error) {
+	select {
+	case <-obj.ctx.Done():
+		return nil, obj.task.readCtx, obj.ctx.Err()
+	case <-obj.closeCtx.Done():
+		return nil, obj.task.readCtx, obj.closeCtx.Err()
+	default:
+	}
+	if obj.task != nil {
+		select {
+		case <-obj.task.writeCtx.Done():
+		default:
+			return nil, obj.task.readCtx, errLastTaskRuning
+		}
+		select {
+		case <-obj.task.readCtx.Done():
+		default:
+			return nil, obj.task.readCtx, errLastTaskRuning
+		}
+	}
 	readCtx, readCnl := context.WithCancelCause(obj.closeCtx)
 	writeCtx, writeCnl := context.WithCancel(obj.closeCtx)
-	ctx, cnl := context.WithCancel(req.Context())
-	task := &httpTask{
+	obj.task = &httpTask{
 		readCtx: readCtx,
 		readCnl: readCnl,
 
@@ -311,29 +172,12 @@ func (obj *clientConn) DoRequest(req *http.Request, orderHeaders []interface {
 
 		req:          req,
 		orderHeaders: orderHeaders,
-		ctx:          ctx,
-		cnl:          cnl,
 	}
-	select {
-	case <-obj.ctx.Done():
-		return nil, task.readCtx, obj.ctx.Err()
-	case <-obj.closeCtx.Done():
-		return nil, task.readCtx, obj.closeCtx.Err()
-	case obj.tasks <- task:
-	default:
-		return nil, nil, errLastTaskRuning
+	obj.send()
+	if obj.task.err != nil {
+		obj.CloseWithError(obj.task.err)
 	}
-	select {
-	case <-obj.ctx.Done():
-		return nil, task.readCtx, obj.ctx.Err()
-	case <-obj.closeCtx.Done():
-		return nil, task.readCtx, obj.closeCtx.Err()
-	case <-task.ctx.Done():
-	}
-	if task.err != nil {
-		obj.CloseWithError(task.err)
-	}
-	return task.res, task.readCtx, task.err
+	return obj.task.res, obj.task.readCtx, obj.task.err
 }
 
 type websocketConn struct {
@@ -357,7 +201,6 @@ func (obj *websocketConn) Close() error {
 }
 
 func (obj *clientConn) Stream() io.ReadWriteCloser {
-	obj.keepSendClose()
 	return &websocketConn{
 		cnl: obj.closeCnl,
 		r:   obj.r,

@@ -330,7 +330,7 @@ func (obj *Client) request(ctx *Response) (err error) {
 		return
 	}
 	if ctx.response == nil {
-		err = errors.New("response is nil")
+		err = errors.New("send req response is nil")
 		return
 	}
 	if ctx.Body() != nil {
