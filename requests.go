@@ -317,6 +317,11 @@ func (obj *Client) request(ctx *Response) (err error) {
 	if cookies != nil {
 		addCookie(reqs, cookies)
 	}
+	if ctx.Option().Jar != nil {
+		addCookie(reqs, ctx.Option().Jar.GetCookies(reqs.URL))
+	}
+	//init cookies ok
+
 	if err = ctx.option.initSpec(); err != nil {
 		return err
 	}
@@ -324,7 +329,13 @@ func (obj *Client) request(ctx *Response) (err error) {
 	//init spec
 
 	//send req
-	err = obj.send(ctx)
+	err = obj.transport.RoundTrip(ctx)
+	if ctx.Option().Jar != nil && ctx.response != nil {
+		if rc := ctx.response.Cookies(); len(rc) > 0 {
+			ctx.Option().Jar.SetCookies(ctx.Request().URL, rc)
+		}
+	}
+
 	if err != nil && err != ErrUseLastResponse {
 		err = tools.WrapError(err, "client do error")
 		return
@@ -350,6 +361,5 @@ func (obj *Client) request(ctx *Response) (err error) {
 			ctx.response.Body = unCompressionBody
 		}
 	}
-
 	return
 }

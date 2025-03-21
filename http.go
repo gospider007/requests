@@ -41,16 +41,6 @@ type clientConn struct {
 	closeCtx context.Context
 	closeCnl context.CancelCauseFunc
 }
-type httpBody struct {
-	r *io.PipeReader
-}
-
-func (obj *httpBody) Read(b []byte) (i int, err error) {
-	return obj.r.Read(b)
-}
-func (obj *httpBody) Close() error {
-	return obj.r.Close()
-}
 
 func newClientConn(ctx context.Context, con net.Conn, closeFunc func(error)) *clientConn {
 	closeCtx, closeCnl := context.WithCancelCause(ctx)
@@ -116,7 +106,7 @@ func (obj *clientConn) send() {
 			}
 		}
 	}()
-	obj.task.res.Body = &httpBody{r: pr}
+	obj.task.res.Body = pr
 }
 
 func (obj *clientConn) CloseCtx() context.Context {

@@ -69,15 +69,3 @@ func (obj *Client) Close() {
 	obj.CloseConns()
 	obj.cnl()
 }
-func (obj *Client) send(ctx *Response) (err error) {
-	if ctx.Option().Jar != nil {
-		addCookie(ctx.Request(), ctx.Option().Jar.GetCookies(ctx.Request().URL))
-	}
-	err = obj.transport.RoundTrip(ctx)
-	if ctx.Option().Jar != nil && ctx.response != nil {
-		if rc := ctx.response.Cookies(); len(rc) > 0 {
-			ctx.Option().Jar.SetCookies(ctx.Request().URL, rc)
-		}
-	}
-	return err
-}
