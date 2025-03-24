@@ -246,7 +246,7 @@ func (obj *Response) SetContent(val []byte) {
 
 // return content with []byte
 func (obj *Response) Content() []byte {
-	if !obj.IsWebSocket() && !obj.IsSSE() {
+	if obj.webSocket == nil && obj.sse == nil {
 		obj.ReadBody()
 	}
 	return obj.content
@@ -303,19 +303,6 @@ func (obj *Response) defaultDecode() bool {
 }
 func (obj *Response) Body() io.ReadCloser {
 	return obj.response.Body
-}
-
-// return true if response is stream
-func (obj *Response) IsStream() bool {
-	return obj.option.Stream
-}
-
-// return true if response is other stream
-func (obj *Response) IsWebSocket() bool {
-	return obj.webSocket != nil
-}
-func (obj *Response) IsSSE() bool {
-	return obj.sse != nil
 }
 
 // read body

@@ -203,7 +203,7 @@ func (obj *Client) Request(ctx context.Context, method string, href string, opti
 func (obj *Client) request(ctx *Response) (err error) {
 	defer func() {
 		//read body
-		if err == nil && !ctx.IsSSE() && !ctx.IsStream() {
+		if err == nil && ctx.sse == nil && !ctx.option.Stream {
 			err = ctx.ReadBody()
 		}
 		//result callback

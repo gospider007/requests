@@ -20,24 +20,20 @@ func TestStream(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp.IsStream() {
-		// con, err := io.ReadAll(resp.Body())
-		// if err != nil {
-		// 	t.Fatal(err)
-		// }
-		// resp.ReadBody()
-		// bBody := bytes.NewBuffer(nil)
-		// io.Copy(bBody, resp.Body())
+	// con, err := io.ReadAll(resp.Body())
+	// if err != nil {
+	// 	t.Fatal(err)
+	// }
+	// resp.ReadBody()
+	// bBody := bytes.NewBuffer(nil)
+	// io.Copy(bBody, resp.Body())
 
-		// t.Log(string(con))
-		// t.Log(resp.Text())
-		time.Sleep(2 * time.Second)
-		resp.CloseConn()
-		time.Sleep(2 * time.Second)
-		if resp.StatusCode() != 200 {
-			t.Fatal("resp.StatusCode()!= 200")
-		}
-	} else {
-		t.Fatal("resp.IsStream() is false")
+	// t.Log(string(con))
+	// t.Log(resp.Text())
+	time.Sleep(2 * time.Second)
+	resp.CloseConn()
+	time.Sleep(2 * time.Second)
+	if resp.StatusCode() != 200 {
+		t.Fatal("resp.StatusCode()!= 200")
 	}
 }
