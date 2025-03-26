@@ -153,7 +153,6 @@ func (obj *Client) retryRequest(ctx context.Context, option RequestOption, uhref
 			option.Method = http.MethodGet
 			option.disBody = true
 			option.Headers = nil
-			option.Referer = response.Url().String()
 			if getDomain(loc) == getDomain(response.Url()) {
 				if Authorization := response.Request().Header.Get("Authorization"); Authorization != "" {
 					option.Headers = map[string]any{"Authorization": Authorization}

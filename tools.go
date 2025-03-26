@@ -156,6 +156,9 @@ func NewRequestWithContext(ctx context.Context, method string, u *url.URL, body 
 	}
 	req.URL = u
 	req.Proto = "HTTP/1.1"
+	req.ProtoMajor = 1
+	req.ProtoMinor = 1
+
 	if body != nil {
 		if v, ok := body.(interface{ Len() int }); ok {
 			req.ContentLength = int64(v.Len())

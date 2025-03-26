@@ -10,7 +10,7 @@ require (
 	github.com/gospider007/http2 v0.0.0-20250307152953-67c9f881b5be
 	github.com/gospider007/http3 v0.0.0-20250228010827-4832f37a33e9
 	github.com/gospider007/ja3 v0.0.0-20250309093815-ea9cc2528120
-	github.com/gospider007/proxy v0.0.0-20250305031300-6b187bb8107e
+	github.com/gospider007/proxy v0.0.0-20250325005536-ef27fe24e9c8
 	github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c
 	github.com/gospider007/tools v0.0.0-20250314001755-8fd6f4fc62e2
 	github.com/gospider007/websocket v0.0.0-20250306064730-90385d6147ad
@@ -29,7 +29,7 @@ require (
 	github.com/bodgit/plumbing v1.3.0 // indirect
 	github.com/bodgit/sevenzip v1.6.0 // indirect
 	github.com/bodgit/windows v1.0.1 // indirect
-	github.com/caddyserver/certmagic v0.22.0 // indirect
+	github.com/caddyserver/certmagic v0.22.2 // indirect
 	github.com/caddyserver/zerossl v0.1.3 // indirect
 	github.com/cloudflare/circl v1.6.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20230904184137-39efe44ab707 // indirect
@@ -52,7 +52,7 @@ require (
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/libdns/libdns v0.2.3 // indirect
-	github.com/mholt/acmez/v3 v3.1.0 // indirect
+	github.com/mholt/acmez/v3 v3.1.1 // indirect
 	github.com/mholt/archives v0.1.0 // indirect
 	github.com/miekg/dns v1.1.64 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
