@@ -128,6 +128,21 @@ func (obj *clientConn) CloseWithError(err error) error {
 	}
 	return obj.conn.Close()
 }
+func (obj *clientConn) initTask(req *http.Request, orderHeaders []interface {
+	Key() string
+	Val() any
+}) {
+	readCtx, readCnl := context.WithCancelCause(obj.closeCtx)
+	writeCtx, writeCnl := context.WithCancel(obj.closeCtx)
+	obj.task = &httpTask{
+		readCtx:      readCtx,
+		readCnl:      readCnl,
+		writeCtx:     writeCtx,
+		writeCnl:     writeCnl,
+		req:          req,
+		orderHeaders: orderHeaders,
+	}
+}
 func (obj *clientConn) DoRequest(req *http.Request, orderHeaders []interface {
 	Key() string
 	Val() any
@@ -142,27 +157,33 @@ func (obj *clientConn) DoRequest(req *http.Request, orderHeaders []interface {
 	if obj.task != nil {
 		select {
 		case <-obj.task.writeCtx.Done():
+		case <-obj.ctx.Done():
+			return nil, nil, obj.ctx.Err()
+		case <-obj.closeCtx.Done():
+			return nil, nil, obj.closeCtx.Err()
 		default:
 			return nil, obj.task.readCtx, errLastTaskRuning
 		}
 		select {
 		case <-obj.task.readCtx.Done():
+		case <-obj.ctx.Done():
+			return nil, nil, obj.ctx.Err()
+		case <-obj.closeCtx.Done():
+			return nil, nil, obj.closeCtx.Err()
+		default:
+			return nil, obj.task.readCtx, errLastTaskRuning
+		}
+	} else {
+		select {
+		case <-obj.ctx.Done():
+			return nil, nil, obj.ctx.Err()
+		case <-obj.closeCtx.Done():
+			return nil, nil, obj.closeCtx.Err()
 		default:
 			return nil, obj.task.readCtx, errLastTaskRuning
 		}
 	}
-	readCtx, readCnl := context.WithCancelCause(obj.closeCtx)
-	writeCtx, writeCnl := context.WithCancel(obj.closeCtx)
-	obj.task = &httpTask{
-		readCtx: readCtx,
-		readCnl: readCnl,
-
-		writeCtx: writeCtx,
-		writeCnl: writeCnl,
-
-		req:          req,
-		orderHeaders: orderHeaders,
-	}
+	obj.initTask(req, orderHeaders)
 	obj.send()
 	if obj.task.err != nil {
 		obj.CloseWithError(obj.task.err)
