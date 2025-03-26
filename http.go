@@ -147,13 +147,6 @@ func (obj *clientConn) DoRequest(req *http.Request, orderHeaders []interface {
 	Key() string
 	Val() any
 }) (*http.Response, context.Context, error) {
-	select {
-	case <-obj.ctx.Done():
-		return nil, obj.task.readCtx, obj.ctx.Err()
-	case <-obj.closeCtx.Done():
-		return nil, obj.task.readCtx, obj.closeCtx.Err()
-	default:
-	}
 	if obj.task != nil {
 		select {
 		case <-obj.task.writeCtx.Done():
@@ -180,7 +173,6 @@ func (obj *clientConn) DoRequest(req *http.Request, orderHeaders []interface {
 		case <-obj.closeCtx.Done():
 			return nil, nil, obj.closeCtx.Err()
 		default:
-			return nil, obj.task.readCtx, errLastTaskRuning
 		}
 	}
 	obj.initTask(req, orderHeaders)
