@@ -371,12 +371,6 @@ func (obj *Response) Proxys() []Address {
 
 // close
 func (obj *Response) CloseConn() {
-	if obj.webSocket != nil {
-		obj.webSocket.Close()
-	}
-	if obj.sse != nil {
-		obj.sse.Close()
-	}
 	if obj.body != nil {
 		obj.body.CloseConn()
 	}
@@ -384,12 +378,6 @@ func (obj *Response) CloseConn() {
 
 // close
 func (obj *Response) Close() {
-	if obj.webSocket != nil {
-		obj.webSocket.Close()
-	}
-	if obj.sse != nil {
-		obj.sse.Close()
-	}
 	if obj.body != nil {
 		obj.body.Close()
 	}
