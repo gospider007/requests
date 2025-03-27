@@ -215,7 +215,7 @@ func (obj *Client) request(ctx *Response) (err error) {
 			if ctx.option.ErrCallBack != nil {
 				ctx.err = err
 				if err2 := ctx.option.ErrCallBack(ctx); err2 != nil {
-					err = tools.WrapError(errFatal, err2)
+					err = errors.Join(errFatal, err2)
 				}
 			}
 		}
@@ -236,7 +236,7 @@ func (obj *Client) request(ctx *Response) (err error) {
 	if ctx.option.Proxy != nil {
 		ctx.proxys, err = parseProxy(ctx.option.Proxy)
 		if err != nil {
-			return tools.WrapError(errFatal, errors.New("tempRequest init proxy error"), err)
+			return errors.Join(errFatal, errors.New("tempRequest init proxy error"), err)
 		}
 	}
 	//init ctx,cnl
@@ -252,7 +252,7 @@ func (obj *Client) request(ctx *Response) (err error) {
 		ctx.filePath = re.Sub(`^/+`, "", ctx.option.Url.Path)
 		ctx.content, err = os.ReadFile(ctx.filePath)
 		if err != nil {
-			err = tools.WrapError(errFatal, errors.New("read filePath data error"), err)
+			err = errors.Join(errFatal, errors.New("read filePath data error"), err)
 		}
 		return
 	case "ws":
@@ -277,17 +277,17 @@ func (obj *Client) request(ctx *Response) (err error) {
 		body = nil
 	} else {
 		if body, err = ctx.option.initBody(ctx.ctx); err != nil {
-			return tools.WrapError(err, errors.New("tempRequest init body error"), err)
+			return errors.Join(err, errors.New("tempRequest init body error"), err)
 		}
 	}
 	//create request
 	reqs, err := NewRequestWithContext(ctx.Context(), ctx.option.Method, href, body)
 	if err != nil {
-		return tools.WrapError(errFatal, errors.New("tempRequest 构造request失败"), err)
+		return errors.Join(errFatal, errors.New("tempRequest 构造request失败"), err)
 	}
 	//init headers
 	if reqs.Header, err = ctx.option.initOrderHeaders(); err != nil {
-		return tools.WrapError(err, errors.New("tempRequest init headers error"), err)
+		return errors.Join(err, errors.New("tempRequest init headers error"), err)
 	}
 	if isWebsocket && reqs.Header.Get("Sec-WebSocket-Key") == "" {
 		websocket.SetClientHeadersWithOption(reqs.Header, ctx.option.WsOption)
@@ -311,7 +311,7 @@ func (obj *Client) request(ctx *Response) (err error) {
 	//init cookies
 	cookies, err := ctx.option.initCookies()
 	if err != nil {
-		return tools.WrapError(err, errors.New("tempRequest init cookies error"), err)
+		return errors.Join(err, errors.New("tempRequest init cookies error"), err)
 	}
 	if cookies != nil {
 		addCookie(reqs, cookies)

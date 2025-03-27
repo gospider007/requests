@@ -99,7 +99,7 @@ func (obj *clientConn) send() {
 					}
 				}
 			default:
-				readErr = tools.WrapError(errLastTaskRuning, errors.New("last task not write done with read done"))
+				readErr = tools.WrapError(errLastTaskRuning, "last task not write done with read done")
 				obj.task.err = readErr
 				obj.CloseWithError(readErr)
 				return

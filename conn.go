@@ -80,7 +80,7 @@ func (obj *connecotr) taskMain(task *reqTask) {
 			if errors.Is(task.err, errLastTaskRuning) {
 				task.isNotice = true
 			}
-			obj.CloseWithError(tools.WrapError(task.err, errors.New("taskMain close with error")))
+			obj.CloseWithError(tools.WrapError(task.err, "taskMain close with error"))
 		}
 		task.cnl()
 		if task.err == nil && task.reqCtx.response != nil && task.reqCtx.response.Body != nil {
@@ -197,5 +197,5 @@ func (obj *connPool) rwMain(done chan struct{}, conn *connecotr) {
 }
 func (obj *connPool) close(err error) {
 	obj.connPools.del(obj.connKey)
-	obj.forceCnl(tools.WrapError(err, errors.New("connPool close")))
+	obj.forceCnl(tools.WrapError(err, "connPool close"))
 }
