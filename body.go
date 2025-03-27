@@ -199,33 +199,44 @@ func (obj *OrderData) MarshalJSON() ([]byte, error) {
 	}
 	return buf.Bytes(), nil
 }
-func (obj *RequestOption) newBody(val any) (io.Reader, *OrderData, bool, error) {
+
+// type bodyT = int
+
+// const (
+// 	bodyTypeNone bodyT = iota
+// 	bodyTypeForm
+// 	bodyTypeJson
+// 	bodyTypeText
+// 	bodyTypeParams
+// )
+
+func (obj *RequestOption) newBody(val any) (io.Reader, *OrderData, error) {
 	switch value := val.(type) {
 	case *OrderData:
-		return nil, value, true, nil
+		return nil, value, nil
 	case io.Reader:
 		obj.readOne = true
-		return value, nil, true, nil
+		return value, nil, nil
 	case string:
-		return bytes.NewReader(tools.StringToBytes(value)), nil, true, nil
+		return bytes.NewReader(tools.StringToBytes(value)), nil, nil
 	case []byte:
-		return bytes.NewReader(value), nil, true, nil
+		return bytes.NewReader(value), nil, nil
 	case map[string]any:
 		orderMap := NewOrderData()
 		for key, val := range value {
 			orderMap.Add(key, val)
 		}
-		return nil, orderMap, true, nil
+		return nil, orderMap, nil
 	default:
 		jsonData, err := gson.Decode(val)
 		if err != nil {
-			return nil, nil, false, errors.New("invalid body type")
+			return nil, nil, errors.New("invalid body type")
 		}
 		orderMap := NewOrderData()
 		for kk, vv := range jsonData.Map() {
 			orderMap.Add(kk, vv.Value())
 		}
-		return nil, orderMap, false, nil
+		return nil, orderMap, nil
 	}
 }
 

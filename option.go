@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -115,7 +114,7 @@ func randomBoundary() string {
 
 func (obj *RequestOption) initBody(ctx context.Context) (io.Reader, error) {
 	if obj.Body != nil {
-		body, orderData, _, err := obj.newBody(obj.Body)
+		body, orderData, err := obj.newBody(obj.Body)
 		if err != nil {
 			return nil, err
 		}
@@ -131,12 +130,9 @@ func (obj *RequestOption) initBody(ctx context.Context) (io.Reader, error) {
 		if obj.ContentType == "" {
 			obj.ContentType = randomBoundary()
 		}
-		body, orderData, ok, err := obj.newBody(obj.Form)
+		body, orderData, err := obj.newBody(obj.Form)
 		if err != nil {
 			return nil, err
-		}
-		if !ok {
-			return nil, errors.New("not support type")
 		}
 		if body != nil {
 			return body, nil
@@ -151,12 +147,9 @@ func (obj *RequestOption) initBody(ctx context.Context) (io.Reader, error) {
 		if obj.ContentType == "" {
 			obj.ContentType = "application/x-www-form-urlencoded"
 		}
-		body, orderData, ok, err := obj.newBody(obj.Data)
+		body, orderData, err := obj.newBody(obj.Data)
 		if err != nil {
 			return nil, err
-		}
-		if !ok {
-			return nil, errors.New("not support type")
 		}
 		if body != nil {
 			return body, nil
@@ -166,7 +159,7 @@ func (obj *RequestOption) initBody(ctx context.Context) (io.Reader, error) {
 		if obj.ContentType == "" {
 			obj.ContentType = "application/json"
 		}
-		body, orderData, _, err := obj.newBody(obj.Json)
+		body, orderData, err := obj.newBody(obj.Json)
 		if err != nil {
 			return nil, err
 		}
@@ -178,7 +171,7 @@ func (obj *RequestOption) initBody(ctx context.Context) (io.Reader, error) {
 		if obj.ContentType == "" {
 			obj.ContentType = "text/plain"
 		}
-		body, orderData, _, err := obj.newBody(obj.Text)
+		body, orderData, err := obj.newBody(obj.Text)
 		if err != nil {
 			return nil, err
 		}
@@ -195,12 +188,9 @@ func (obj *RequestOption) initParams() (*url.URL, error) {
 	if obj.Params == nil {
 		return baseUrl, nil
 	}
-	body, dataData, ok, err := obj.newBody(obj.Params)
+	body, dataData, err := obj.newBody(obj.Params)
 	if err != nil {
 		return nil, err
-	}
-	if !ok {
-		return nil, errors.New("not support type")
 	}
 	var query string
 	if body != nil {

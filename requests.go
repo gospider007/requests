@@ -219,7 +219,7 @@ func (obj *Client) request(ctx *Response) (err error) {
 				}
 			}
 		}
-		if ctx.Request().Body != nil {
+		if ctx.Request() != nil && ctx.Request().Body != nil {
 			ctx.Request().Body.Close()
 		}
 	}()
