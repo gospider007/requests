@@ -102,14 +102,14 @@ type File struct {
 	ContentType string
 }
 
-func randomBoundary() string {
+func randomBoundary() (string, string) {
 	var buf [30]byte
 	io.ReadFull(rand.Reader, buf[:])
 	boundary := fmt.Sprintf("%x", buf[:])
 	if strings.ContainsAny(boundary, `()<>@,;:\"/[]?= `) {
 		boundary = `"` + boundary + `"`
 	}
-	return "multipart/form-data; boundary=" + boundary
+	return "multipart/form-data; boundary=" + boundary, boundary
 }
 
 func (obj *RequestOption) initBody(ctx context.Context) (io.Reader, error) {
@@ -127,8 +127,9 @@ func (obj *RequestOption) initBody(ctx context.Context) (io.Reader, error) {
 		}
 		return bytes.NewReader(con), nil
 	} else if obj.Form != nil {
+		var boundary string
 		if obj.ContentType == "" {
-			obj.ContentType = randomBoundary()
+			obj.ContentType, boundary = randomBoundary()
 		}
 		body, orderData, err := obj.newBody(obj.Form)
 		if err != nil {
@@ -137,7 +138,7 @@ func (obj *RequestOption) initBody(ctx context.Context) (io.Reader, error) {
 		if body != nil {
 			return body, nil
 		}
-		body, once, err := orderData.parseForm(ctx)
+		body, once, err := orderData.parseForm(ctx, boundary)
 		if err != nil {
 			return nil, err
 		}

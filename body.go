@@ -247,7 +247,7 @@ func (obj *OrderData) parseParams() *bytes.Buffer {
 	}
 	return buf
 }
-func (obj *OrderData) parseForm(ctx context.Context) (io.Reader, bool, error) {
+func (obj *OrderData) parseForm(ctx context.Context, boundary string) (io.Reader, bool, error) {
 	if len(obj.data) == 0 {
 		return nil, false, nil
 	}
@@ -265,6 +265,7 @@ func (obj *OrderData) parseForm(ctx context.Context) (io.Reader, bool, error) {
 	}
 	body := bytes.NewBuffer(nil)
 	writer := multipart.NewWriter(body)
+	writer.SetBoundary(boundary)
 	err := obj.formWriteMain(writer)
 	if err != nil {
 		return nil, false, err
