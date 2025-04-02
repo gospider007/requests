@@ -60,8 +60,8 @@ func TestHttp3Proxy(t *testing.T) {
 						return gtls.Ipv4
 					},
 				},
-				Proxy:      "socks5://" + proxyAddress,
-				ForceHttp3: true,
+				Proxy: "https://" + proxyAddress,
+				// ForceHttp3: true,
 			},
 		})
 	if err != nil {

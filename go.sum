@@ -60,6 +60,7 @@ github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1/go.mod h1:vR7hzQXu2zJy9
 github.com/go-gl/glfw/v3.3/glfw v0.0.0-20191125211704-12ad95a8df72/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=
 github.com/go-logr/logr v1.4.2 h1:6pFjapn8bFcIbiKo3XT4j/BhANplGihG6tvd+8rYgrY=
 github.com/go-logr/logr v1.4.2/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
+github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 h1:tfuBGBXKqDEevZMzYi5KSi8KkcZtzBcTgAUUtapy0OI=
 github.com/go-task/slim-sprig/v3 v3.0.0 h1:sUs3vkvUymDpBKi3qH1YSqBQk9+9D/8M2mN1vB6EwHI=
 github.com/go-task/slim-sprig/v3 v3.0.0/go.mod h1:W848ghGpv3Qj3dhTPRyJypKRiqCdHZiAzKg9hl15HA8=
 github.com/gobwas/httphead v0.1.0 h1:exrUm0f4YX0L7EBwZHuCF4GDp8aJfVeBrlLQrs6NqWU=
@@ -111,6 +112,8 @@ github.com/gospider007/gson v0.0.0-20250310035055-50bf98aae917 h1:y0PkitoC/PjgM8
 github.com/gospider007/gson v0.0.0-20250310035055-50bf98aae917/go.mod h1:3qme4vU9wRm58hRcg8k9ZY+TrFbtemp4eDjbvW8zQgQ=
 github.com/gospider007/gtls v0.0.0-20250324005721-d358b4cc74c6 h1:LpQa63CYHuKLT1R0c320ca4+G3ePZV6Up9nkXeu+qkA=
 github.com/gospider007/gtls v0.0.0-20250324005721-d358b4cc74c6/go.mod h1:dIZ6b7GEKiaBPSg9Kaa9OqlAsLDrh9bj4s2bVsF0bKI=
+github.com/gospider007/gtls v0.0.0-20250402071209-2e597e03e689 h1:QDNW6gdKiicJSp+cLITID4xPOMk/ktuWTgBOdfeboBA=
+github.com/gospider007/gtls v0.0.0-20250402071209-2e597e03e689/go.mod h1:F7khMBRadd93mSH5L0BI+oTx1D3D99XJ430TnffZAt0=
 github.com/gospider007/http2 v0.0.0-20250307152953-67c9f881b5be h1:rUz7sGjJxMGveTFuZqehQScru6bTN3yuh5VdBbBDGZM=
 github.com/gospider007/http2 v0.0.0-20250307152953-67c9f881b5be/go.mod h1:c5QmnC5Li5j9L9GRsTEzeleOxytuiS0a5IMt9hHn4Gw=
 github.com/gospider007/http3 v0.0.0-20250228010827-4832f37a33e9 h1:rNUYNiGNoJaCGyqkdVnAH8a8XyMqhCr8zMXzjh7yvl4=
@@ -159,6 +162,7 @@ github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=
 github.com/kr/text v0.2.0/go.mod h1:eLer722TekiGuMkidMxC/pM04lWEeraHUUmBw8l2grE=
 github.com/libdns/libdns v0.2.3 h1:ba30K4ObwMGB/QTmqUxf3H4/GmUrCAIkMWejeGl12v8=
 github.com/libdns/libdns v0.2.3/go.mod h1:4Bj9+5CQiNMVGf87wjX4CY3HQJypUHRuLvlsfsZqLWQ=
+github.com/mholt/acmez v1.2.0 h1:1hhLxSgY5FvH5HCnGUuwbKY2VQVo8IU7rxXKSnZ7F30=
 github.com/mholt/acmez/v3 v3.1.1 h1:Jh+9uKHkPxUJdxM16q5mOr+G2V0aqkuFtNA28ihCxhQ=
 github.com/mholt/acmez/v3 v3.1.1/go.mod h1:L1wOU06KKvq7tswuMDwKdcHeKpFFgkppZy/y0DFxagQ=
 github.com/mholt/archives v0.1.0 h1:FacgJyrjiuyomTuNA92X5GyRBRZjE43Y/lrzKIlF35Q=
