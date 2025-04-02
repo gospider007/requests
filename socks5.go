@@ -85,62 +85,24 @@ func (a Address) String() string {
 func (a Address) Network() string {
 	return a.NetWork
 }
-func ReadUdpAddr(r io.Reader) (Address, error) {
-	UdpAddress := Address{}
-	var addrType [1]byte
-	if _, err := r.Read(addrType[:]); err != nil {
-		return UdpAddress, err
-	}
-
-	switch addrType[0] {
-	case ipv4Address:
-		addr := make(net.IP, net.IPv4len)
-		if _, err := io.ReadFull(r, addr); err != nil {
-			return UdpAddress, err
-		}
-		UdpAddress.IP = addr
-	case ipv6Address:
-		addr := make(net.IP, net.IPv6len)
-		if _, err := io.ReadFull(r, addr); err != nil {
-			return UdpAddress, err
-		}
-		UdpAddress.IP = addr
-	case fqdnAddress:
-		if _, err := r.Read(addrType[:]); err != nil {
-			return UdpAddress, err
-		}
-		addrLen := int(addrType[0])
-		fqdn := make([]byte, addrLen)
-		if _, err := io.ReadFull(r, fqdn); err != nil {
-			return UdpAddress, err
-		}
-		UdpAddress.Name = string(fqdn)
-	default:
-		return UdpAddress, errors.New("invalid atyp")
-	}
-	var port [2]byte
-	if _, err := io.ReadFull(r, port[:]); err != nil {
-		return UdpAddress, err
-	}
-	UdpAddress.Port = int(binary.BigEndian.Uint16(port[:]))
-	return UdpAddress, nil
-}
 
 type UDPConn struct {
-	ctx          context.Context
-	proxyAddress net.Addr
+	ctx context.Context
 	net.PacketConn
-	prefix   []byte
-	bufRead  [MaxUdpPacket]byte
-	bufWrite [MaxUdpPacket]byte
+	prefix        []byte
+	bufRead       [MaxUdpPacket]byte
+	bufWrite      [MaxUdpPacket]byte
+	proxyAddress  net.Addr
+	remoteAddress Address
 }
 
-func NewUDPConn(ctx context.Context, packConn net.PacketConn, proxyAddress net.Addr) *UDPConn {
+func NewUDPConn(ctx context.Context, packConn net.PacketConn, proxyAddress net.Addr, remoteAddress Address) *UDPConn {
 	return &UDPConn{
-		ctx:          ctx,
-		PacketConn:   packConn,
-		proxyAddress: proxyAddress,
-		prefix:       []byte{0, 0, 0},
+		ctx:           ctx,
+		remoteAddress: remoteAddress,
+		PacketConn:    packConn,
+		proxyAddress:  proxyAddress,
+		prefix:        []byte{0, 0, 0},
 	}
 }
 
@@ -153,7 +115,7 @@ func (c *UDPConn) ReadFrom(p []byte) (n int, addr net.Addr, err error) {
 		return 0, nil, errors.New("bad header")
 	}
 	buf := bytes.NewBuffer(c.bufRead[len(c.prefix):n])
-	a, err := ReadUdpAddr(buf)
+	a, err := readUdpAddr(buf)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -164,8 +126,7 @@ func (c *UDPConn) ReadFrom(p []byte) (n int, addr net.Addr, err error) {
 func (c *UDPConn) WriteTo(p []byte, addr net.Addr) (n int, err error) {
 	buf := bytes.NewBuffer(c.bufWrite[:0])
 	buf.Write(c.prefix)
-	udpAddr := addr.(*net.UDPAddr)
-	err = WriteUdpAddr(buf, Address{IP: udpAddr.IP, Port: udpAddr.Port})
+	err = WriteUdpAddr(buf, c.remoteAddress)
 	if err != nil {
 		return 0, err
 	}

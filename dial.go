@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"crypto/tls"
+	"encoding/binary"
 	"errors"
 	"io"
 	"net"
@@ -91,7 +92,7 @@ func newDialer(option DialOption) dialer {
 func (obj *Dialer) dialContext(ctx *Response, network string, addr Address, isProxy bool) (net.Conn, error) {
 	var err error
 	if addr.IP == nil {
-		addr.IP, err = obj.loadHost(ctx, addr.Name)
+		addr.IP, err = obj.loadHost(ctx.Context(), addr.Name, ctx.option.DialOption)
 	}
 	if ctx.option != nil && ctx.option.Logger != nil {
 		if isProxy {
@@ -201,9 +202,9 @@ func (obj *Dialer) verifyProxyToRemote(ctx *Response, conn net.Conn, proxyTlsCon
 			}
 		case "socks5":
 			if isLast && ctx.option.ForceHttp3 {
-				packCon, err = obj.verifyUDPSocks5(ctx.Context(), conn, proxyAddress, remoteAddress)
+				packCon, err = obj.verifyUDPSocks5(ctx, conn, proxyAddress, remoteAddress)
 			} else {
-				err = obj.verifyTCPSocks5(conn, proxyAddress, remoteAddress)
+				err = obj.verifyTCPSocks5(ctx, conn, proxyAddress, remoteAddress)
 			}
 			if ctx.option.Logger != nil {
 				ctx.option.Logger(Log{
@@ -227,14 +228,7 @@ func (obj *Dialer) verifyProxyToRemote(ctx *Response, conn net.Conn, proxyTlsCon
 	}
 }
 
-func (obj *Dialer) LookupIPAddrWithCache(host string) net.IP {
-	msgDataAny, ok := obj.dnsIpData.Load(host)
-	if ok {
-		return msgDataAny.(msgClient).ip
-	}
-	return nil
-}
-func (obj *Dialer) loadHost(ctx *Response, host string) (net.IP, error) {
+func (obj *Dialer) loadHost(ctx context.Context, host string, option DialOption) (net.IP, error) {
 	msgDataAny, ok := obj.dnsIpData.Load(host)
 	if ok {
 		msgdata := msgDataAny.(msgClient)
@@ -247,12 +241,12 @@ func (obj *Dialer) loadHost(ctx *Response, host string) (net.IP, error) {
 		return ip, nil
 	}
 	var addrType gtls.AddrType
-	if ctx.option.DialOption.AddrType != 0 {
-		addrType = ctx.option.DialOption.AddrType
-	} else if ctx.option.DialOption.GetAddrType != nil {
-		addrType = ctx.option.DialOption.GetAddrType(host)
+	if option.AddrType != 0 {
+		addrType = option.AddrType
+	} else if option.GetAddrType != nil {
+		addrType = option.GetAddrType(host)
 	}
-	ips, err := newDialer(ctx.option.DialOption).LookupIPAddr(ctx.Context(), host)
+	ips, err := newDialer(option).LookupIPAddr(ctx, host)
 	if err != nil {
 		return net.IP{}, err
 	}
@@ -260,6 +254,56 @@ func (obj *Dialer) loadHost(ctx *Response, host string) (net.IP, error) {
 		return nil, err
 	}
 	return ip, nil
+}
+func readUdpAddr(r io.Reader) (Address, error) {
+	var UdpAddress Address
+	var addrType [1]byte
+	var err error
+	if _, err = r.Read(addrType[:]); err != nil {
+		return UdpAddress, err
+	}
+	switch addrType[0] {
+	case ipv4Address:
+		addr := make(net.IP, net.IPv4len)
+		if _, err := io.ReadFull(r, addr); err != nil {
+			return UdpAddress, err
+		}
+		UdpAddress.IP = addr
+	case ipv6Address:
+		addr := make(net.IP, net.IPv6len)
+		if _, err := io.ReadFull(r, addr); err != nil {
+			return UdpAddress, err
+		}
+		UdpAddress.IP = addr
+	case fqdnAddress:
+		if _, err := r.Read(addrType[:]); err != nil {
+			return UdpAddress, err
+		}
+		addrLen := int(addrType[0])
+		fqdn := make([]byte, addrLen)
+		if _, err := io.ReadFull(r, fqdn); err != nil {
+			return UdpAddress, err
+		}
+		UdpAddress.Name = string(fqdn)
+	default:
+		return UdpAddress, errors.New("invalid atyp")
+	}
+	var port [2]byte
+	if _, err := io.ReadFull(r, port[:]); err != nil {
+		return UdpAddress, err
+	}
+	UdpAddress.Port = int(binary.BigEndian.Uint16(port[:]))
+	return UdpAddress, nil
+}
+func (obj *Dialer) ReadUdpAddr(ctx context.Context, r io.Reader, option DialOption) (Address, error) {
+	udpAddress, err := readUdpAddr(r)
+	if err != nil {
+		return udpAddress, err
+	}
+	if udpAddress.Name != "" {
+		udpAddress.IP, err = obj.loadHost(ctx, udpAddress.Name, option)
+	}
+	return udpAddress, err
 }
 func (obj *Dialer) addrToIp(host string, ips []net.IPAddr, addrType gtls.AddrType) (net.IP, error) {
 	ip, err := obj.lookupIPAddr(ips, addrType)
@@ -269,7 +313,7 @@ func (obj *Dialer) addrToIp(host string, ips []net.IPAddr, addrType gtls.AddrTyp
 	obj.dnsIpData.Store(host, msgClient{time: time.Now(), ip: ip})
 	return ip, nil
 }
-func (obj *Dialer) verifySocks5(conn net.Conn, network string, proxyAddr Address, remoteAddr Address) (proxyAddress Address, err error) {
+func (obj *Dialer) verifySocks5(ctx *Response, conn net.Conn, network string, proxyAddr Address, remoteAddr Address) (proxyAddress Address, err error) {
 	err = obj.verifySocks5Auth(conn, proxyAddr)
 	if err != nil {
 		err = tools.WrapError(err, "verifySocks5Auth error")
@@ -299,27 +343,27 @@ func (obj *Dialer) verifySocks5(conn net.Conn, network string, proxyAddr Address
 		err = errors.New("socks conn error")
 		return
 	}
-	proxyAddress, err = ReadUdpAddr(conn)
+	proxyAddress, err = obj.ReadUdpAddr(ctx.Context(), conn, ctx.option.DialOption)
 	return
 }
-func (obj *Dialer) verifyTCPSocks5(conn net.Conn, proxyAddr Address, remoteAddr Address) (err error) {
-	_, err = obj.verifySocks5(conn, "tcp", proxyAddr, remoteAddr)
+func (obj *Dialer) verifyTCPSocks5(ctx *Response, conn net.Conn, proxyAddr Address, remoteAddr Address) (err error) {
+	_, err = obj.verifySocks5(ctx, conn, "tcp", proxyAddr, remoteAddr)
 	return
 }
-func (obj *Dialer) verifyUDPSocks5(ctx context.Context, conn net.Conn, proxyAddr Address, remoteAddr Address) (wrapConn net.PacketConn, err error) {
+func (obj *Dialer) verifyUDPSocks5(ctx *Response, conn net.Conn, proxyAddr Address, remoteAddr Address) (wrapConn net.PacketConn, err error) {
 	remoteAddr.NetWork = "udp"
-	proxyAddress, err := obj.verifySocks5(conn, "udp", proxyAddr, remoteAddr)
+	proxyAddress, err := obj.verifySocks5(ctx, conn, "udp", proxyAddr, remoteAddr)
 	if err != nil {
 		return
 	}
 	var listener net.ListenConfig
-	wrapConn, err = listener.ListenPacket(ctx, "udp", ":0")
+	wrapConn, err = listener.ListenPacket(ctx.Context(), "udp", ":0")
 	if err != nil {
 		return
 	}
 	var cnl context.CancelFunc
 	udpCtx, cnl := context.WithCancel(context.TODO())
-	wrapConn = NewUDPConn(udpCtx, wrapConn, &net.UDPAddr{IP: proxyAddress.IP, Port: proxyAddress.Port})
+	wrapConn = NewUDPConn(udpCtx, wrapConn, &net.UDPAddr{IP: proxyAddress.IP, Port: proxyAddress.Port}, remoteAddr)
 	go func() {
 		io.Copy(io.Discard, conn)
 		cnl()
@@ -381,17 +425,15 @@ func (obj *Dialer) verifySocks5Auth(conn net.Conn, proxyAddr Address) (err error
 }
 func (obj *Dialer) lookupIPAddr(ips []net.IPAddr, addrType gtls.AddrType) (net.IP, error) {
 	for _, ipAddr := range ips {
-		ip := ipAddr.IP
-		if ipType := gtls.ParseIp(ip); ipType == 4 || ipType == 6 {
-			if addrType == 0 || addrType == ipType {
-				return ip, nil
+		if ipType := gtls.ParseIp(ipAddr.IP); ipType == gtls.Ipv4 || ipType == gtls.Ipv6 {
+			if addrType == gtls.AutoIp || addrType == ipType {
+				return ipAddr.IP, nil
 			}
 		}
 	}
 	for _, ipAddr := range ips {
-		ip := ipAddr.IP
-		if ipType := gtls.ParseIp(ip); ipType == 4 || ipType == 6 {
-			return ip, nil
+		if ipType := gtls.ParseIp(ipAddr.IP); ipType == gtls.Ipv4 || ipType == gtls.Ipv6 {
+			return ipAddr.IP, nil
 		}
 	}
 	return nil, errors.New("dns parse host error")
@@ -422,7 +464,7 @@ func (obj *Dialer) Socks5TcpProxy(ctx *Response, proxyAddr Address, remoteAddr A
 	didVerify := make(chan struct{})
 	go func() {
 		defer close(didVerify)
-		err = obj.verifyTCPSocks5(conn, proxyAddr, remoteAddr)
+		err = obj.verifyTCPSocks5(ctx, conn, proxyAddr, remoteAddr)
 	}()
 	select {
 	case <-ctx.Context().Done():
@@ -449,7 +491,7 @@ func (obj *Dialer) Socks5UdpProxy(ctx *Response, proxyAddress Address, remoteAdd
 	didVerify := make(chan struct{})
 	go func() {
 		defer close(didVerify)
-		udpConn, err = obj.verifyUDPSocks5(ctx.Context(), conn, proxyAddress, remoteAddress)
+		udpConn, err = obj.verifyUDPSocks5(ctx, conn, proxyAddress, remoteAddress)
 		if ctx.option.Logger != nil {
 			ctx.option.Logger(Log{
 				Id:   ctx.requestId,

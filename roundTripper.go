@@ -125,8 +125,8 @@ func (obj *roundTripper) ghttp3Dial(ctx *Response, remoteAddress Address, proxyA
 	tlsConfig := ctx.option.TlsConfig.Clone()
 	tlsConfig.NextProtos = []string{http3.NextProtoH3}
 	tlsConfig.ServerName = remoteAddress.Host
-	if remoteAddress.IP == nil {
-		remoteAddress.IP, err = obj.dialer.loadHost(ctx, remoteAddress.Name)
+	if remoteAddress.IP == nil && len(proxyAddress) == 0 {
+		remoteAddress.IP, err = obj.dialer.loadHost(ctx.Context(), remoteAddress.Name, ctx.option.DialOption)
 		if err != nil {
 			return nil, err
 		}
@@ -160,8 +160,8 @@ func (obj *roundTripper) uhttp3Dial(ctx *Response, spec uquic.QUICSpec, remoteAd
 	tlsConfig := ctx.option.UtlsConfig.Clone()
 	tlsConfig.NextProtos = []string{http3.NextProtoH3}
 	tlsConfig.ServerName = remoteAddress.Host
-	if remoteAddress.IP == nil {
-		remoteAddress.IP, err = obj.dialer.loadHost(ctx, remoteAddress.Name)
+	if remoteAddress.IP == nil && len(proxyAddress) == 0 {
+		remoteAddress.IP, err = obj.dialer.loadHost(ctx.Context(), remoteAddress.Name, ctx.option.DialOption)
 		if err != nil {
 			return nil, err
 		}
