@@ -78,7 +78,10 @@ func (obj *clientConn) send() {
 		defer func() {
 			obj.task.readCnl(readErr)
 		}()
-		_, readErr = io.Copy(pw, rawBody)
+		noBody := obj.task.res.ContentLength == -1 && len(obj.task.res.TransferEncoding) == 0
+		if !noBody {
+			_, readErr = io.Copy(pw, rawBody)
+		}
 		pw.CloseWithError(readErr)
 		if readErr != nil && readErr != io.EOF && readErr != io.ErrUnexpectedEOF {
 			obj.task.err = tools.WrapError(readErr, "failed to read response body")
