@@ -346,18 +346,21 @@ func (obj *Client) request(ctx *Response) (err error) {
 	if ctx.Body() != nil {
 		ctx.body = ctx.Body().(*wrapBody)
 	}
-	if strings.Contains(ctx.response.Header.Get("Content-Type"), "text/event-stream") {
-		ctx.sse = newSSE(ctx)
-	} else if encoding := ctx.ContentEncoding(); encoding != "" {
-		var unCompressionBody io.ReadCloser
-		unCompressionBody, err = tools.CompressionHeadersDecode(ctx.Context(), ctx.Body(), encoding)
-		if err != nil {
-			if err != io.ErrUnexpectedEOF && err != io.EOF {
-				return
+	if ctx.StatusCode() != 101 {
+		if encoding := ctx.ContentEncoding(); encoding != "" {
+			var unCompressionBody io.ReadCloser
+			unCompressionBody, err = tools.CompressionHeadersDecode(ctx.Context(), ctx.Body(), encoding)
+			if err != nil {
+				if err != io.ErrUnexpectedEOF && err != io.EOF {
+					return
+				}
+			}
+			if unCompressionBody != nil {
+				ctx.response.Body = unCompressionBody
 			}
 		}
-		if unCompressionBody != nil {
-			ctx.response.Body = unCompressionBody
+		if strings.Contains(ctx.response.Header.Get("Content-Type"), "text/event-stream") {
+			ctx.sse = newSSE(ctx)
 		}
 	}
 	return
