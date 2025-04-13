@@ -49,6 +49,9 @@ func (obj *connecotr) CloseWithError(err error) error {
 
 func (obj *connecotr) wrapBody(task *reqTask) {
 	body := new(wrapBody)
+	if task.reqCtx.response.Body == nil {
+		task.reqCtx.response.Body = http.NoBody
+	}
 	rawBody := task.reqCtx.response.Body
 	body.rawBody = rawBody
 	body.conn = obj
