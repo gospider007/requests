@@ -53,6 +53,7 @@ func (obj *connecotr) wrapBody(task *reqTask) {
 	body.rawBody = rawBody
 	body.conn = obj
 	task.reqCtx.response.Body = body
+	task.reqCtx.response.Request = task.reqCtx.request
 }
 
 func (obj *connecotr) httpReq(task *reqTask, done chan struct{}) {

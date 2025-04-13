@@ -42,15 +42,15 @@ func WriteUdpAddr(w io.Writer, addr Address) error {
 			_, err := w.Write(con)
 			return err
 		}
-	} else if addr.Name != "" {
-		l := len(addr.Name)
+	} else if addr.Host != "" {
+		l := len(addr.Host)
 		if l > 255 {
 			return errors.New("errStringTooLong")
 		}
 		con := make([]byte, 2+l+2)
 		con[0] = fqdnAddress
 		con[1] = byte(l)
-		copy(con[2:], []byte(addr.Name))
+		copy(con[2:], []byte(addr.Host))
 		binary.BigEndian.PutUint16(con[2+l:], uint16(addr.Port))
 		_, err := w.Write(con)
 		return err
@@ -67,7 +67,6 @@ func WriteUdpAddr(w io.Writer, addr Address) error {
 type Address struct {
 	User     string
 	Password string
-	Name     string
 	Host     string
 	NetWork  string
 	Scheme   string
@@ -80,7 +79,7 @@ func (a Address) String() string {
 	if len(a.IP) != 0 {
 		return net.JoinHostPort(a.IP.String(), port)
 	}
-	return net.JoinHostPort(a.Name, port)
+	return net.JoinHostPort(a.Host, port)
 }
 func (a Address) Network() string {
 	return a.NetWork

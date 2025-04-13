@@ -101,9 +101,8 @@ func server() {
 }
 func proxyServer(addr string) {
 	c, err := proxy.NewClient(nil, proxy.ClientOption{
-		Addr:      addr,
-		Debug:     true,
-		DisVerify: true,
+		Addr:  addr,
+		Debug: true,
 	})
 	if err != nil {
 		panic(err)

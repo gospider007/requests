@@ -33,28 +33,12 @@ func getHost(req *http.Request) string {
 	return host
 }
 
-func getAddr(uurl *url.URL) (addr string) {
-	if uurl == nil {
-		return ""
-	}
-	_, port, _ := net.SplitHostPort(uurl.Host)
-	if port == "" {
-		if uurl.Scheme == "https" {
-			port = "443"
-		} else {
-			port = "80"
-		}
-		return fmt.Sprintf("%s:%s", uurl.Host, port)
-	}
-	return uurl.Host
-}
 func GetAddressWithUrl(uurl *url.URL) (addr Address, err error) {
 	if uurl == nil {
 		return Address{}, errors.New("url is nil")
 	}
 	addr = Address{
-		Name: uurl.Hostname(),
-		Host: uurl.Host,
+		Host: uurl.Hostname(),
 	}
 	portStr := uurl.Port()
 	addr.Scheme = uurl.Scheme
@@ -70,15 +54,48 @@ func GetAddressWithUrl(uurl *url.URL) (addr Address, err error) {
 			return Address{}, errors.New("unknown scheme")
 		}
 	} else {
-		addr.Port, err = strconv.Atoi(portStr)
-		if err != nil {
-			return Address{}, err
-		}
+		addr.Port, _ = strconv.Atoi(portStr)
 	}
 	addr.IP, _ = gtls.ParseHost(uurl.Hostname())
 	if uurl.User != nil {
 		addr.User = uurl.User.Username()
 		addr.Password, _ = uurl.User.Password()
+	}
+	return
+}
+func GetAddressWithReq(req *http.Request) (addr Address, err error) {
+	if req == nil {
+		return Address{}, errors.New("req is nil")
+	}
+	host, port, _ := net.SplitHostPort(req.Host)
+	if host == "" {
+		host = req.URL.Hostname()
+	}
+	if port == "" {
+		port = req.URL.Port()
+	}
+	portI, _ := strconv.Atoi(port)
+	addr = Address{
+		Host:   host,
+		Scheme: req.URL.Scheme,
+		Port:   portI,
+	}
+	if addr.Port == 0 {
+		switch addr.Scheme {
+		case "http":
+			addr.Port = 80
+		case "https":
+			addr.Port = 443
+		case "socks5":
+			addr.Port = 1080
+		default:
+			return Address{}, errors.New("unknown scheme")
+		}
+	}
+	addr.IP, _ = gtls.ParseHost(addr.Host)
+	if req.URL.User != nil {
+		addr.User = req.URL.User.Username()
+		addr.Password, _ = req.URL.User.Password()
 	}
 	return
 }
@@ -88,15 +105,11 @@ func GetAddressWithAddr(addrS string) (addr Address, err error) {
 		return Address{}, err
 	}
 	ip, _ := gtls.ParseHost(host)
-	portInt, err := strconv.Atoi(port)
-	if err != nil {
-		return Address{}, err
-	}
+	portInt, _ := strconv.Atoi(port)
 	addr = Address{
-		Name: host,
-		IP:   ip,
-		Host: addrS,
+		Host: host,
 		Port: portInt,
+		IP:   ip,
 	}
 	return
 }

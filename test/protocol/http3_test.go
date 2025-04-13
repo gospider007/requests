@@ -38,7 +38,7 @@ func TestHttp3Proxy(t *testing.T) {
 	// 	return
 	// }
 	// go server.ListenAndServe(nil)
-	proxyC, err := proxy.NewClient(nil, proxy.ClientOption{Addr: proxyAddress, DisVerify: true})
+	proxyC, err := proxy.NewClient(nil, proxy.ClientOption{Addr: proxyAddress})
 	if err != nil {
 		log.Println(err)
 		return

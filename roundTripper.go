@@ -47,13 +47,21 @@ func (obj *reqTask) suppertRetry() bool {
 	}
 	return false
 }
-func getKey(ctx *Response) (key string) {
+func getKey(ctx *Response) (string, error) {
 	adds := []string{}
 	for _, p := range ctx.proxys {
-		adds = append(adds, getAddr(p))
+		pd, err := GetAddressWithUrl(p)
+		if err != nil {
+			return "", err
+		}
+		adds = append(adds, pd.String())
 	}
-	adds = append(adds, getAddr(ctx.Request().URL))
-	return strings.Join(adds, "@")
+	pd, err := GetAddressWithUrl(ctx.Request().URL)
+	if err != nil {
+		return "", err
+	}
+	adds = append(adds, pd.String())
+	return strings.Join(adds, "@"), nil
 }
 
 type roundTripper struct {
@@ -126,7 +134,7 @@ func (obj *roundTripper) ghttp3Dial(ctx *Response, remoteAddress Address, proxyA
 	tlsConfig.NextProtos = []string{http3.NextProtoH3}
 	tlsConfig.ServerName = remoteAddress.Host
 	if remoteAddress.IP == nil && len(proxyAddress) == 0 {
-		remoteAddress.IP, err = obj.dialer.loadHost(ctx.Context(), remoteAddress.Name, ctx.option.DialOption)
+		remoteAddress.IP, err = obj.dialer.loadHost(ctx.Context(), remoteAddress.Host, ctx.option.DialOption)
 		if err != nil {
 			return nil, err
 		}
@@ -161,7 +169,7 @@ func (obj *roundTripper) uhttp3Dial(ctx *Response, spec uquic.QUICSpec, remoteAd
 	tlsConfig.NextProtos = []string{http3.NextProtoH3}
 	tlsConfig.ServerName = remoteAddress.Host
 	if remoteAddress.IP == nil && len(proxyAddress) == 0 {
-		remoteAddress.IP, err = obj.dialer.loadHost(ctx.Context(), remoteAddress.Name, ctx.option.DialOption)
+		remoteAddress.IP, err = obj.dialer.loadHost(ctx.Context(), remoteAddress.Host, ctx.option.DialOption)
 		if err != nil {
 			return nil, err
 		}
@@ -366,15 +374,19 @@ func (obj *roundTripper) closeConns() {
 	}
 }
 
-func (obj *roundTripper) newReqTask(ctx *Response) *reqTask {
+func (obj *roundTripper) newReqTask(ctx *Response) (*reqTask, error) {
 	if ctx.option.ResponseHeaderTimeout == 0 {
 		ctx.option.ResponseHeaderTimeout = time.Second * 300
 	}
 	task := new(reqTask)
 	task.reqCtx = ctx
 	task.reqCtx.response = nil
-	task.key = getKey(ctx) //pool key
-	return task
+	key, err := getKey(ctx)
+	if err != nil {
+		return nil, err
+	}
+	task.key = key
+	return task, nil
 }
 func (obj *roundTripper) RoundTrip(ctx *Response) (err error) {
 	if ctx.option.RequestCallBack != nil {
@@ -397,7 +409,10 @@ func (obj *roundTripper) RoundTrip(ctx *Response) (err error) {
 			return context.Cause(ctx.Context())
 		default:
 		}
-		task = obj.newReqTask(ctx)
+		task, err = obj.newReqTask(ctx)
+		if err != nil {
+			return err
+		}
 		obj.poolRoundTrip(task)
 		if task.err == nil || !task.suppertRetry() {
 			break

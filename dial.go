@@ -92,7 +92,7 @@ func newDialer(option DialOption) dialer {
 func (obj *Dialer) dialContext(ctx *Response, network string, addr Address, isProxy bool) (net.Conn, error) {
 	var err error
 	if addr.IP == nil {
-		addr.IP, err = obj.loadHost(ctx.Context(), addr.Name, ctx.option.DialOption)
+		addr.IP, err = obj.loadHost(ctx.Context(), addr.Host, ctx.option.DialOption)
 	}
 	if ctx.option != nil && ctx.option.Logger != nil {
 		if isProxy {
@@ -100,14 +100,14 @@ func (obj *Dialer) dialContext(ctx *Response, network string, addr Address, isPr
 				Id:   ctx.requestId,
 				Time: time.Now(),
 				Type: LogType_ProxyDNSLookup,
-				Msg:  addr.Name,
+				Msg:  addr.Host,
 			})
 		} else {
 			ctx.option.Logger(Log{
 				Id:   ctx.requestId,
 				Time: time.Now(),
 				Type: LogType_DNSLookup,
-				Msg:  addr.Name,
+				Msg:  addr.Host,
 			})
 		}
 	}
@@ -284,7 +284,7 @@ func readUdpAddr(r io.Reader) (Address, error) {
 		if _, err := io.ReadFull(r, fqdn); err != nil {
 			return UdpAddress, err
 		}
-		UdpAddress.Name = string(fqdn)
+		UdpAddress.Host = string(fqdn)
 	default:
 		return UdpAddress, errors.New("invalid atyp")
 	}
@@ -300,8 +300,8 @@ func (obj *Dialer) ReadUdpAddr(ctx context.Context, r io.Reader, option DialOpti
 	if err != nil {
 		return udpAddress, err
 	}
-	if udpAddress.Name != "" {
-		udpAddress.IP, err = obj.loadHost(ctx, udpAddress.Name, option)
+	if udpAddress.Host != "" {
+		udpAddress.IP, err = obj.loadHost(ctx, udpAddress.Host, option)
 	}
 	return udpAddress, err
 }

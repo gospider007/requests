@@ -10,9 +10,7 @@ import (
 )
 
 func TestProxy2(t *testing.T) {
-	proCliPre, err := proxy.NewClient(nil, proxy.ClientOption{
-		DisVerify: true,
-	})
+	proCliPre, err := proxy.NewClient(nil, proxy.ClientOption{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -20,9 +18,7 @@ func TestProxy2(t *testing.T) {
 	go proCliPre.Run()
 	proIp := "http://" + proCliPre.Addr()
 
-	proCli, err := proxy.NewClient(nil, proxy.ClientOption{
-		DisVerify: true,
-	})
+	proCli, err := proxy.NewClient(nil, proxy.ClientOption{})
 	if err != nil {
 		t.Fatal(err)
 	}
