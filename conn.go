@@ -22,7 +22,6 @@ type Conn interface {
 		Key() string
 		Val() any
 	}) (*http.Response, context.Context, error)
-	CloseCtx() context.Context
 	Stream() io.ReadWriteCloser
 }
 type connecotr struct {
@@ -59,53 +58,53 @@ func (obj *connecotr) wrapBody(task *reqTask) {
 	task.reqCtx.response.Request = task.reqCtx.request
 }
 
-func (obj *connecotr) httpReq(task *reqTask, done chan struct{}) {
+func (obj *connecotr) httpReq(task *reqTask, done chan struct{}) (err error) {
 	defer close(done)
-	task.reqCtx.response, task.bodyCtx, task.err = obj.Conn.DoRequest(task.reqCtx.request, task.reqCtx.option.orderHeaders.Data())
+	task.reqCtx.response, task.bodyCtx, err = obj.Conn.DoRequest(task.reqCtx.request, task.reqCtx.option.orderHeaders.Data())
 	if task.reqCtx.response != nil {
 		obj.wrapBody(task)
 	}
-	if task.err != nil {
-		task.err = tools.WrapError(task.err, "roundTrip error")
+	if err != nil {
+		err = tools.WrapError(err, "roundTrip error")
 	}
+	return
 }
 
-func (obj *connecotr) taskMain(task *reqTask) {
+func (obj *connecotr) taskMain(task *reqTask) (err error) {
 	defer func() {
-		if task.err != nil && task.reqCtx.option.ErrCallBack != nil {
-			task.reqCtx.err = task.err
+		if err != nil && task.reqCtx.option.ErrCallBack != nil {
+			task.reqCtx.err = err
 			if err2 := task.reqCtx.option.ErrCallBack(task.reqCtx); err2 != nil {
 				task.isNotice = false
 				task.disRetry = true
-				task.err = err2
+				err = err2
 			}
 		}
-		if task.err != nil {
-			if errors.Is(task.err, errLastTaskRuning) {
+		if err != nil {
+			if errors.Is(err, errLastTaskRuning) {
 				task.isNotice = true
 			}
-			obj.CloseWithError(tools.WrapError(task.err, "taskMain close with error"))
+			obj.CloseWithError(tools.WrapError(err, "taskMain close with error"))
 		}
-		task.cnl()
-		if task.err == nil && task.reqCtx.response != nil && task.reqCtx.response.Body != nil {
+		if err == nil {
+			task.cnl(errNoErr)
+		} else {
+			task.cnl(err)
+		}
+		if err == nil && task.reqCtx.response != nil && task.reqCtx.response.Body != nil {
 			select {
 			case <-obj.forceCtx.Done():
-				task.err = context.Cause(obj.forceCtx)
+				err = context.Cause(obj.forceCtx)
 			case <-task.bodyCtx.Done():
 				if context.Cause(task.bodyCtx) != context.Canceled {
-					task.err = context.Cause(task.bodyCtx)
+					err = context.Cause(task.bodyCtx)
 				}
 			}
 		}
 	}()
 	select {
 	case <-obj.forceCtx.Done(): //force conn close
-		task.err = context.Cause(obj.forceCtx)
-		task.enableRetry = true
-		task.isNotice = true
-		return
-	case <-obj.Conn.CloseCtx().Done():
-		task.err = context.Cause(obj.Conn.CloseCtx())
+		err = context.Cause(obj.forceCtx)
 		task.enableRetry = true
 		task.isNotice = true
 		return
@@ -114,13 +113,15 @@ func (obj *connecotr) taskMain(task *reqTask) {
 	done := make(chan struct{})
 	go obj.httpReq(task, done)
 	select {
-	case <-task.ctx.Done():
-		task.err = tools.WrapError(context.Cause(task.ctx), "task.ctx error: ")
+	case <-obj.forceCtx.Done(): //force conn close
+		err = tools.WrapError(context.Cause(obj.forceCtx), "taskMain delete ctx error: ")
+	case <-time.After(task.reqCtx.option.ResponseHeaderTimeout):
+		err = errors.New("ResponseHeaderTimeout error: ")
 	case <-done:
 		if task.reqCtx.response == nil {
-			task.err = context.Cause(task.ctx)
-			if task.err == nil {
-				task.err = errors.New("body done response is nil")
+			err = context.Cause(task.ctx)
+			if err == nil {
+				err = errors.New("body done response is nil")
 			}
 		}
 		if task.reqCtx.option.Logger != nil {
@@ -131,9 +132,8 @@ func (obj *connecotr) taskMain(task *reqTask) {
 				Msg:  "response header",
 			})
 		}
-	case <-obj.forceCtx.Done(): //force conn close
-		task.err = tools.WrapError(context.Cause(obj.forceCtx), "taskMain delete ctx error: ")
 	}
+	return
 }
 
 type connPool struct {
@@ -186,14 +186,11 @@ func (obj *connPool) rwMain(done chan struct{}, conn *connecotr) {
 		select {
 		case <-conn.forceCtx.Done(): //force close conn
 			return
-		case <-conn.Conn.CloseCtx().Done():
-			return
 		case task := <-obj.tasks: //recv task
 			if task == nil {
 				return
 			}
-			conn.taskMain(task)
-			if task.err != nil {
+			if conn.taskMain(task) != nil {
 				return
 			}
 		}

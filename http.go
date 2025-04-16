@@ -37,18 +37,15 @@ type clientConn struct {
 	w            *bufio.Writer
 	closeFunc    func(error)
 	ctx          context.Context
-
-	closeCtx context.Context
-	closeCnl context.CancelCauseFunc
+	cnl          context.CancelCauseFunc
 }
 
-func newClientConn(ctx context.Context, con net.Conn, closeFunc func(error)) *clientConn {
-	closeCtx, closeCnl := context.WithCancelCause(ctx)
+func newClientConn(con net.Conn, closeFunc func(error)) *clientConn {
+	ctx, cnl := context.WithCancelCause(context.TODO())
 	reader, writer := io.Pipe()
 	c := &clientConn{
-		closeCtx:  closeCtx,
-		closeCnl:  closeCnl,
 		ctx:       ctx,
+		cnl:       cnl,
 		conn:      con,
 		closeFunc: closeFunc,
 		r:         bufio.NewReader(reader),
@@ -63,6 +60,7 @@ func newClientConn(ctx context.Context, con net.Conn, closeFunc func(error)) *cl
 }
 
 var errLastTaskRuning = errors.New("last task is running")
+var errNoErr = errors.New("no error")
 
 func (obj *clientConn) send(req *http.Request, orderHeaders []interface {
 	Key() string
@@ -100,12 +98,8 @@ func (obj *clientConn) send(req *http.Request, orderHeaders []interface {
 			select {
 			case <-obj.readWriteCtx.writeCtx.Done():
 				if res.StatusCode == 101 || strings.Contains(res.Header.Get("Content-Type"), "text/event-stream") {
-					select {
-					case <-obj.ctx.Done():
-						return
-					case <-obj.closeCtx.Done():
-						return
-					}
+					<-obj.ctx.Done()
+					return
 				}
 			default:
 				obj.CloseWithError(tools.WrapError(errLastTaskRuning, "last task not write done with read done"))
@@ -117,28 +111,28 @@ func (obj *clientConn) send(req *http.Request, orderHeaders []interface {
 	return
 }
 
-func (obj *clientConn) CloseCtx() context.Context {
-	return obj.closeCtx
-}
+// func (obj *clientConn) CloseCtx() context.Context {
+// 	return obj.closeCtx
+// }
 
 func (obj *clientConn) Close() error {
 	return obj.CloseWithError(nil)
 }
 func (obj *clientConn) CloseWithError(err error) error {
-	obj.closeCnl(err)
+	if obj.closeFunc != nil {
+		obj.closeFunc(obj.err)
+	}
+	obj.cnl(err)
 	if err == nil {
 		obj.err = tools.WrapError(obj.err, "connecotr closeWithError close")
 	} else {
 		obj.err = tools.WrapError(err, "connecotr closeWithError close")
 	}
-	if obj.closeFunc != nil {
-		obj.closeFunc(obj.err)
-	}
 	return obj.conn.Close()
 }
 func (obj *clientConn) initTask() {
-	readCtx, readCnl := context.WithCancelCause(obj.closeCtx)
-	writeCtx, writeCnl := context.WithCancel(obj.closeCtx)
+	readCtx, readCnl := context.WithCancelCause(obj.ctx)
+	writeCtx, writeCnl := context.WithCancel(obj.ctx)
 	obj.readWriteCtx = &reqReadWriteCtx{
 		readCtx:  readCtx,
 		readCnl:  readCnl,
@@ -155,8 +149,6 @@ func (obj *clientConn) DoRequest(req *http.Request, orderHeaders []interface {
 		case <-obj.readWriteCtx.writeCtx.Done():
 		case <-obj.ctx.Done():
 			return nil, nil, obj.ctx.Err()
-		case <-obj.closeCtx.Done():
-			return nil, nil, obj.closeCtx.Err()
 		default:
 			return nil, obj.readWriteCtx.readCtx, errLastTaskRuning
 		}
@@ -164,8 +156,6 @@ func (obj *clientConn) DoRequest(req *http.Request, orderHeaders []interface {
 		case <-obj.readWriteCtx.readCtx.Done():
 		case <-obj.ctx.Done():
 			return nil, nil, obj.ctx.Err()
-		case <-obj.closeCtx.Done():
-			return nil, nil, obj.closeCtx.Err()
 		default:
 			return nil, obj.readWriteCtx.readCtx, errLastTaskRuning
 		}
@@ -173,8 +163,6 @@ func (obj *clientConn) DoRequest(req *http.Request, orderHeaders []interface {
 		select {
 		case <-obj.ctx.Done():
 			return nil, nil, obj.ctx.Err()
-		case <-obj.closeCtx.Done():
-			return nil, nil, obj.closeCtx.Err()
 		default:
 		}
 	}
@@ -209,7 +197,7 @@ func (obj *websocketConn) Close() error {
 
 func (obj *clientConn) Stream() io.ReadWriteCloser {
 	return &websocketConn{
-		cnl: obj.closeCnl,
+		cnl: obj.cnl,
 		r:   obj.r,
 		w:   obj.conn,
 	}

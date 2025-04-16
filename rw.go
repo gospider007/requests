@@ -1,7 +1,6 @@
 package requests
 
 import (
-	"context"
 	"errors"
 	"io"
 )
@@ -21,9 +20,6 @@ func (obj *wrapBody) Proxys() []Address {
 	return obj.conn.proxys
 }
 
-func (obj *wrapBody) ConnCloseCtx() context.Context {
-	return obj.conn.Conn.CloseCtx()
-}
 func (obj *wrapBody) CloseWithError(err error) error {
 	if err != nil {
 		obj.conn.CloseWithError(err)
