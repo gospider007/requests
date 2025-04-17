@@ -4,16 +4,16 @@ go 1.24.0
 
 require (
 	github.com/gospider007/bar v0.0.0-20250217074946-47896d8de2ba
-	github.com/gospider007/bs4 v0.0.0-20250327035236-809c371d35e3
-	github.com/gospider007/gson v0.0.0-20250310035055-50bf98aae917
-	github.com/gospider007/gtls v0.0.0-20250402071209-2e597e03e689
-	github.com/gospider007/http2 v0.0.0-20250307152953-67c9f881b5be
-	github.com/gospider007/http3 v0.0.0-20250228010827-4832f37a33e9
-	github.com/gospider007/ja3 v0.0.0-20250309093815-ea9cc2528120
-	github.com/gospider007/proxy v0.0.0-20250325005536-ef27fe24e9c8
+	github.com/gospider007/bs4 v0.0.0-20250413121342-fed910fb00c9
+	github.com/gospider007/gson v0.0.0-20250413121440-c0f3162075f1
+	github.com/gospider007/gtls v0.0.0-20250413121446-8fb2185cc7b9
+	github.com/gospider007/http2 v0.0.0-20250416094504-9e1519e1a2f4
+	github.com/gospider007/http3 v0.0.0-20250416085920-b642f3f91f47
+	github.com/gospider007/ja3 v0.0.0-20250413121509-be8482fd78bc
+	github.com/gospider007/proxy v0.0.0-20250416085929-e52091d6077c
 	github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c
-	github.com/gospider007/tools v0.0.0-20250327035045-4414145a1ec8
-	github.com/gospider007/websocket v0.0.0-20250306064730-90385d6147ad
+	github.com/gospider007/tools v0.0.0-20250413121648-446528a36c44
+	github.com/gospider007/websocket v0.0.0-20250413121724-a23319f2af52
 	github.com/quic-go/quic-go v0.50.1
 	github.com/refraction-networking/uquic v0.0.6
 	github.com/refraction-networking/utls v1.6.7
@@ -84,6 +84,5 @@ require (
 	golang.org/x/sync v0.13.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/text v0.24.0 // indirect
-	golang.org/x/time v0.9.0 // indirect
 	golang.org/x/tools v0.32.0 // indirect
 )
