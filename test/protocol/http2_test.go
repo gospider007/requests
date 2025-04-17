@@ -19,6 +19,7 @@ func TestHttp2(t *testing.T) {
 	if resp.Proto() != "HTTP/2.0" {
 		t.Error("resp.Proto!= HTTP/2.0")
 	}
+	log.Print(resp.Text())
 	for range 3 {
 		resp, err = requests.Get(context.TODO(), "https://mp.weixin.qq.com")
 		if err != nil {
@@ -27,6 +28,7 @@ func TestHttp2(t *testing.T) {
 		if resp.StatusCode() != 200 {
 			t.Error("resp.StatusCode!= 200")
 		}
+		log.Print(resp.Text())
 		if resp.Proto() != "HTTP/2.0" {
 			t.Error("resp.Proto!= HTTP/2.0")
 		}
@@ -43,6 +45,7 @@ func TestHttp2(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	log.Print(resp.Text())
 	if resp.StatusCode() != 200 {
 		t.Error("resp.StatusCode!= 200")
 	}

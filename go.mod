@@ -29,7 +29,7 @@ require (
 	github.com/bodgit/plumbing v1.3.0 // indirect
 	github.com/bodgit/sevenzip v1.6.0 // indirect
 	github.com/bodgit/windows v1.0.1 // indirect
-	github.com/caddyserver/certmagic v0.22.2 // indirect
+	github.com/caddyserver/certmagic v0.23.0 // indirect
 	github.com/caddyserver/zerossl v0.1.3 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/dsnet/compress v0.0.2-0.20230904184137-39efe44ab707 // indirect
@@ -51,8 +51,8 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
-	github.com/libdns/libdns v0.2.3 // indirect
-	github.com/mholt/acmez/v3 v3.1.1 // indirect
+	github.com/libdns/libdns v1.0.0-beta.1 // indirect
+	github.com/mholt/acmez/v3 v3.1.2 // indirect
 	github.com/mholt/archives v0.1.1 // indirect
 	github.com/miekg/dns v1.1.65 // indirect
 	github.com/minio/minlz v1.0.0 // indirect
