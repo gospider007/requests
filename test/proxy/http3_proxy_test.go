@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"github.com/gospider007/gtls"
-	"github.com/gospider007/proxy"
 	"github.com/gospider007/requests"
 	"github.com/quic-go/quic-go/http3"
+	"github.com/txthinking/socks5"
 )
 
 var (
@@ -100,14 +100,12 @@ func server() {
 	fmt.Println(server.ListenAndServe())
 }
 func proxyServer(addr string) {
-	c, err := proxy.NewClient(nil, proxy.ClientOption{
-		Addr:  addr,
-		Debug: true,
-	})
+	server, err := socks5.NewClassicServer(addr, "127.0.0.1", "", "", 0, 0)
 	if err != nil {
-		panic(err)
+		log.Println(err)
+		return
 	}
-	c.Run()
+	go server.ListenAndServe(nil)
 }
 
 func TestHttp3Proxy(t *testing.T) {

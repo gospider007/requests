@@ -50,8 +50,6 @@ func GetAddressWithUrl(uurl *url.URL) (addr Address, err error) {
 			addr.Port = 443
 		case "socks5":
 			addr.Port = 1080
-		default:
-			return Address{}, errors.New("unknown scheme")
 		}
 	} else {
 		addr.Port, _ = strconv.Atoi(portStr)
@@ -68,6 +66,9 @@ func GetAddressWithReq(req *http.Request) (addr Address, err error) {
 		return Address{}, errors.New("req is nil")
 	}
 	host, port, _ := net.SplitHostPort(req.Host)
+	if port == "" {
+		host = req.Host
+	}
 	if host == "" {
 		host = req.URL.Hostname()
 	}
@@ -88,8 +89,8 @@ func GetAddressWithReq(req *http.Request) (addr Address, err error) {
 			addr.Port = 443
 		case "socks5":
 			addr.Port = 1080
-		default:
-			return Address{}, errors.New("unknown scheme")
+			// default:
+			// 	con, _ := httputil.DumpRequest(req, true)
 		}
 	}
 	addr.IP, _ = gtls.ParseHost(addr.Host)
@@ -103,6 +104,9 @@ func GetAddressWithAddr(addrS string) (addr Address, err error) {
 	host, port, err := net.SplitHostPort(addrS)
 	if err != nil {
 		return Address{}, err
+	}
+	if host == "" {
+		host = addrS
 	}
 	ip, _ := gtls.ParseHost(host)
 	portInt, _ := strconv.Atoi(port)

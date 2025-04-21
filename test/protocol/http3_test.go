@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/gospider007/gtls"
-	"github.com/gospider007/proxy"
 	"github.com/gospider007/requests"
+	"github.com/txthinking/socks5"
 )
 
 func TestHttp3(t *testing.T) {
@@ -32,19 +32,12 @@ func TestHttp3(t *testing.T) {
 }
 func TestHttp3Proxy(t *testing.T) {
 	proxyAddress := "127.0.0.1:1080"
-	// server, err := socks5.NewClassicServer("127.0.0.1:1080", "127.0.0.1", "", "", 0, 0)
-	// if err != nil {
-	// 	log.Println(err)
-	// 	return
-	// }
-	// go server.ListenAndServe(nil)
-	proxyC, err := proxy.NewClient(nil, proxy.ClientOption{Addr: proxyAddress})
+	server, err := socks5.NewClassicServer("127.0.0.1:1080", "127.0.0.1", "", "", 0, 0)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	defer proxyC.Close()
-	go proxyC.Run()
+	go server.ListenAndServe(nil)
 
 	time.Sleep(time.Second)
 	// href := "https://google.com"

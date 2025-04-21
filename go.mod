@@ -10,13 +10,13 @@ require (
 	github.com/gospider007/http2 v0.0.0-20250416094504-9e1519e1a2f4
 	github.com/gospider007/http3 v0.0.0-20250416085920-b642f3f91f47
 	github.com/gospider007/ja3 v0.0.0-20250413121509-be8482fd78bc
-	github.com/gospider007/proxy v0.0.0-20250416085929-e52091d6077c
 	github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c
 	github.com/gospider007/tools v0.0.0-20250413121648-446528a36c44
 	github.com/gospider007/websocket v0.0.0-20250413121724-a23319f2af52
 	github.com/quic-go/quic-go v0.50.1
 	github.com/refraction-networking/uquic v0.0.6
 	github.com/refraction-networking/utls v1.6.7
+	github.com/txthinking/socks5 v0.0.0-20230325130024-4230056ae301
 	golang.org/x/net v0.39.0
 	gopkg.in/errgo.v2 v2.1.0
 )
@@ -60,6 +60,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/nwaples/rardecode/v2 v2.1.1 // indirect
 	github.com/onsi/ginkgo/v2 v2.23.4 // indirect
+	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/quic-go/qpack v0.5.1 // indirect
 	github.com/sorairolake/lzip-go v0.3.7 // indirect
@@ -68,6 +69,7 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
+	github.com/txthinking/runnergroup v0.0.0-20210608031112-152c7c4432bf // indirect
 	github.com/ulikunitz/xz v0.5.12 // indirect
 	github.com/zeebo/blake3 v0.2.4 // indirect
 	go.mongodb.org/mongo-driver v1.17.3 // indirect

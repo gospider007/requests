@@ -91,6 +91,9 @@ func newDialer(option DialOption) dialer {
 }
 func (obj *Dialer) dialContext(ctx *Response, network string, addr Address, isProxy bool) (net.Conn, error) {
 	var err error
+	if addr.Port == 0 {
+		return nil, errors.New("port is nil")
+	}
 	if addr.IP == nil {
 		addr.IP, err = obj.loadHost(ctx.Context(), addr.Host, ctx.option.DialOption)
 	}
