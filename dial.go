@@ -396,10 +396,6 @@ func (obj *Dialer) verifySocks5Auth(conn net.Conn, proxyAddr Address) (err error
 	}
 	switch readCon[1] {
 	case 2:
-		if proxyAddr.User == "" || proxyAddr.Password == "" {
-			err = errors.New("socks5 need auth")
-			return
-		}
 		if _, err = conn.Write(append(
 			append(
 				[]byte{1, byte(len(proxyAddr.User))},
@@ -410,7 +406,7 @@ func (obj *Dialer) verifySocks5Auth(conn net.Conn, proxyAddr Address) (err error
 				tools.StringToBytes(proxyAddr.Password)...,
 			)...,
 		)); err != nil {
-			return
+			return tools.WrapError(err, "socks5 user or password error")
 		}
 		if _, err = io.ReadFull(conn, readCon); err != nil {
 			return

@@ -289,7 +289,7 @@ func (obj *Client) request(ctx *Response) (err error) {
 	if reqs.Header, err = ctx.option.initOrderHeaders(); err != nil {
 		return errors.Join(err, errors.New("tempRequest init headers error"), err)
 	}
-	if isWebsocket && reqs.Header.Get("Sec-WebSocket-Key") == "" {
+	if isWebsocket {
 		websocket.SetClientHeadersWithOption(reqs.Header, ctx.option.WsOption)
 	}
 	if href.User != nil && reqs.Header.Get("Authorization") == "" {
