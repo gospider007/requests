@@ -278,7 +278,7 @@ func (obj *roundTripper) dialConnecotr(ctx *Response, conne *connecotr, h2 bool)
 			return err
 		}
 	} else {
-		conne.Conn = newClientConn(conne.c, func(err error) {
+		conne.Conn = NewClientConn(conne.c, func(err error) {
 			conne.forceCnl(tools.WrapError(err, "http1 client close"))
 		})
 	}

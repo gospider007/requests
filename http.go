@@ -40,7 +40,7 @@ type clientConn struct {
 	cnl          context.CancelCauseFunc
 }
 
-func newClientConn(con net.Conn, closeFunc func(error)) *clientConn {
+func NewClientConn(con net.Conn, closeFunc func(error)) *clientConn {
 	ctx, cnl := context.WithCancelCause(context.TODO())
 	reader, writer := io.Pipe()
 	c := &clientConn{
