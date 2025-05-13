@@ -126,11 +126,11 @@ func formWrite(writer *multipart.Writer, key string, val any) (err error) {
 	case string:
 		err = writer.WriteField(key, value)
 	default:
-		con, err := gson.Decode(val)
+		con, err := gson.Encode(val)
 		if err != nil {
 			return err
 		}
-		err = writer.WriteField(key, con.Raw())
+		err = writer.WriteField(key, tools.BytesToString(con))
 		if err != nil {
 			return err
 		}
@@ -159,17 +159,18 @@ func (obj *OrderData) formWriteMain(writer *multipart.Writer) (err error) {
 	return writer.Close()
 }
 
-func paramsWrite(buf *bytes.Buffer, key string, val any) {
+func paramsWrite(buf *bytes.Buffer, key string, val any) error {
 	if buf.Len() > 0 {
 		buf.WriteByte('&')
 	}
 	buf.WriteString(url.QueryEscape(key))
 	buf.WriteByte('=')
-	if v, err := gson.Decode(val); err == nil {
-		buf.WriteString(url.QueryEscape(v.Raw()))
-	} else {
-		buf.WriteString(url.QueryEscape(fmt.Sprintf("%v", val)))
+	v, err := gson.Encode(val)
+	if err != nil {
+		return err
 	}
+	buf.Write(v)
+	return nil
 }
 func (obj *OrderData) MarshalJSON() ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
@@ -199,16 +200,6 @@ func (obj *OrderData) MarshalJSON() ([]byte, error) {
 	}
 	return buf.Bytes(), nil
 }
-
-// type bodyT = int
-
-// const (
-// 	bodyTypeNone bodyT = iota
-// 	bodyTypeForm
-// 	bodyTypeJson
-// 	bodyTypeText
-// 	bodyTypeParams
-// )
 
 func (obj *RequestOption) newBody(val any) (io.Reader, *OrderData, error) {
 	switch value := val.(type) {
