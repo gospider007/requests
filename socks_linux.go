@@ -3,7 +3,6 @@
 package requests
 
 import (
-	"net"
 	"syscall"
 )
 
@@ -14,8 +13,4 @@ func Control(network, address string, c syscall.RawConn) error {
 		syscall.SetsockoptLinger(int(fd), syscall.SOL_SOCKET, syscall.SO_LINGER, &syscall.Linger{Onoff: 1, Linger: 0})
 		syscall.SetNonblock(int(fd), true)
 	})
-}
-func ChangeControl(conn *net.TCPConn) error {
-	conn.SetNoDelay(true)
-	return nil
 }
