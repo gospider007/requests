@@ -13,9 +13,9 @@ require (
 	github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c
 	github.com/gospider007/tools v0.0.0-20250429035126-c40129cf2865
 	github.com/gospider007/websocket v0.0.0-20250429035144-b1cf6819063a
-	github.com/quic-go/quic-go v0.51.0
+	github.com/quic-go/quic-go v0.52.0
 	github.com/refraction-networking/uquic v0.0.6
-	github.com/refraction-networking/utls v1.7.2
+	github.com/refraction-networking/utls v1.7.3
 	github.com/txthinking/socks5 v0.0.0-20230325130024-4230056ae301
 	golang.org/x/net v0.40.0
 	gopkg.in/errgo.v2 v2.1.0
@@ -24,7 +24,7 @@ require (
 require (
 	github.com/PuerkitoBio/goquery v1.10.3 // indirect
 	github.com/STARRY-S/zip v0.2.3 // indirect
-	github.com/andybalholm/brotli v1.1.1 // indirect
+	github.com/andybalholm/brotli v1.1.2-0.20250424173009-453214e765f3 // indirect
 	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/bodgit/plumbing v1.3.0 // indirect
 	github.com/bodgit/sevenzip v1.6.1 // indirect
@@ -49,9 +49,9 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
-	github.com/libdns/libdns v1.0.0 // indirect
+	github.com/libdns/libdns v1.1.0 // indirect
 	github.com/mholt/acmez/v3 v3.1.2 // indirect
-	github.com/mholt/archives v0.1.1 // indirect
+	github.com/mholt/archives v0.1.2 // indirect
 	github.com/miekg/dns v1.1.66 // indirect
 	github.com/minio/minlz v1.0.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
@@ -85,5 +85,7 @@ require (
 	golang.org/x/sync v0.14.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/text v0.25.0 // indirect
+	golang.org/x/time v0.11.0 // indirect
 	golang.org/x/tools v0.33.0 // indirect
+	google.golang.org/protobuf v1.36.6 // indirect
 )
