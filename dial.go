@@ -135,6 +135,9 @@ func (obj *Dialer) dialContext(ctx *Response, network string, addr Address, isPr
 			})
 		}
 	}
+	if err == nil && addr.Compression != "" {
+		return NewCompressionConn(addr.Compression, con)
+	}
 	return con, err
 }
 func (obj *Dialer) DialContext(ctx *Response, network string, addr Address) (net.Conn, error) {

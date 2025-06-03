@@ -41,9 +41,15 @@ func GetAddressWithUrl(uurl *url.URL) (addr Address, err error) {
 		Host: uurl.Hostname(),
 	}
 	portStr := uurl.Port()
-	addr.Scheme = uurl.Scheme
+	if strings.Count(uurl.Scheme, "+") == 1 {
+		nns := strings.Split(uurl.Scheme, "+")
+		addr.Compression = nns[0]
+		addr.Scheme = nns[1]
+	} else {
+		addr.Scheme = uurl.Scheme
+	}
 	if portStr == "" {
-		switch uurl.Scheme {
+		switch addr.Scheme {
 		case "http":
 			addr.Port = 80
 		case "https":

@@ -65,13 +65,14 @@ func WriteUdpAddr(w io.Writer, addr Address) error {
 }
 
 type Address struct {
-	User     string
-	Password string
-	Host     string
-	NetWork  string
-	Scheme   string
-	IP       net.IP
-	Port     int
+	User        string
+	Password    string
+	Host        string
+	NetWork     string
+	Scheme      string
+	IP          net.IP
+	Compression string
+	Port        int
 }
 
 func (a Address) String() string {
