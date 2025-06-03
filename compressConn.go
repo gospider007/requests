@@ -56,13 +56,10 @@ func (obj *CompressionConn) Write(b []byte) (n int, err error) {
 	if err != nil {
 		return
 	}
-	obj.w.(interface{ Flush() error }).Flush()
-	// err = obj.f.Flush()
+	err = obj.f.Flush()
 	return
 }
 func (obj *CompressionConn) Close() error {
-	obj.w.Close()
-	obj.r.Close()
 	return obj.conn.Close()
 }
 func (obj *CompressionConn) LocalAddr() net.Addr {
