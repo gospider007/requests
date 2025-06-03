@@ -56,7 +56,9 @@ func (obj *CompressionConn) Write(b []byte) (n int, err error) {
 	if err != nil {
 		return
 	}
-	err = obj.f.Flush()
+	if obj.f != nil {
+		err = obj.f.Flush()
+	}
 	return
 }
 func (obj *CompressionConn) Close() error {
