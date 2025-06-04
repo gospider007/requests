@@ -13,6 +13,7 @@ require (
 	github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c
 	github.com/gospider007/tools v0.0.0-20250529114105-be4d4dbf36a2
 	github.com/gospider007/websocket v0.0.0-20250429035144-b1cf6819063a
+	github.com/klauspost/compress v1.18.0
 	github.com/mholt/archives v0.1.2
 	github.com/quic-go/quic-go v0.52.0
 	github.com/refraction-networking/uquic v0.0.6
@@ -47,7 +48,6 @@ require (
 	github.com/gospider007/kinds v0.0.0-20250217075226-10f199f7215d // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/kr/pretty v0.3.1 // indirect

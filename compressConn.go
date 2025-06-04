@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/klauspost/compress/zstd"
 	"github.com/mholt/archives"
 )
 
@@ -38,11 +39,29 @@ func NewCompressionConn(decode string, conn net.Conn) (net.Conn, error) {
 }
 
 func newZstdConn(conn net.Conn) (io.ReadCloser, io.WriteCloser, error) {
-	r, err := archives.Zstd{}.OpenReader(conn)
+	r, err := archives.Zstd{
+		EncoderOptions: []zstd.EOption{
+			zstd.WithEncoderLevel(zstd.SpeedFastest),
+			zstd.WithWindowSize(zstd.MinWindowSize), // 1MB 窗口，减少内存
+			zstd.WithEncoderConcurrency(1),          // 单线程，减少内存
+		},
+		DecoderOptions: []zstd.DOption{
+			zstd.WithDecodeBuffersBelow(zstd.MinWindowSize),
+		},
+	}.OpenReader(conn)
 	if err != nil {
 		return nil, nil, err
 	}
-	w, err := archives.Zstd{}.OpenWriter(conn)
+	w, err := archives.Zstd{
+		EncoderOptions: []zstd.EOption{
+			zstd.WithEncoderLevel(zstd.SpeedFastest),
+			zstd.WithWindowSize(zstd.MinWindowSize), // 1MB 窗口，减少内存
+			zstd.WithEncoderConcurrency(1),          // 单线程，减少内存
+		},
+		DecoderOptions: []zstd.DOption{
+			zstd.WithDecodeBuffersBelow(zstd.MinWindowSize),
+		},
+	}.OpenWriter(conn)
 	if err != nil {
 		return nil, nil, err
 	}
