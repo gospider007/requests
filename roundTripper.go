@@ -146,6 +146,7 @@ func (obj *roundTripper) ghttp3Dial(ctx *Response, remoteAddress Address, proxyA
 	if err != nil {
 		return nil, err
 	}
+
 	conn = obj.newConnecotr()
 	conn.Conn, err = http3.NewClient(netConn, func() {
 		conn.forceCnl(errors.New("http3 client close"))
@@ -160,7 +161,11 @@ func (obj *roundTripper) ghttp3Dial(ctx *Response, remoteAddress Address, proxyA
 	return
 }
 
-func (obj *roundTripper) uhttp3Dial(ctx *Response, spec uquic.QUICSpec, remoteAddress Address, proxyAddress ...Address) (conn *connecotr, err error) {
+func (obj *roundTripper) uhttp3Dial(ctx *Response, remoteAddress Address, proxyAddress ...Address) (conn *connecotr, err error) {
+	spec, err := ja3.CreateUSpec(ctx.option.USpec)
+	if err != nil {
+		return nil, err
+	}
 	udpConn, err := obj.http3Dial(ctx, remoteAddress, proxyAddress...)
 	if err != nil {
 		return nil, err
@@ -201,6 +206,36 @@ func (obj *roundTripper) uhttp3Dial(ctx *Response, spec uquic.QUICSpec, remoteAd
 	return
 }
 
+// func (obj *roundTripper) thttp3Dial(ctx *Response, remoteAddress Address, proxyAddress ...Address) (conn *connecotr, err error) {
+// 	// var rawNetConn net.Conn
+
+// 	// if len(proxys) > 0 {
+// 	// 	comp := proxys[len(proxys)-1]
+// 	// 	if comp.Compression != "" {
+// 	// 		arch, err = NewCompression(comp.Compression, CompressionLevelBest)
+// 	// 		if err != nil {
+// 	// 			return nil, err
+// 	// 		}
+// 	// 	}
+// 	// 	_, rawNetConn, err = obj.dialer.DialProxyContext(ctx, "tcp", ctx.option.TlsConfig.Clone(), append(proxys, remoteAddress)...)
+// 	// } else {
+// 	// 	var remoteAddress Address
+// 	// 	remoteAddress, err = GetAddressWithUrl(ctx.request.URL)
+// 	// 	if err != nil {
+// 	// 		return nil, err
+// 	// 	}
+// 	// 	rawNetConn, err = obj.dialer.DialContext(ctx, "tcp", remoteAddress)
+// 	// }
+// 	// defer func() {
+// 	// 	if err != nil && rawNetConn != nil {
+// 	// 		rawNetConn.Close()
+// 	// 	}
+// 	// }()
+// 	// if err != nil {
+// 	// 	return nil, err
+// 	// }
+// }
+
 func (obj *roundTripper) dial(ctx *Response) (conn *connecotr, err error) {
 	proxys, err := obj.initProxys(ctx)
 	if err != nil {
@@ -212,18 +247,21 @@ func (obj *roundTripper) dial(ctx *Response) (conn *connecotr, err error) {
 	}
 	if ctx.option.ForceHttp3 {
 		if ctx.option.USpec != nil {
-			spec, err := ja3.CreateUSpec(ctx.option.USpec)
+			return obj.uhttp3Dial(ctx, remoteAddress, proxys...)
+		} else {
+			return obj.ghttp3Dial(ctx, remoteAddress, proxys...)
+		}
+	}
+	var rawNetConn net.Conn
+	var arch Compression
+	if len(proxys) > 0 {
+		comp := proxys[len(proxys)-1]
+		if comp.Compression != "" {
+			arch, err = NewCompression(comp.Compression, CompressionLevelBest)
 			if err != nil {
 				return nil, err
 			}
-			if spec.ClientHelloSpec != nil {
-				return obj.uhttp3Dial(ctx, spec, remoteAddress, proxys...)
-			}
 		}
-		return obj.ghttp3Dial(ctx, remoteAddress, proxys...)
-	}
-	var rawNetConn net.Conn
-	if len(proxys) > 0 {
 		_, rawNetConn, err = obj.dialer.DialProxyContext(ctx, "tcp", ctx.option.TlsConfig.Clone(), append(proxys, remoteAddress)...)
 	} else {
 		var remoteAddress Address
@@ -259,6 +297,12 @@ func (obj *roundTripper) dial(ctx *Response) (conn *connecotr, err error) {
 		}
 	} else {
 		conne.c = rawNetConn
+	}
+	if arch != nil {
+		conne.c, err = NewCompressionConn(conne.c, arch)
+		if err != nil {
+			return nil, err
+		}
 	}
 	err = obj.dialConnecotr(ctx, conne, h2)
 	if err != nil {

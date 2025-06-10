@@ -82,16 +82,15 @@ func (obj *clientConn) send(req *http.Request, orderHeaders []interface {
 		defer func() {
 			obj.readWriteCtx.readCnl(readErr)
 		}()
-		noBody := res.Body == nil || (res.ContentLength == -1 && len(res.TransferEncoding) == 0)
-		if !noBody {
+		if res.Body != nil {
 			_, readErr = io.Copy(pw, rawBody)
 		}
-		pw.CloseWithError(readErr)
 		if readErr != nil && readErr != io.EOF && readErr != io.ErrUnexpectedEOF {
 			err = tools.WrapError(readErr, "failed to read response body")
 		} else {
 			readErr = nil
 		}
+		pw.CloseWithError(readErr)
 		if readErr != nil {
 			obj.CloseWithError(readErr)
 		} else {

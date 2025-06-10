@@ -3,7 +3,6 @@ package requests
 import (
 	"errors"
 	"io"
-	"log"
 )
 
 type wrapBody struct {
@@ -33,9 +32,6 @@ func (obj *wrapBody) Close() error {
 
 // safe close conn
 func (obj *wrapBody) CloseConn() {
-	log.Print("111")
 	obj.conn.forceCnl(errors.New("readWriterCloser close conn"))
-	log.Print("222")
 	obj.conn.CloseWithError(errConnectionForceClosed)
-	log.Print("333")
 }

@@ -1,6 +1,7 @@
 package requests
 
 import (
+	"compress/flate"
 	"errors"
 	"io"
 	"net"
@@ -8,7 +9,6 @@ import (
 	"time"
 
 	"github.com/klauspost/compress/zstd"
-	"github.com/mholt/archives"
 )
 
 type CompressionConn struct {
@@ -17,17 +17,97 @@ type CompressionConn struct {
 	r    io.ReadCloser
 	f    interface{ Flush() error }
 }
+type Compression interface {
+	OpenReader(r io.Reader) (io.ReadCloser, error)
+	OpenWriter(w io.Writer) (io.WriteCloser, error)
+}
+type compression struct {
+	openReader func(r io.Reader) (io.ReadCloser, error)
+	openWriter func(w io.Writer) (io.WriteCloser, error)
+}
 
-func NewCompressionConn(decode string, conn net.Conn) (net.Conn, error) {
-	var r io.ReadCloser
-	var w io.WriteCloser
-	var err error
+func (obj compression) OpenReader(r io.Reader) (io.ReadCloser, error) {
+	return obj.openReader(r)
+}
+func (obj compression) OpenWriter(w io.Writer) (io.WriteCloser, error) {
+	return obj.openWriter(w)
+}
+
+type CompressionLevel int
+
+const (
+	CompressionLevelFast CompressionLevel = 1
+	CompressionLevelBest CompressionLevel = 2
+)
+
+func NewCompression(decode string, leval CompressionLevel) (Compression, error) {
+	var arch Compression
 	switch strings.ToLower(decode) {
 	case "zstd":
-		r, w, err = newZstdConn(conn)
+		options := []zstd.EOption{}
+		options2 := []zstd.DOption{}
+		switch leval {
+		case CompressionLevelFast:
+			options = append(options, zstd.WithEncoderLevel(zstd.SpeedFastest), zstd.WithZeroFrames(true), zstd.WithLowerEncoderMem(true))
+			options2 = append(options2, zstd.WithDecoderLowmem(true))
+		case CompressionLevelBest:
+			options = append(options, zstd.WithEncoderLevel(zstd.SpeedBetterCompression))
+		default:
+			options = append(options, zstd.WithEncoderLevel(zstd.SpeedDefault), zstd.WithZeroFrames(true), zstd.WithLowerEncoderMem(true))
+			options2 = append(options2, zstd.WithDecoderLowmem(true))
+		}
+		arch = compression{
+			openReader: func(r io.Reader) (io.ReadCloser, error) {
+				decoder, err := zstd.NewReader(r, options2...)
+				if err != nil {
+					return nil, err
+				}
+				return decoder.IOReadCloser(), nil
+			},
+			openWriter: func(w io.Writer) (io.WriteCloser, error) {
+				encoder, err := zstd.NewWriter(w, options...)
+				if err != nil {
+					return nil, err
+				}
+				return encoder, nil
+			},
+		}
+	case "flate":
+		arch = compression{
+			openReader: func(r io.Reader) (io.ReadCloser, error) {
+				buf := make([]byte, 1)
+				n, err := r.Read(buf)
+				if err != nil {
+					return nil, err
+				}
+				if n != 1 || buf[0] != 92 {
+					return nil, errors.New("invalid response")
+				}
+				return flate.NewReader(r), nil
+			},
+			openWriter: func(w io.Writer) (io.WriteCloser, error) {
+				n, err := w.Write([]byte{92})
+				if err != nil {
+					return nil, err
+				}
+				if n != 1 {
+					return nil, errors.New("invalid response")
+				}
+				return flate.NewWriter(w, flate.BestCompression)
+			},
+		}
 	default:
 		return nil, errors.New("unsupported compression type")
 	}
+	return arch, nil
+}
+
+func NewCompressionConn(conn net.Conn, arch Compression) (net.Conn, error) {
+	w, err := arch.OpenWriter(conn)
+	if err != nil {
+		return nil, err
+	}
+	r, err := arch.OpenReader(conn)
 	if err != nil {
 		return nil, err
 	}
@@ -38,35 +118,6 @@ func NewCompressionConn(decode string, conn net.Conn) (net.Conn, error) {
 	return ccon, nil
 }
 
-func newZstdConn(conn net.Conn) (io.ReadCloser, io.WriteCloser, error) {
-	r, err := archives.Zstd{
-		EncoderOptions: []zstd.EOption{
-			zstd.WithEncoderLevel(zstd.SpeedFastest),
-			zstd.WithWindowSize(zstd.MinWindowSize), // 1MB 窗口，减少内存
-			zstd.WithEncoderConcurrency(1),          // 单线程，减少内存
-		},
-		DecoderOptions: []zstd.DOption{
-			zstd.WithDecodeBuffersBelow(zstd.MinWindowSize),
-		},
-	}.OpenReader(conn)
-	if err != nil {
-		return nil, nil, err
-	}
-	w, err := archives.Zstd{
-		EncoderOptions: []zstd.EOption{
-			zstd.WithEncoderLevel(zstd.SpeedFastest),
-			zstd.WithWindowSize(zstd.MinWindowSize), // 1MB 窗口，减少内存
-			zstd.WithEncoderConcurrency(1),          // 单线程，减少内存
-		},
-		DecoderOptions: []zstd.DOption{
-			zstd.WithDecodeBuffersBelow(zstd.MinWindowSize),
-		},
-	}.OpenWriter(conn)
-	if err != nil {
-		return nil, nil, err
-	}
-	return r, w, nil
-}
 func (obj *CompressionConn) Read(b []byte) (n int, err error) {
 	return obj.r.Read(b)
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/gospider007/ja3"
 	"github.com/gospider007/tools"
 	utls "github.com/refraction-networking/utls"
+	"golang.org/x/crypto/ssh"
 )
 
 type msgClient struct {
@@ -135,9 +136,6 @@ func (obj *Dialer) dialContext(ctx *Response, network string, addr Address, isPr
 			})
 		}
 	}
-	if err == nil && addr.Compression != "" {
-		return NewCompressionConn(addr.Compression, con)
-	}
 	return con, err
 }
 func (obj *Dialer) DialContext(ctx *Response, network string, addr Address) (net.Conn, error) {
@@ -177,6 +175,26 @@ func (obj *Dialer) DialProxyContext(ctx *Response, network string, proxyTlsConfi
 func (obj *Dialer) dialProxyContext(ctx *Response, network string, proxyUrl Address) (net.Conn, error) {
 	return obj.ProxyDialContext(ctx, network, proxyUrl)
 }
+
+func (obj *Dialer) verifySSH(ctx *Response, conn net.Conn, proxyAddress Address, remoteAddress Address) (net.Conn, error) {
+	if proxyAddress.User == "" || proxyAddress.Password == "" {
+		return conn, errors.New("ssh proxy user or password is nil")
+	}
+	config := &ssh.ClientConfig{
+		User:            proxyAddress.User,
+		Auth:            []ssh.AuthMethod{ssh.Password(proxyAddress.Password)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+	c, chans, reqs, err := ssh.NewClientConn(conn, proxyAddress.String(), config)
+	if err != nil {
+		return conn, err
+	}
+	sshC, err := ssh.NewClient(c, chans, reqs).DialContext(ctx.Context(), "tcp", remoteAddress.String())
+	if err != nil {
+		return conn, err
+	}
+	return newSSHConn(sshC, conn), nil
+}
 func (obj *Dialer) verifyProxyToRemote(ctx *Response, conn net.Conn, proxyTlsConfig *tls.Config, proxyAddress Address, remoteAddress Address, isLast bool, forceHttp1 bool) (net.PacketConn, net.Conn, error) {
 	var err error
 	var packCon net.PacketConn
@@ -206,6 +224,9 @@ func (obj *Dialer) verifyProxyToRemote(ctx *Response, conn net.Conn, proxyTlsCon
 					Msg:  remoteAddress.String(),
 				})
 			}
+		case "ssh":
+			conn, err = obj.verifySSH(ctx, conn, proxyAddress, remoteAddress)
+			// log.Print("verify ssh", remoteAddress.String(), err)
 		case "socks5":
 			if isLast && ctx.option.ForceHttp3 {
 				packCon, err = obj.verifyUDPSocks5(ctx, conn, proxyAddress, remoteAddress)

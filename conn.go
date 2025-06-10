@@ -200,3 +200,40 @@ func (obj *connPool) close(err error) {
 	obj.connPools.del(obj.connKey)
 	obj.forceCnl(tools.WrapError(err, "connPool close"))
 }
+
+func newSSHConn(sshCon net.Conn, rawCon net.Conn) *sshConn {
+	return &sshConn{sshCon: sshCon, rawCon: rawCon}
+}
+
+type sshConn struct {
+	sshCon net.Conn
+	rawCon net.Conn
+}
+
+func (obj *sshConn) Read(b []byte) (n int, err error) {
+	return obj.sshCon.Read(b)
+}
+
+func (obj *sshConn) Write(b []byte) (n int, err error) {
+	return obj.sshCon.Write(b)
+}
+
+func (obj *sshConn) Close() error {
+	return obj.sshCon.Close()
+}
+func (obj *sshConn) LocalAddr() net.Addr {
+	return obj.sshCon.LocalAddr()
+}
+func (obj *sshConn) RemoteAddr() net.Addr {
+	return obj.sshCon.RemoteAddr()
+}
+func (obj *sshConn) SetDeadline(deadline time.Time) error {
+	return obj.rawCon.SetDeadline(deadline)
+}
+func (obj *sshConn) SetReadDeadline(deadline time.Time) error {
+	return obj.rawCon.SetReadDeadline(deadline)
+}
+
+func (obj *sshConn) SetWriteDeadline(deadline time.Time) error {
+	return obj.rawCon.SetWriteDeadline(deadline)
+}

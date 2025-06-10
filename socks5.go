@@ -85,6 +85,12 @@ func (a Address) String() string {
 func (a Address) Network() string {
 	return a.NetWork
 }
+func (a Address) IsZero() bool {
+	if a.Port == 0 && a.Host == "" && len(a.IP) == 0 && a.NetWork == "" {
+		return true
+	}
+	return false
+}
 
 type UDPConn struct {
 	ctx context.Context

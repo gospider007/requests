@@ -54,6 +54,8 @@ func GetAddressWithUrl(uurl *url.URL) (addr Address, err error) {
 			addr.Port = 80
 		case "https":
 			addr.Port = 443
+		case "ssh":
+			addr.Port = 22
 		case "socks5":
 			addr.Port = 1080
 		}
@@ -93,6 +95,8 @@ func GetAddressWithReq(req *http.Request) (addr Address, err error) {
 			addr.Port = 80
 		case "https":
 			addr.Port = 443
+		case "ssh":
+			addr.Port = 22
 		case "socks5":
 			addr.Port = 1080
 			// default:
