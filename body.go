@@ -110,7 +110,7 @@ func formWrite(writer *multipart.Writer, key string, val any) (err error) {
 		case string:
 			_, err = wp.Write(tools.StringToBytes(content))
 		case io.Reader:
-			_, err = io.Copy(wp, content)
+			_, err = tools.Copy(wp, content)
 		default:
 			con, err := gson.Encode(content)
 			if err != nil {

@@ -12,10 +12,11 @@ import (
 )
 
 type CompressionConn struct {
-	conn net.Conn
-	w    io.WriteCloser
-	r    io.ReadCloser
-	f    interface{ Flush() error }
+	conn    net.Conn
+	oneFunc func()
+	w       io.WriteCloser
+	r       io.ReadCloser
+	f       interface{ Flush() error }
 }
 type Compression interface {
 	OpenReader(r io.Reader) (io.ReadCloser, error)
@@ -93,7 +94,7 @@ func NewCompression(decode string, leval CompressionLevel) (Compression, error) 
 				if n != 1 {
 					return nil, errors.New("invalid response")
 				}
-				return flate.NewWriter(w, flate.BestCompression)
+				return flate.NewWriter(w, flate.DefaultCompression)
 			},
 		}
 	default:
@@ -111,7 +112,16 @@ func NewCompressionConn(conn net.Conn, arch Compression) (net.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	ccon := &CompressionConn{conn: conn, r: r, w: w}
+
+	ccon := &CompressionConn{
+		conn: conn,
+		r:    r,
+		w:    w,
+		// oneFunc: sync.OnceFunc(func() {
+		// 	defer recover()
+		// 	w.Close()
+		// }),
+	}
 	if f, ok := w.(interface{ Flush() error }); ok {
 		ccon.f = f
 	}
@@ -132,7 +142,11 @@ func (obj *CompressionConn) Write(b []byte) (n int, err error) {
 	return
 }
 func (obj *CompressionConn) Close() error {
-	return obj.conn.Close()
+	err := obj.conn.Close()
+	if obj.oneFunc != nil {
+		obj.oneFunc()
+	}
+	return err
 }
 func (obj *CompressionConn) LocalAddr() net.Addr {
 	return obj.conn.LocalAddr()

@@ -52,7 +52,7 @@ func NewClientConn(con net.Conn, closeFunc func(error)) *clientConn {
 		w:         bufio.NewWriter(con),
 	}
 	go func() {
-		_, err := io.Copy(writer, con)
+		_, err := tools.Copy(writer, con)
 		writer.CloseWithError(err)
 		c.CloseWithError(err)
 	}()
@@ -83,7 +83,7 @@ func (obj *clientConn) send(req *http.Request, orderHeaders []interface {
 			obj.readWriteCtx.readCnl(readErr)
 		}()
 		if res.Body != nil {
-			_, readErr = io.Copy(pw, rawBody)
+			_, readErr = tools.Copy(pw, rawBody)
 		}
 		if readErr != nil && readErr != io.EOF && readErr != io.ErrUnexpectedEOF {
 			err = tools.WrapError(readErr, "failed to read response body")
@@ -255,14 +255,14 @@ func (obj *clientConn) httpWrite(req *http.Request, rawHeaders http.Header, orde
 	}
 	if chunked {
 		chunkedWriter := newChunkedWriter(obj.w)
-		if _, err = io.Copy(chunkedWriter, req.Body); err != nil {
+		if _, err = tools.Copy(chunkedWriter, req.Body); err != nil {
 			return
 		}
 		if err = chunkedWriter.Close(); err != nil {
 			return
 		}
 	} else {
-		if _, err = io.Copy(obj.w, req.Body); err != nil {
+		if _, err = tools.Copy(obj.w, req.Body); err != nil {
 			return
 		}
 	}

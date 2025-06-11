@@ -329,12 +329,12 @@ func (obj *Response) ReadBody() (err error) {
 	go func() {
 		defer close(done)
 		if obj.option.Bar && obj.ContentLength() > 0 {
-			_, readErr = io.Copy(&barBody{
+			_, readErr = tools.Copy(&barBody{
 				bar:  bar.NewClient(obj.response.ContentLength),
 				body: bBody,
 			}, obj.Body())
 		} else {
-			_, readErr = io.Copy(bBody, obj.Body())
+			_, readErr = tools.Copy(bBody, obj.Body())
 		}
 		if readErr == io.ErrUnexpectedEOF {
 			readErr = nil
