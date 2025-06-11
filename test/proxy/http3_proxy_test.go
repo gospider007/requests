@@ -139,6 +139,7 @@ func TestHttp3Proxy2(t *testing.T) {
 		}
 		fmt.Println(resp.StatusCode())
 		fmt.Println(resp.Proto())
+		resp.CloseConn()
 		time.Sleep(time.Second)
 	}
 }

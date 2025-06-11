@@ -148,13 +148,13 @@ func (obj *roundTripper) ghttp3Dial(ctx *Response, remoteAddress Address, proxyA
 	}
 
 	conn = obj.newConnecotr()
-	conn.Conn, err = http3.NewClient(netConn, func() {
+	conn.Conn, err = http3.NewClient(netConn, udpConn, func() {
 		conn.forceCnl(errors.New("http3 client close"))
 	})
 	if ct, ok := udpConn.(interface {
-		Context() context.Context
+		SetTcpCloseFunc(f func(error))
 	}); ok {
-		context.AfterFunc(ct.Context(), func() {
+		ct.SetTcpCloseFunc(func(err error) {
 			conn.forceCnl(errors.New("http3 client close with udp"))
 		})
 	}
@@ -193,14 +193,14 @@ func (obj *roundTripper) uhttp3Dial(ctx *Response, remoteAddress Address, proxyA
 		return nil, err
 	}
 	conn = obj.newConnecotr()
-	conn.Conn, err = http3.NewClient(netConn, func() {
+	conn.Conn, err = http3.NewClient(netConn, udpConn, func() {
 		conn.forceCnl(errors.New("http3 client close"))
 	})
 	if ct, ok := udpConn.(interface {
-		Context() context.Context
+		SetTcpCloseFunc(f func(error))
 	}); ok {
-		context.AfterFunc(ct.Context(), func() {
-			conn.forceCnl(errors.New("http3 client close with udp"))
+		ct.SetTcpCloseFunc(func(err error) {
+			conn.forceCnl(errors.New("uhttp3 client close with udp"))
 		})
 	}
 	return
@@ -459,6 +459,7 @@ func (obj *roundTripper) RoundTrip(ctx *Response) (err error) {
 			return err
 		}
 		err = obj.poolRoundTrip(task)
+		// log.Print(err)
 		if err == nil || !task.suppertRetry() {
 			break
 		}

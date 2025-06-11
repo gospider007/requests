@@ -388,13 +388,7 @@ func (obj *Dialer) verifyUDPSocks5(ctx *Response, conn net.Conn, proxyAddr Addre
 	if err != nil {
 		return
 	}
-	var cnl context.CancelFunc
-	udpCtx, cnl := context.WithCancel(context.TODO())
-	wrapConn = NewUDPConn(udpCtx, wrapConn, &net.UDPAddr{IP: proxyAddress.IP, Port: proxyAddress.Port}, remoteAddr)
-	go func() {
-		tools.Copy(io.Discard, conn)
-		cnl()
-	}()
+	wrapConn = NewUDPConn(conn, wrapConn, &net.UDPAddr{IP: proxyAddress.IP, Port: proxyAddress.Port}, remoteAddr)
 	return
 }
 func (obj *Dialer) writeCmd(conn net.Conn, network string) (err error) {

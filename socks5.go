@@ -2,13 +2,14 @@ package requests
 
 import (
 	"bytes"
-	"context"
 	"encoding/binary"
 	"errors"
 	"io"
 	"math"
 	"net"
 	"strconv"
+
+	"github.com/gospider007/tools"
 )
 
 const MaxUdpPacket int = math.MaxUint16 - 28
@@ -93,23 +94,31 @@ func (a Address) IsZero() bool {
 }
 
 type UDPConn struct {
-	ctx context.Context
 	net.PacketConn
+	tcpConn       net.Conn
 	prefix        []byte
 	bufRead       [MaxUdpPacket]byte
 	bufWrite      [MaxUdpPacket]byte
 	proxyAddress  net.Addr
 	remoteAddress Address
+	tcpCloseFunc  func(error)
 }
 
-func NewUDPConn(ctx context.Context, packConn net.PacketConn, proxyAddress net.Addr, remoteAddress Address) *UDPConn {
-	return &UDPConn{
-		ctx:           ctx,
+func NewUDPConn(tcpConn net.Conn, packConn net.PacketConn, proxyAddress net.Addr, remoteAddress Address) *UDPConn {
+	ucon := &UDPConn{
+		tcpConn:       tcpConn,
 		remoteAddress: remoteAddress,
 		PacketConn:    packConn,
 		proxyAddress:  proxyAddress,
 		prefix:        []byte{0, 0, 0},
 	}
+	go func() {
+		_, err := tools.Copy(io.Discard, tcpConn)
+		if ucon.tcpCloseFunc != nil {
+			ucon.tcpCloseFunc(err)
+		}
+	}()
+	return ucon
 }
 
 func (c *UDPConn) ReadFrom(p []byte) (n int, addr net.Addr, err error) {
@@ -153,6 +162,10 @@ func (c *UDPConn) SetReadBuffer(i int) error {
 func (c *UDPConn) SetWriteBuffer(i int) error {
 	return c.PacketConn.(*net.UDPConn).SetWriteBuffer(i)
 }
-func (c *UDPConn) Context() context.Context {
-	return c.ctx
+func (c *UDPConn) SetTcpCloseFunc(f func(error)) {
+	c.tcpCloseFunc = f
+}
+func (c *UDPConn) Close() error {
+	c.tcpConn.Close()
+	return c.PacketConn.Close()
 }
