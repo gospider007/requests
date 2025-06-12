@@ -257,7 +257,7 @@ func (obj *roundTripper) dial(ctx *Response) (conn *connecotr, err error) {
 	if len(proxys) > 0 {
 		comp := proxys[len(proxys)-1]
 		if comp.Compression != "" {
-			arch, err = NewCompression(comp.Compression, CompressionLevelBest)
+			arch, err = NewCompression(comp.Compression)
 			if err != nil {
 				return nil, err
 			}
@@ -459,7 +459,6 @@ func (obj *roundTripper) RoundTrip(ctx *Response) (err error) {
 			return err
 		}
 		err = obj.poolRoundTrip(task)
-		// log.Print(err)
 		if err == nil || !task.suppertRetry() {
 			break
 		}

@@ -5,15 +5,16 @@ go 1.24.0
 require (
 	github.com/gospider007/bar v0.0.0-20250217074946-47896d8de2ba
 	github.com/gospider007/bs4 v0.0.0-20250413121342-fed910fb00c9
-	github.com/gospider007/gson v0.0.0-20250530002642-aee7c1b761df
+	github.com/gospider007/gson v0.0.0-20250611163241-fa021e9c5531
 	github.com/gospider007/gtls v0.0.0-20250610060422-446e017b9858
-	github.com/gospider007/http2 v0.0.0-20250427082905-4aed0707e580
-	github.com/gospider007/http3 v0.0.0-20250416085920-b642f3f91f47
+	github.com/gospider007/http2 v0.0.0-20250611163252-ee5823d0f04a
+	github.com/gospider007/http3 v0.0.0-20250611163115-77b77de7a3f9
 	github.com/gospider007/ja3 v0.0.0-20250427082442-f7dc5fb959e6
 	github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c
-	github.com/gospider007/tools v0.0.0-20250610060552-2e45eaa25022
+	github.com/gospider007/tools v0.0.0-20250611120310-b7d5692a72bf
 	github.com/gospider007/websocket v0.0.0-20250429035144-b1cf6819063a
 	github.com/klauspost/compress v1.18.0
+	github.com/mholt/archives v0.1.2
 	github.com/quic-go/quic-go v0.52.0
 	github.com/refraction-networking/uquic v0.0.6
 	github.com/refraction-networking/utls v1.7.3
@@ -37,7 +38,6 @@ require (
 	github.com/dsnet/compress v0.0.2-0.20230904184137-39efe44ab707 // indirect
 	github.com/gaukas/clienthellod v0.4.2 // indirect
 	github.com/gaukas/godicttls v0.0.4 // indirect
-	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
@@ -53,7 +53,6 @@ require (
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/libdns/libdns v1.1.0 // indirect
 	github.com/mholt/acmez/v3 v3.1.2 // indirect
-	github.com/mholt/archives v0.1.2 // indirect
 	github.com/miekg/dns v1.1.66 // indirect
 	github.com/minio/minlz v1.0.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
@@ -86,7 +85,5 @@ require (
 	golang.org/x/sync v0.15.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/text v0.26.0 // indirect
-	golang.org/x/time v0.11.0 // indirect
 	golang.org/x/tools v0.34.0 // indirect
-	google.golang.org/protobuf v1.36.6 // indirect
 )

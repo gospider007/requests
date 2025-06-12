@@ -6,9 +6,11 @@ import (
 	"io"
 	"net"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/klauspost/compress/zstd"
+	"github.com/mholt/archives"
 )
 
 type CompressionConn struct {
@@ -41,32 +43,37 @@ const (
 	CompressionLevelBest CompressionLevel = 2
 )
 
-func NewCompression(decode string, leval CompressionLevel) (Compression, error) {
+func NewCompression(decode string) (Compression, error) {
 	var arch Compression
 	switch strings.ToLower(decode) {
-	case "zstd":
-		options := []zstd.EOption{}
-		options2 := []zstd.DOption{}
-		switch leval {
-		case CompressionLevelFast:
-			options = append(options, zstd.WithEncoderLevel(zstd.SpeedFastest), zstd.WithZeroFrames(true), zstd.WithLowerEncoderMem(true))
-			options2 = append(options2, zstd.WithDecoderLowmem(true))
-		case CompressionLevelBest:
-			options = append(options, zstd.WithEncoderLevel(zstd.SpeedBetterCompression))
-		default:
-			options = append(options, zstd.WithEncoderLevel(zstd.SpeedDefault), zstd.WithZeroFrames(true), zstd.WithLowerEncoderMem(true))
-			options2 = append(options2, zstd.WithDecoderLowmem(true))
-		}
+	case "s2":
 		arch = compression{
 			openReader: func(r io.Reader) (io.ReadCloser, error) {
-				decoder, err := zstd.NewReader(r, options2...)
+				return archives.Sz{
+					S2: archives.S2{
+						Compression: archives.S2LevelBetter,
+					},
+				}.OpenReader(r)
+			},
+			openWriter: func(w io.Writer) (io.WriteCloser, error) {
+				return archives.Sz{
+					S2: archives.S2{
+						Compression: archives.S2LevelBetter,
+					},
+				}.OpenWriter(w)
+			},
+		}
+	case "zstd":
+		arch = compression{
+			openReader: func(r io.Reader) (io.ReadCloser, error) {
+				decoder, err := zstd.NewReader(r)
 				if err != nil {
 					return nil, err
 				}
 				return decoder.IOReadCloser(), nil
 			},
 			openWriter: func(w io.Writer) (io.WriteCloser, error) {
-				encoder, err := zstd.NewWriter(w, options...)
+				encoder, err := zstd.NewWriter(nil, zstd.WithEncoderLevel(zstd.SpeedDefault))
 				if err != nil {
 					return nil, err
 				}
@@ -117,10 +124,10 @@ func NewCompressionConn(conn net.Conn, arch Compression) (net.Conn, error) {
 		conn: conn,
 		r:    r,
 		w:    w,
-		// oneFunc: sync.OnceFunc(func() {
-		// 	defer recover()
-		// 	w.Close()
-		// }),
+		oneFunc: sync.OnceFunc(func() {
+			defer recover()
+			w.Close()
+		}),
 	}
 	if f, ok := w.(interface{ Flush() error }); ok {
 		ccon.f = f

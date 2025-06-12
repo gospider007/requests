@@ -169,6 +169,17 @@ func (obj *Dialer) DialProxyContext(ctx *Response, network string, proxyTlsConfi
 			}
 		}
 		packCon, conn, err = obj.verifyProxyToRemote(ctx, conn, proxyTlsConfig, oneProxy, remoteUrl, index == proxyLen-2, true)
+		if err != nil {
+			break
+		}
+	}
+	if err != nil {
+		if conn != nil {
+			conn.Close()
+		}
+		if packCon != nil {
+			packCon.Close()
+		}
 	}
 	return packCon, conn, err
 }
