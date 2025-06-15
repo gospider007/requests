@@ -15,14 +15,6 @@ import (
 )
 
 type reqReadWriteCtx struct {
-	// req *http.Request
-	// res          *http.Response
-	// orderHeaders []interface {
-	// 	Key() string
-	// 	Val() any
-	// }
-	// err error
-
 	writeCtx context.Context
 	writeCnl context.CancelFunc
 
@@ -109,10 +101,6 @@ func (obj *clientConn) send(req *http.Request, orderHeaders []interface {
 	res.Body = pr
 	return
 }
-
-// func (obj *clientConn) CloseCtx() context.Context {
-// 	return obj.closeCtx
-// }
 
 func (obj *clientConn) Close() error {
 	return obj.CloseWithError(nil)
@@ -201,6 +189,7 @@ func (obj *clientConn) Stream() io.ReadWriteCloser {
 		w:   obj.conn,
 	}
 }
+
 func (obj *clientConn) httpWrite(req *http.Request, rawHeaders http.Header, orderHeaders []interface {
 	Key() string
 	Val() any

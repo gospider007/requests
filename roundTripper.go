@@ -206,36 +206,6 @@ func (obj *roundTripper) uhttp3Dial(ctx *Response, remoteAddress Address, proxyA
 	return
 }
 
-// func (obj *roundTripper) thttp3Dial(ctx *Response, remoteAddress Address, proxyAddress ...Address) (conn *connecotr, err error) {
-// 	// var rawNetConn net.Conn
-
-// 	// if len(proxys) > 0 {
-// 	// 	comp := proxys[len(proxys)-1]
-// 	// 	if comp.Compression != "" {
-// 	// 		arch, err = NewCompression(comp.Compression, CompressionLevelBest)
-// 	// 		if err != nil {
-// 	// 			return nil, err
-// 	// 		}
-// 	// 	}
-// 	// 	_, rawNetConn, err = obj.dialer.DialProxyContext(ctx, "tcp", ctx.option.TlsConfig.Clone(), append(proxys, remoteAddress)...)
-// 	// } else {
-// 	// 	var remoteAddress Address
-// 	// 	remoteAddress, err = GetAddressWithUrl(ctx.request.URL)
-// 	// 	if err != nil {
-// 	// 		return nil, err
-// 	// 	}
-// 	// 	rawNetConn, err = obj.dialer.DialContext(ctx, "tcp", remoteAddress)
-// 	// }
-// 	// defer func() {
-// 	// 	if err != nil && rawNetConn != nil {
-// 	// 		rawNetConn.Close()
-// 	// 	}
-// 	// }()
-// 	// if err != nil {
-// 	// 	return nil, err
-// 	// }
-// }
-
 func (obj *roundTripper) dial(ctx *Response) (conn *connecotr, err error) {
 	proxys, err := obj.initProxys(ctx)
 	if err != nil {

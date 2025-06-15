@@ -9,27 +9,27 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang/snappy"
 	"github.com/klauspost/compress/zstd"
-	"github.com/mholt/archives"
 )
 
 type CompressionConn struct {
 	conn    net.Conn
 	oneFunc func()
 	w       io.WriteCloser
-	r       io.ReadCloser
+	r       io.Reader
 	f       interface{ Flush() error }
 }
 type Compression interface {
-	OpenReader(r io.Reader) (io.ReadCloser, error)
+	OpenReader(r io.Reader) (io.Reader, error)
 	OpenWriter(w io.Writer) (io.WriteCloser, error)
 }
 type compression struct {
-	openReader func(r io.Reader) (io.ReadCloser, error)
+	openReader func(r io.Reader) (io.Reader, error)
 	openWriter func(w io.Writer) (io.WriteCloser, error)
 }
 
-func (obj compression) OpenReader(r io.Reader) (io.ReadCloser, error) {
+func (obj compression) OpenReader(r io.Reader) (io.Reader, error) {
 	return obj.openReader(r)
 }
 func (obj compression) OpenWriter(w io.Writer) (io.WriteCloser, error) {
@@ -48,24 +48,16 @@ func NewCompression(decode string) (Compression, error) {
 	switch strings.ToLower(decode) {
 	case "s2":
 		arch = compression{
-			openReader: func(r io.Reader) (io.ReadCloser, error) {
-				return archives.Sz{
-					S2: archives.S2{
-						Compression: archives.S2LevelBetter,
-					},
-				}.OpenReader(r)
+			openReader: func(r io.Reader) (io.Reader, error) {
+				return getSnappyReader(r), nil
 			},
 			openWriter: func(w io.Writer) (io.WriteCloser, error) {
-				return archives.Sz{
-					S2: archives.S2{
-						Compression: archives.S2LevelBetter,
-					},
-				}.OpenWriter(w)
+				return getSnappyWriter(w), nil
 			},
 		}
 	case "zstd":
 		arch = compression{
-			openReader: func(r io.Reader) (io.ReadCloser, error) {
+			openReader: func(r io.Reader) (io.Reader, error) {
 				decoder, err := zstd.NewReader(r)
 				if err != nil {
 					return nil, err
@@ -82,7 +74,7 @@ func NewCompression(decode string) (Compression, error) {
 		}
 	case "flate":
 		arch = compression{
-			openReader: func(r io.Reader) (io.ReadCloser, error) {
+			openReader: func(r io.Reader) (io.Reader, error) {
 				buf := make([]byte, 1)
 				n, err := r.Read(buf)
 				if err != nil {
@@ -119,14 +111,18 @@ func NewCompressionConn(conn net.Conn, arch Compression) (net.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	ccon := &CompressionConn{
 		conn: conn,
 		r:    r,
 		w:    w,
 		oneFunc: sync.OnceFunc(func() {
 			defer recover()
-			w.Close()
+			if snW, ok := w.(*snappy.Writer); ok {
+				putSnappyWriter(snW)
+			}
+			if snR, ok := r.(*snappy.Reader); ok {
+				putSnappyReader(snR)
+			}
 		}),
 	}
 	if f, ok := w.(interface{ Flush() error }); ok {

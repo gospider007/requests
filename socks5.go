@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+	"log"
 	"math"
 	"net"
 	"strconv"
@@ -166,6 +167,7 @@ func (c *UDPConn) SetTcpCloseFunc(f func(error)) {
 	c.tcpCloseFunc = f
 }
 func (c *UDPConn) Close() error {
+	log.Print("正在关闭tcp")
 	c.tcpConn.Close()
 	return c.PacketConn.Close()
 }
