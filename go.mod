@@ -3,16 +3,16 @@ module github.com/gospider007/requests
 go 1.24.0
 
 require (
-	github.com/golang/snappy v0.0.4
+	github.com/golang/snappy v1.0.0
 	github.com/gospider007/bar v0.0.0-20250217074946-47896d8de2ba
 	github.com/gospider007/bs4 v0.0.0-20250413121342-fed910fb00c9
 	github.com/gospider007/gson v0.0.0-20250611163241-fa021e9c5531
 	github.com/gospider007/gtls v0.0.0-20250610060422-446e017b9858
 	github.com/gospider007/http2 v0.0.0-20250611163252-ee5823d0f04a
 	github.com/gospider007/http3 v0.0.0-20250611163115-77b77de7a3f9
-	github.com/gospider007/ja3 v0.0.0-20250427082442-f7dc5fb959e6
+	github.com/gospider007/ja3 v0.0.0-20250615121404-6d7f30dfa700
 	github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c
-	github.com/gospider007/tools v0.0.0-20250611120310-b7d5692a72bf
+	github.com/gospider007/tools v0.0.0-20250615121459-dc3df1b74a16
 	github.com/gospider007/websocket v0.0.0-20250429035144-b1cf6819063a
 	github.com/klauspost/compress v1.18.0
 	github.com/quic-go/quic-go v0.52.0
