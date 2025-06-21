@@ -116,7 +116,6 @@ func NewCompressionConn(conn net.Conn, arch Compression) (net.Conn, error) {
 		r:    r,
 		w:    w,
 		oneFunc: sync.OnceFunc(func() {
-			defer recover()
 			if snW, ok := w.(*snappy.Writer); ok {
 				putSnappyWriter(snW)
 			}

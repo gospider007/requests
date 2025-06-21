@@ -42,6 +42,7 @@ type Log struct {
 // Connection Management Options
 type ClientOption struct {
 	Spec                  string //goSpiderSpec   origin : https://github.com/gospider007/fp
+	OrderHeaders          []string
 	DialOption            DialOption
 	Headers               any                              //default headers
 	Jar                   Jar                              //custom cookies

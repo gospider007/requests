@@ -68,13 +68,14 @@ func (obj *clientConn) send(req *http.Request, orderHeaders []interface {
 		return
 	}
 	rawBody := res.Body
+	isStream := res.StatusCode == 101 || strings.Contains(res.Header.Get("Content-Type"), "text/event-stream")
 	pr, pw := io.Pipe()
 	go func() {
 		var readErr error
 		defer func() {
 			obj.readWriteCtx.readCnl(readErr)
 		}()
-		if res.Body != nil {
+		if rawBody != nil {
 			_, readErr = tools.Copy(pw, rawBody)
 		}
 		if readErr != nil && readErr != io.EOF && readErr != io.ErrUnexpectedEOF {
@@ -88,7 +89,7 @@ func (obj *clientConn) send(req *http.Request, orderHeaders []interface {
 		} else {
 			select {
 			case <-obj.readWriteCtx.writeCtx.Done():
-				if res.StatusCode == 101 || strings.Contains(res.Header.Get("Content-Type"), "text/event-stream") {
+				if isStream {
 					<-obj.ctx.Done()
 					return
 				}

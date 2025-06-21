@@ -114,8 +114,8 @@ github.com/gospider007/gson v0.0.0-20250611163241-fa021e9c5531 h1:dzUU4p3u9eaY1v
 github.com/gospider007/gson v0.0.0-20250611163241-fa021e9c5531/go.mod h1:YO6h5iR/nAFAaZ34JJbkJPuMG2nq2mShKWI7llEWRQA=
 github.com/gospider007/gtls v0.0.0-20250610060422-446e017b9858 h1:Tb+T5YfysjR7Mp22AgrJhMPF28KBgjWkbKj2zi8AyBU=
 github.com/gospider007/gtls v0.0.0-20250610060422-446e017b9858/go.mod h1:SxhMpxq4EYHlUre2EdQ4dKKGZyvj7+1PYZ2LQ9RO0y4=
-github.com/gospider007/http2 v0.0.0-20250611163252-ee5823d0f04a h1:OtgLN7N2rFHxF1HXutXeY33bzNAZ/npzQQ4JlaDZk+8=
-github.com/gospider007/http2 v0.0.0-20250611163252-ee5823d0f04a/go.mod h1:r0XfXyaHynGBLi0o7SN6KxPL0V7q5sX2JVvk2ISDyH0=
+github.com/gospider007/http2 v0.0.0-20250616085600-a49f075f841e h1:fO2FFvKS/BAX7saBk6YKuJD28wD/UZ078fkfBetcB2s=
+github.com/gospider007/http2 v0.0.0-20250616085600-a49f075f841e/go.mod h1:Uz/rGu9oVkQmroHDeDSS1yhWqaLGHj5UbJdvAXu645E=
 github.com/gospider007/http3 v0.0.0-20250611163115-77b77de7a3f9 h1:6OiYSTsyrabSDV0dj5SpAGenpPm8VA20fD/FVzrx/TM=
 github.com/gospider007/http3 v0.0.0-20250611163115-77b77de7a3f9/go.mod h1:FObAlfJRtytX4nI47Ra+j2mKoJlUmxfraqpeOBX2Bi0=
 github.com/gospider007/ja3 v0.0.0-20250615121404-6d7f30dfa700 h1:UsY1LwHsnvZXdXjoExpwKK/bAiqvfowpwUoLUCG25WU=
@@ -283,8 +283,8 @@ golang.org/x/exp v0.0.0-20191030013958-a1ab85dbe136/go.mod h1:JXzH8nQsPlswgeRAPE
 golang.org/x/exp v0.0.0-20191129062945-2f5052295587/go.mod h1:2RIsYlXP63K8oxa1u096TMicItID8zy7Y6sNkU49FU4=
 golang.org/x/exp v0.0.0-20191227195350-da58074b4299/go.mod h1:2RIsYlXP63K8oxa1u096TMicItID8zy7Y6sNkU49FU4=
 golang.org/x/exp v0.0.0-20200207192155-f17229e696bd/go.mod h1:J/WKrq2StrnmMY6+EHIKF9dgMWnmCNThgcyBT1FY9mM=
-golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476 h1:bsqhLWFR6G6xiQcb+JoGqdKdRU6WzPWmK8E0jxTjzo4=
-golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476/go.mod h1:3//PLf8L/X+8b4vuAfHzxeRUl04Adcb341+IGKfnqS8=
+golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b h1:M2rDM6z3Fhozi9O7NWsxAkg/yqS/lQJ6PmkyIV3YP+o=
+golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b/go.mod h1:3//PLf8L/X+8b4vuAfHzxeRUl04Adcb341+IGKfnqS8=
 golang.org/x/image v0.0.0-20190227222117-0694c2d4d067/go.mod h1:kZ7UVZpmo3dzQBMxlp+ypCbDeSB+sBbTgSJuh5dn5js=
 golang.org/x/image v0.0.0-20190802002840-cff245a6509b/go.mod h1:FeLwcggjj3mMvU+oOTbSwawSJRM1uh48EjtB4UJZlP0=
 golang.org/x/image v0.28.0 h1:gdem5JW1OLS4FbkWgLO+7ZeFzYtL3xClb97GaUzYMFE=

@@ -32,6 +32,8 @@ func getSnappyWriter(w io.Writer) *snappy.Writer {
 
 // 释放 snappy.Writer
 func putSnappyWriter(sw *snappy.Writer) {
+	defer recover()
+	// sw.Reset(nil)
 	snappyWriterPool.Put(sw)
 }
 
@@ -44,6 +46,7 @@ func getSnappyReader(r io.Reader) *snappy.Reader {
 
 // 释放 snappy.Reader
 func putSnappyReader(sr *snappy.Reader) {
-	// snappy.Reader 没有 Close 方法，直接放回池
+	defer recover()
+	// sr.Reset(nil)
 	snappyReaderPool.Put(sr)
 }

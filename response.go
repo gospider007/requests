@@ -161,6 +161,9 @@ func (obj *Response) SSE() *SSE {
 
 // return URL redirected address
 func (obj *Response) Location() (*url.URL, error) {
+	if obj.filePath != "" {
+		return nil, nil
+	}
 	u, err := obj.response.Location()
 	if err == http.ErrNoLocation {
 		err = nil
@@ -246,7 +249,7 @@ func (obj *Response) SetContent(val []byte) {
 
 // return content with []byte
 func (obj *Response) Content() []byte {
-	if obj.webSocket == nil && obj.sse == nil {
+	if obj.webSocket == nil && obj.sse == nil && obj.filePath == "" {
 		obj.ReadBody()
 	}
 	return obj.content
