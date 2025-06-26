@@ -9,13 +9,13 @@ require (
 	github.com/gospider007/gson v0.0.0-20250611163241-fa021e9c5531
 	github.com/gospider007/gtls v0.0.0-20250610060422-446e017b9858
 	github.com/gospider007/http2 v0.0.0-20250616085600-a49f075f841e
-	github.com/gospider007/http3 v0.0.0-20250611163115-77b77de7a3f9
+	github.com/gospider007/http3 v0.0.0-20250625134649-90c214b46d1c
 	github.com/gospider007/ja3 v0.0.0-20250615121404-6d7f30dfa700
 	github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c
-	github.com/gospider007/tools v0.0.0-20250615121459-dc3df1b74a16
+	github.com/gospider007/tools v0.0.0-20250623092633-4c8b251d2f4a
 	github.com/gospider007/websocket v0.0.0-20250429035144-b1cf6819063a
 	github.com/klauspost/compress v1.18.0
-	github.com/quic-go/quic-go v0.52.0
+	github.com/quic-go/quic-go v0.53.0
 	github.com/refraction-networking/uquic v0.0.6
 	github.com/refraction-networking/utls v1.7.3
 	github.com/txthinking/socks5 v0.0.0-20230325130024-4230056ae301
@@ -27,7 +27,7 @@ require (
 require (
 	github.com/PuerkitoBio/goquery v1.10.3 // indirect
 	github.com/STARRY-S/zip v0.2.3 // indirect
-	github.com/andybalholm/brotli v1.1.2-0.20250424173009-453214e765f3 // indirect
+	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/bodgit/plumbing v1.3.0 // indirect
 	github.com/bodgit/sevenzip v1.6.1 // indirect
@@ -48,7 +48,7 @@ require (
 	github.com/gospider007/kinds v0.0.0-20250217075226-10f199f7215d // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.11 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/libdns/libdns v1.1.0 // indirect
