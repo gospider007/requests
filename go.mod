@@ -6,14 +6,14 @@ require (
 	github.com/golang/snappy v1.0.0
 	github.com/gospider007/bar v0.0.0-20250217074946-47896d8de2ba
 	github.com/gospider007/bs4 v0.0.0-20250413121342-fed910fb00c9
-	github.com/gospider007/gson v0.0.0-20250611163241-fa021e9c5531
-	github.com/gospider007/gtls v0.0.0-20250610060422-446e017b9858
-	github.com/gospider007/http2 v0.0.0-20250616085600-a49f075f841e
-	github.com/gospider007/http3 v0.0.0-20250625134649-90c214b46d1c
+	github.com/gospider007/gson v0.0.0-20250630120534-cce6e3c6756d
+	github.com/gospider007/gtls v0.0.0-20250630120509-4e99c91661ee
+	github.com/gospider007/http2 v0.0.0-20250630120519-3f59fca61c88
+	github.com/gospider007/http3 v0.0.0-20250630120526-1066890881e5
 	github.com/gospider007/ja3 v0.0.0-20250627013834-1d2966014638
 	github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c
-	github.com/gospider007/tools v0.0.0-20250627013901-3925ccd90381
-	github.com/gospider007/websocket v0.0.0-20250429035144-b1cf6819063a
+	github.com/gospider007/tools v0.0.0-20250630120304-b22c2ddf35b5
+	github.com/gospider007/websocket v0.0.0-20250630120328-1ec26253d082
 	github.com/klauspost/compress v1.18.0
 	github.com/quic-go/quic-go v0.53.0
 	github.com/refraction-networking/uquic v0.0.6

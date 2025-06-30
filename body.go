@@ -165,12 +165,20 @@ func paramsWrite(buf *bytes.Buffer, key string, val any) error {
 	}
 	buf.WriteString(url.QueryEscape(key))
 	buf.WriteByte('=')
-	v, err := gson.Encode(val)
-	if err != nil {
-		return err
+	var err error
+	switch value := val.(type) {
+	case []byte:
+		_, err = buf.Write(value)
+	case string:
+		_, err = buf.WriteString(value)
+	default:
+		v, err2 := gson.Encode(val)
+		if err2 != nil {
+			return err2
+		}
+		_, err = buf.Write(v)
 	}
-	buf.Write(v)
-	return nil
+	return err
 }
 func (obj *OrderData) MarshalJSON() ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
