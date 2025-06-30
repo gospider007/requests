@@ -8,7 +8,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"strings"
 
 	"github.com/gospider007/tools"
 	"golang.org/x/net/http/httpguts"
@@ -21,6 +20,7 @@ type reqReadWriteCtx struct {
 	readCtx context.Context
 	readCnl context.CancelCauseFunc
 }
+
 type clientConn struct {
 	err          error
 	readWriteCtx *reqReadWriteCtx
@@ -68,12 +68,16 @@ func (obj *clientConn) send(req *http.Request, orderHeaders []interface {
 		return
 	}
 	rawBody := res.Body
-	isStream := res.StatusCode == 101 || strings.Contains(res.Header.Get("Content-Type"), "text/event-stream")
+	isStream := res.StatusCode == 101
 	pr, pw := io.Pipe()
 	go func() {
 		var readErr error
 		defer func() {
-			obj.readWriteCtx.readCnl(readErr)
+			if readErr == nil {
+				obj.readWriteCtx.readCnl(errNoErr)
+			} else {
+				obj.readWriteCtx.readCnl(readErr)
+			}
 		}()
 		if rawBody != nil {
 			_, readErr = tools.Copy(pw, rawBody)

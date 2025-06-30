@@ -321,7 +321,7 @@ func (obj *Response) ReadBody() (err error) {
 		} else {
 			obj.Close()
 			if obj.response.StatusCode == 101 && obj.webSocket == nil {
-				obj.webSocket = websocket.NewConn(newFakeConn(obj.body.connStream()), true, obj.Headers().Get("Sec-WebSocket-Extensions"))
+				obj.webSocket = websocket.NewConn(newFakeConn(obj.body.connStream()), func() { obj.CloseConn() }, true, obj.Headers().Get("Sec-WebSocket-Extensions"))
 			}
 		}
 	}()

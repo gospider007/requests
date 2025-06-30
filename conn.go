@@ -70,7 +70,7 @@ func (obj *connecotr) httpReq(task *reqTask, done chan struct{}) (err error) {
 	return
 }
 
-func (obj *connecotr) taskMain(task *reqTask) (err error) {
+func (obj *connPool) taskMain(conn *connecotr, task *reqTask) (err error) {
 	defer func() {
 		if err != nil && task.reqCtx.option.ErrCallBack != nil {
 			task.reqCtx.err = err
@@ -80,12 +80,6 @@ func (obj *connecotr) taskMain(task *reqTask) (err error) {
 				err = err2
 			}
 		}
-		if err != nil {
-			if errors.Is(err, errLastTaskRuning) {
-				task.isNotice = true
-			}
-			obj.CloseWithError(tools.WrapError(err, "taskMain close with error"))
-		}
 		if err == nil {
 			task.cnl(errNoErr)
 		} else {
@@ -93,30 +87,40 @@ func (obj *connecotr) taskMain(task *reqTask) (err error) {
 		}
 		if err == nil && task.reqCtx.response != nil && task.reqCtx.response.Body != nil {
 			select {
-			case <-obj.forceCtx.Done():
-				err = context.Cause(obj.forceCtx)
+			case <-conn.forceCtx.Done():
+				err = context.Cause(conn.forceCtx)
+			case <-task.ctx.Done():
+				err = context.Cause(task.ctx)
 			case <-task.bodyCtx.Done():
-				if context.Cause(task.bodyCtx) != context.Canceled {
+				if context.Cause(task.bodyCtx) != errNoErr {
 					err = context.Cause(task.bodyCtx)
 				}
 			}
 		}
+		if err != nil {
+			if errors.Is(err, errLastTaskRuning) {
+				task.isNotice = true
+			}
+			conn.CloseWithError(tools.WrapError(err, "taskMain close with error"))
+		}
 	}()
 	select {
-	case <-obj.forceCtx.Done(): //force conn close
-		err = context.Cause(obj.forceCtx)
+	case <-conn.forceCtx.Done(): //force conn close
+		err = context.Cause(conn.forceCtx)
 		task.enableRetry = true
 		task.isNotice = true
 		return
 	default:
 	}
 	done := make(chan struct{})
-	go obj.httpReq(task, done)
+	go conn.httpReq(task, done)
 	select {
-	case <-obj.forceCtx.Done(): //force conn close
-		err = tools.WrapError(context.Cause(obj.forceCtx), "taskMain delete ctx error: ")
+	case <-conn.forceCtx.Done(): //force conn close
+		err = tools.WrapError(context.Cause(conn.forceCtx), "taskMain delete ctx error: ")
 	case <-time.After(task.reqCtx.option.ResponseHeaderTimeout):
 		err = errors.New("ResponseHeaderTimeout error: ")
+	case <-task.ctx.Done():
+		err = context.Cause(task.ctx)
 	case <-done:
 		if task.reqCtx.response == nil {
 			err = context.Cause(task.ctx)
@@ -190,7 +194,8 @@ func (obj *connPool) rwMain(done chan struct{}, conn *connecotr) {
 			if task == nil {
 				return
 			}
-			if conn.taskMain(task) != nil {
+			err := obj.taskMain(conn, task)
+			if err != nil {
 				return
 			}
 		}

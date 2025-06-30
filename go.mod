@@ -10,9 +10,9 @@ require (
 	github.com/gospider007/gtls v0.0.0-20250610060422-446e017b9858
 	github.com/gospider007/http2 v0.0.0-20250616085600-a49f075f841e
 	github.com/gospider007/http3 v0.0.0-20250625134649-90c214b46d1c
-	github.com/gospider007/ja3 v0.0.0-20250626122029-44a230c1d67e
+	github.com/gospider007/ja3 v0.0.0-20250627013834-1d2966014638
 	github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c
-	github.com/gospider007/tools v0.0.0-20250623092633-4c8b251d2f4a
+	github.com/gospider007/tools v0.0.0-20250627013901-3925ccd90381
 	github.com/gospider007/websocket v0.0.0-20250429035144-b1cf6819063a
 	github.com/klauspost/compress v1.18.0
 	github.com/quic-go/quic-go v0.53.0
@@ -43,7 +43,7 @@ require (
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.4.0 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
-	github.com/google/pprof v0.0.0-20250607225305-033d6d78b36a // indirect
+	github.com/google/pprof v0.0.0-20250629210550-e611ec304b22 // indirect
 	github.com/gospider007/blog v0.0.0-20250302134054-8afc12c2a9a7 // indirect
 	github.com/gospider007/kinds v0.0.0-20250217075226-10f199f7215d // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
