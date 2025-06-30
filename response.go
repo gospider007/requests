@@ -63,7 +63,7 @@ type Response struct {
 	response     *http.Response
 	webSocket    *websocket.Conn
 	sse          *SSE
-	cnl          context.CancelFunc
+	cnl          context.CancelCauseFunc
 	option       *RequestOption
 	client       *Client
 	encoding     string
@@ -316,10 +316,10 @@ func (obj *Response) ReadBody() (err error) {
 		return nil
 	}
 	defer func() {
+		obj.Close(err)
 		if err != nil {
 			obj.CloseConn()
 		} else {
-			obj.Close()
 			if obj.response.StatusCode == 101 && obj.webSocket == nil {
 				obj.webSocket = websocket.NewConn(newFakeConn(obj.body.connStream()), func() { obj.CloseConn() }, true, obj.Headers().Get("Sec-WebSocket-Extensions"))
 			}
@@ -374,14 +374,22 @@ func (obj *Response) Proxys() []Address {
 
 // close
 func (obj *Response) CloseConn() {
+	obj.Close(errors.New("response close conn"))
 	if obj.body != nil {
 		obj.body.CloseConn()
 	}
 }
 
 // close
-func (obj *Response) Close() {
+func (obj *Response) Close(err error) {
 	if obj.body != nil {
 		obj.body.Close()
+	}
+	if obj.cnl != nil {
+		if err == nil {
+			obj.cnl(errNoErr)
+		} else {
+			obj.cnl(err)
+		}
 	}
 }

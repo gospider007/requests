@@ -90,7 +90,9 @@ func (obj *connPool) taskMain(conn *connecotr, task *reqTask) (err error) {
 			case <-conn.forceCtx.Done():
 				err = context.Cause(conn.forceCtx)
 			case <-task.reqCtx.Context().Done():
-				err = context.Cause(task.reqCtx.Context())
+				if context.Cause(task.reqCtx.Context()) != errNoErr {
+					err = context.Cause(task.reqCtx.Context())
+				}
 			case <-task.bodyCtx.Done():
 				if context.Cause(task.bodyCtx) != errNoErr {
 					err = context.Cause(task.bodyCtx)

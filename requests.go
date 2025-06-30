@@ -142,7 +142,7 @@ func (obj *Client) retryRequest(ctx context.Context, option RequestOption, uhref
 		if err != nil || loc == nil {
 			return
 		}
-		response.Close()
+		response.Close(nil)
 		switch response.StatusCode() {
 		case 307, 308:
 			if response.Option().readOne {
@@ -244,9 +244,10 @@ func (obj *Client) request(ctx *Response) (err error) {
 	}
 	//init ctx,cnl
 	if ctx.option.Timeout > 0 { //超时
-		ctx.ctx, ctx.cnl = context.WithTimeout(ctx.Context(), ctx.option.Timeout)
+		ctx.ctx, _ = context.WithTimeout(ctx.ctx, ctx.option.Timeout)
+		ctx.ctx, ctx.cnl = context.WithCancelCause(ctx.ctx)
 	} else {
-		ctx.ctx, ctx.cnl = context.WithCancel(ctx.Context())
+		ctx.ctx, ctx.cnl = context.WithCancelCause(ctx.Context())
 	}
 	var isWebsocket bool
 	//init Scheme
