@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/textproto"
 	"net/url"
+	"sort"
 
 	"github.com/gospider007/gson"
 	"github.com/gospider007/tools"
@@ -43,6 +44,33 @@ func (obj *OrderData) Keys() []string {
 		keys[i] = value.key
 	}
 	return keys
+}
+func (obj *OrderData) ReorderWithKeys(key ...string) {
+	if len(key) == 0 {
+		return
+	}
+	for i, k := range key {
+		key[i] = textproto.CanonicalMIMEHeaderKey(k)
+	}
+	sort.SliceStable(obj.data, func(x, y int) bool {
+		xIndex := -1
+		yIndex := -1
+		for i, k := range key {
+			if k == obj.data[x].key {
+				xIndex = i
+			}
+			if k == obj.data[y].key {
+				yIndex = i
+			}
+		}
+		if xIndex == -1 {
+			return false
+		}
+		if yIndex == -1 {
+			return true
+		}
+		return xIndex < yIndex
+	})
 }
 
 type orderT struct {

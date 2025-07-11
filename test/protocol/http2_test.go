@@ -9,7 +9,8 @@ import (
 )
 
 func TestHttp2(t *testing.T) {
-	resp, err := requests.Get(context.TODO(), "https://httpbin.org/anything")
+	session, _ := requests.NewClient(nil)
+	resp, err := session.Get(context.TODO(), "https://httpbin.org/anything")
 	if err != nil {
 		t.Error(err)
 	}
@@ -19,21 +20,19 @@ func TestHttp2(t *testing.T) {
 	if resp.Proto() != "HTTP/2.0" {
 		t.Error("resp.Proto!= HTTP/2.0")
 	}
-	log.Print(resp.Text())
 	for range 3 {
-		resp, err = requests.Get(context.TODO(), "https://mp.weixin.qq.com")
+		resp, err = session.Get(context.TODO(), "https://mp.weixin.qq.com")
 		if err != nil {
 			t.Error(err)
 		}
 		if resp.StatusCode() != 200 {
 			t.Error("resp.StatusCode!= 200")
 		}
-		log.Print(resp.Text())
 		if resp.Proto() != "HTTP/2.0" {
 			t.Error("resp.Proto!= HTTP/2.0")
 		}
 	}
-	resp, err = requests.Post(context.TODO(), "https://mp.weixin.qq.com", requests.RequestOption{
+	resp, err = session.Post(context.TODO(), "https://mp.weixin.qq.com", requests.RequestOption{
 		Body: "fasfasfsdfdssdsfasdfasdfsadfsdf对方是大翻身大翻身大翻身对方的身份",
 		ClientOption: requests.ClientOption{
 			ErrCallBack: func(ctx *requests.Response) error {
@@ -45,7 +44,6 @@ func TestHttp2(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	log.Print(resp.Text())
 	if resp.StatusCode() != 200 {
 		t.Error("resp.StatusCode!= 200")
 	}

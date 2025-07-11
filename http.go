@@ -13,198 +13,93 @@ import (
 	"golang.org/x/net/http/httpguts"
 )
 
-type reqReadWriteCtx struct {
-	writeCtx context.Context
-	writeCnl context.CancelFunc
-
-	readCtx context.Context
-	readCnl context.CancelCauseFunc
+type rsp struct {
+	r   *http.Response
+	ctx context.Context
+	err error
 }
 
 type clientConn struct {
-	err          error
-	readWriteCtx *reqReadWriteCtx
-	conn         net.Conn
-	r            *bufio.Reader
-	w            *bufio.Writer
-	closeFunc    func(error)
-	ctx          context.Context
-	cnl          context.CancelCauseFunc
+	conn      net.Conn
+	r         *bufio.Reader
+	w         *bufio.Writer
+	closeFunc func(error)
+	ctx       context.Context
+	cnl       context.CancelCauseFunc
+	rsps      chan *rsp
 }
 
 func NewClientConn(con net.Conn, closeFunc func(error)) *clientConn {
 	ctx, cnl := context.WithCancelCause(context.TODO())
-	reader, writer := io.Pipe()
 	c := &clientConn{
 		ctx:       ctx,
 		cnl:       cnl,
 		conn:      con,
 		closeFunc: closeFunc,
-		r:         bufio.NewReader(reader),
+		rsps:      make(chan *rsp),
+		r:         bufio.NewReader(con),
 		w:         bufio.NewWriter(con),
 	}
-	go func() {
-		_, err := tools.Copy(writer, con)
-		writer.CloseWithError(err)
-		c.CloseWithError(err)
-	}()
+	go c.read()
 	return c
 }
-
-var errLastTaskRuning = errors.New("last task is running")
-var errNoErr = errors.New("no error")
-
-func (obj *clientConn) send(req *http.Request, orderHeaders []interface {
-	Key() string
-	Val() any
-}) (res *http.Response, err error) {
-	go obj.httpWrite(req, req.Header.Clone(), orderHeaders)
-	res, err = http.ReadResponse(obj.r, req)
-	if err == nil && res == nil {
-		err = errors.New("response is nil")
-	}
-	if err != nil {
-		obj.readWriteCtx.readCnl(nil)
-		return
-	}
-	rawBody := res.Body
-	isStream := res.StatusCode == 101
-	pr, pw := io.Pipe()
-	go func() {
-		var readErr error
-		defer func() {
-			if readErr == nil {
-				obj.readWriteCtx.readCnl(errNoErr)
-			} else {
-				obj.readWriteCtx.readCnl(readErr)
-			}
-		}()
-		if rawBody != nil {
-			_, readErr = tools.Copy(pw, rawBody)
+func (obj *clientConn) read() {
+	var err error
+	var res *http.Response
+	defer obj.CloseWithError(err)
+	for {
+		res, err = http.ReadResponse(obj.r, nil)
+		if res == nil && err == nil {
+			err = errors.New("response is nil")
 		}
-		if readErr != nil && readErr != io.EOF && readErr != io.ErrUnexpectedEOF {
-			err = tools.WrapError(readErr, "failed to read response body")
-		} else {
-			readErr = nil
-		}
-		pw.CloseWithError(readErr)
-		if readErr != nil {
-			obj.CloseWithError(readErr)
-		} else {
+		if err != nil {
 			select {
-			case <-obj.readWriteCtx.writeCtx.Done():
-				if isStream {
-					<-obj.ctx.Done()
-					return
-				}
-			default:
-				obj.CloseWithError(tools.WrapError(errLastTaskRuning, "last task not write done with read done"))
+			case obj.rsps <- &rsp{res, nil, err}:
+			case <-obj.ctx.Done():
 				return
 			}
+			return
 		}
-	}()
-	res.Body = pr
-	return
-}
-
-func (obj *clientConn) Close() error {
-	return obj.CloseWithError(nil)
-}
-func (obj *clientConn) CloseWithError(err error) error {
-	if obj.closeFunc != nil {
-		obj.closeFunc(obj.err)
-	}
-	obj.cnl(err)
-	if err == nil {
-		obj.err = tools.WrapError(obj.err, "connecotr closeWithError close")
-	} else {
-		obj.err = tools.WrapError(err, "connecotr closeWithError close")
-	}
-	return obj.conn.Close()
-}
-func (obj *clientConn) initTask() {
-	readCtx, readCnl := context.WithCancelCause(obj.ctx)
-	writeCtx, writeCnl := context.WithCancel(obj.ctx)
-	obj.readWriteCtx = &reqReadWriteCtx{
-		readCtx:  readCtx,
-		readCnl:  readCnl,
-		writeCtx: writeCtx,
-		writeCnl: writeCnl,
-	}
-}
-func (obj *clientConn) DoRequest(req *http.Request, orderHeaders []interface {
-	Key() string
-	Val() any
-}) (*http.Response, context.Context, error) {
-	if obj.readWriteCtx != nil {
-		select {
-		case <-obj.readWriteCtx.writeCtx.Done():
-		case <-obj.ctx.Done():
-			return nil, nil, obj.ctx.Err()
-		default:
-			return nil, obj.readWriteCtx.readCtx, errLastTaskRuning
+		if res.StatusCode == 101 {
+			select {
+			case obj.rsps <- &rsp{res, obj.ctx, err}:
+			case <-obj.ctx.Done():
+				return
+			}
+			<-obj.ctx.Done()
+			return
+		} else if res == nil || res.Body == nil || res.Body == http.NoBody {
+			select {
+			case obj.rsps <- &rsp{res, nil, err}:
+			case <-obj.ctx.Done():
+				return
+			}
+		} else {
+			ctx, cnl := context.WithCancelCause(obj.ctx)
+			res.Body = &clientBody{res.Body, cnl}
+			select {
+			case obj.rsps <- &rsp{res, ctx, err}:
+			case <-obj.ctx.Done():
+				return
+			}
+			<-ctx.Done()
 		}
 		select {
-		case <-obj.readWriteCtx.readCtx.Done():
 		case <-obj.ctx.Done():
-			return nil, nil, obj.ctx.Err()
-		default:
-			return nil, obj.readWriteCtx.readCtx, errLastTaskRuning
-		}
-	} else {
-		select {
-		case <-obj.ctx.Done():
-			return nil, nil, obj.ctx.Err()
+			return
 		default:
 		}
-	}
-	obj.initTask()
-	res, err := obj.send(req, orderHeaders)
-	if err != nil {
-		obj.CloseWithError(err)
-		return nil, nil, err
-	}
-	return res, obj.readWriteCtx.readCtx, err
-}
-
-type websocketConn struct {
-	r   io.Reader
-	w   io.WriteCloser
-	cnl context.CancelCauseFunc
-}
-
-func (obj *websocketConn) Read(p []byte) (n int, err error) {
-	return obj.r.Read(p)
-}
-func (obj *websocketConn) Write(p []byte) (n int, err error) {
-	// i, err := obj.w.Write(p)
-	// log.Print(err, "  write error  ", i, p)
-	// return i, err
-	return obj.w.Write(p)
-}
-func (obj *websocketConn) Close() error {
-	obj.cnl(nil)
-	return obj.w.Close()
-}
-
-func (obj *clientConn) Stream() io.ReadWriteCloser {
-	return &websocketConn{
-		cnl: obj.cnl,
-		r:   obj.r,
-		w:   obj.conn,
 	}
 }
 
 func (obj *clientConn) httpWrite(req *http.Request, rawHeaders http.Header, orderHeaders []interface {
 	Key() string
 	Val() any
-}) {
-	var err error
+}) (err error) {
 	defer func() {
 		if err != nil {
 			obj.CloseWithError(tools.WrapError(err, "failed to send request body"))
 		}
-		obj.readWriteCtx.writeCnl()
 	}()
 	host := req.Host
 	if host == "" {
@@ -261,6 +156,79 @@ func (obj *clientConn) httpWrite(req *http.Request, rawHeaders http.Header, orde
 		}
 	}
 	err = obj.w.Flush()
+	return
+}
+
+type clientBody struct {
+	r   io.Reader
+	cnl context.CancelCauseFunc
+}
+
+func (obj *clientBody) Read(p []byte) (n int, err error) {
+	return obj.r.Read(p)
+}
+func (obj *clientBody) Close() error {
+	return obj.CloseWithError(nil)
+}
+func (obj *clientBody) CloseWithError(err error) error {
+	obj.cnl(err)
+	return nil
+}
+
+func (obj *clientConn) DoRequest(req *http.Request, orderHeaders []interface {
+	Key() string
+	Val() any
+}) (res *http.Response, ctx context.Context, err error) {
+	defer func() {
+		if err != nil {
+			obj.CloseWithError(tools.WrapError(err, "failed to send request"))
+		}
+	}()
+	var writeErr error
+	writeDone := make(chan struct{})
+	go func() {
+		writeErr = obj.httpWrite(req, req.Header.Clone(), orderHeaders)
+		close(writeDone)
+	}()
+	select {
+	case <-writeDone:
+		if writeErr != nil {
+			return nil, nil, writeErr
+		}
+		select {
+		case <-req.Context().Done():
+			return nil, nil, req.Context().Err()
+		case <-obj.ctx.Done():
+			return nil, nil, obj.ctx.Err()
+		case rsp := <-obj.rsps:
+			return rsp.r, rsp.ctx, rsp.err
+		}
+	case <-req.Context().Done():
+		return nil, nil, req.Context().Err()
+	case <-obj.ctx.Done():
+		return nil, nil, obj.ctx.Err()
+	case rsp := <-obj.rsps:
+		return rsp.r, rsp.ctx, rsp.err
+	}
+}
+
+func (obj *clientConn) Close() error {
+	return obj.CloseWithError(nil)
+}
+func (obj *clientConn) CloseWithError(err error) error {
+	if obj.closeFunc != nil {
+		obj.closeFunc(err)
+	}
+	obj.cnl(err)
+	return obj.conn.Close()
+}
+
+func (obj *clientConn) Stream() io.ReadWriteCloser {
+	return &websocketConn{
+		cnl: obj.cnl,
+		r:   obj.r,
+		w:   obj.conn,
+	}
 }
 
 func newChunkedWriter(w *bufio.Writer) io.WriteCloser {
@@ -290,4 +258,24 @@ func (cw *chunkedWriter) Write(data []byte) (n int, err error) {
 func (cw *chunkedWriter) Close() error {
 	_, err := io.WriteString(cw.w, "0\r\n\r\n")
 	return err
+}
+
+type websocketConn struct {
+	r   io.Reader
+	w   io.WriteCloser
+	cnl context.CancelCauseFunc
+}
+
+func (obj *websocketConn) Read(p []byte) (n int, err error) {
+	return obj.r.Read(p)
+}
+func (obj *websocketConn) Write(p []byte) (n int, err error) {
+	// i, err := obj.w.Write(p)
+	// log.Print(err, "  write error  ", i, p)
+	// return i, err
+	return obj.w.Write(p)
+}
+func (obj *websocketConn) Close() error {
+	obj.cnl(nil)
+	return obj.w.Close()
 }

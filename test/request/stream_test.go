@@ -1,39 +1,51 @@
 package main
 
 import (
-	"log"
+	"io"
 	"testing"
-	"time"
 
 	"github.com/gospider007/requests"
 )
 
 func TestStream(t *testing.T) {
-	resp, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{
-		Stream: true,
-		ClientOption: requests.ClientOption{
-			Logger: func(l requests.Log) {
-				log.Print(l)
-			},
-		},
-	})
+	resp, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{Stream: true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	// con, err := io.ReadAll(resp.Body())
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
-	// resp.ReadBody()
-	// bBody := bytes.NewBuffer(nil)
-	// io.Copy(bBody, resp.Body())
-
-	// t.Log(string(con))
-	// t.Log(resp.Text())
-	time.Sleep(2 * time.Second)
-	resp.CloseConn()
-	time.Sleep(2 * time.Second)
 	if resp.StatusCode() != 200 {
 		t.Fatal("resp.StatusCode()!= 200")
+	}
+	body := resp.Body()
+	defer body.Close()
+	con, err := io.ReadAll(body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(string(con)) == 0 {
+		t.Fatal("con is empty")
+	}
+}
+func TestStreamWithConn(t *testing.T) {
+	for i := 0; i < 2; i++ {
+		resp, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{Stream: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp.StatusCode() != 200 {
+			t.Fatal("resp.StatusCode()!= 200")
+		}
+		body := resp.Body()
+		defer body.Close()
+		con, err := io.ReadAll(body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(string(con)) == 0 {
+			t.Fatal("con is empty")
+		}
+		body.Close()
+		if i == 1 && resp.IsNewConn() {
+			t.Fatal("con is new")
+		}
 	}
 }

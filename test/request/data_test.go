@@ -29,7 +29,9 @@ func TestSendDataWithMap(t *testing.T) {
 	}
 }
 func TestSendDataWithString(t *testing.T) {
-	dataBody := `{"name":"test"}`
+	dataBody := map[string]string{
+		"name": "test",
+	}
 	resp, err := requests.Post(nil, "https://httpbin.org/anything", requests.RequestOption{
 		Data: dataBody,
 	})
@@ -43,6 +45,7 @@ func TestSendDataWithString(t *testing.T) {
 	if jsonData.Get("headers.Content-Type").String() != "application/x-www-form-urlencoded" {
 		t.Fatal("json data error")
 	}
+	// log.Print(jsonData)
 	if jsonData.Get("form.name").String() != "test" {
 		t.Fatal("json data error")
 	}

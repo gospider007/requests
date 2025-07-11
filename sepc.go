@@ -113,26 +113,7 @@ func (obj *RequestOption) initSpec() error {
 	}
 	obj.gospiderSpec = gospiderSpec
 	if obj.orderHeaders == nil {
-		if len(obj.OrderHeaders) > 0 {
-			obj.orderHeaders = NewOrderData()
-			var ods [][2]string
-			if gospiderSpec.H1Spec != nil {
-				ods = gospiderSpec.H1Spec.OrderHeaders
-			} else if gospiderSpec.H2Spec != nil {
-				ods = gospiderSpec.H2Spec.OrderHeaders
-			}
-			for _, key := range obj.OrderHeaders {
-				key = textproto.CanonicalMIMEHeaderKey(key)
-				var val any
-				for _, kv := range ods {
-					if key == kv[0] && slices.Contains(tools.DefaultHeaderKeys, kv[0]) {
-						val = kv[1]
-						break
-					}
-				}
-				obj.orderHeaders.Add(key, val)
-			}
-		} else if gospiderSpec.H1Spec != nil {
+		if gospiderSpec.H1Spec != nil {
 			obj.orderHeaders = NewOrderData()
 			for _, kv := range gospiderSpec.H1Spec.OrderHeaders {
 				if slices.Contains(tools.DefaultHeaderKeys, kv[0]) {
@@ -151,7 +132,9 @@ func (obj *RequestOption) initSpec() error {
 					obj.orderHeaders.Add(key, nil)
 				}
 			}
-
+		}
+		if len(obj.OrderHeaders) > 0 && obj.orderHeaders != nil {
+			obj.orderHeaders.ReorderWithKeys(obj.OrderHeaders...)
 		}
 	}
 	return nil

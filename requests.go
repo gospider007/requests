@@ -135,7 +135,10 @@ func (obj *Client) retryRequest(ctx context.Context, option RequestOption, uhref
 		default:
 		}
 		err = obj.request(response)
-		if err != nil || response.Option().MaxRedirect < 0 || (response.Option().MaxRedirect > 0 && redirectNum > response.Option().MaxRedirect) {
+		if err != nil || err == ErrUseLastResponse || response.Option().MaxRedirect < 0 || (response.Option().MaxRedirect > 0 && redirectNum > response.Option().MaxRedirect) {
+			if err == ErrUseLastResponse {
+				err = nil
+			}
 			return
 		}
 		loc, err = response.Location()
@@ -205,15 +208,19 @@ func (obj *Client) request(ctx *Response) (err error) {
 			return
 		}
 		//read body
-		if err == nil && ctx.sse == nil && !ctx.option.Stream {
-			err = ctx.ReadBody()
+		isReadBody := (err == nil || err == ErrUseLastResponse) && ctx.sse == nil && !ctx.option.Stream
+		if isReadBody {
+			if err2 := ctx.ReadBody(); err2 != nil {
+				err = err2
+			}
 		}
 		//result callback
-
-		if err == nil && ctx.option.ResultCallBack != nil {
-			err = ctx.option.ResultCallBack(ctx)
+		if (err == nil || err == ErrUseLastResponse) && ctx.option.ResultCallBack != nil {
+			if err2 := ctx.option.ResultCallBack(ctx); err2 != nil {
+				err = err2
+			}
 		}
-		if err != nil { //err callback, must close body
+		if err != nil && err != ErrUseLastResponse { //err callback, must close body
 			ctx.CloseConn()
 			if ctx.option.ErrCallBack != nil {
 				ctx.err = err
@@ -347,12 +354,12 @@ func (obj *Client) request(ctx *Response) (err error) {
 		err = errors.New("send req response is nil")
 		return
 	}
-	if ctx.Body() != nil {
-		ctx.body = ctx.Body().(*wrapBody)
+	if ctx.response.Body != nil {
+		ctx.body = ctx.response.Body.(*wrapBody)
 	}
-	if encoding := ctx.ContentEncoding(); encoding != "" {
+	if encoding := ctx.ContentEncoding(); encoding != "" && ctx.response.Body != nil {
 		var unCompressionBody io.ReadCloser
-		unCompressionBody, err = tools.CompressionHeadersDecode(ctx.Context(), ctx.Body(), encoding)
+		unCompressionBody, err = tools.CompressionHeadersDecode(ctx.Context(), ctx.response.Body, encoding)
 		if err != nil {
 			if err != io.ErrUnexpectedEOF && err != io.EOF {
 				return

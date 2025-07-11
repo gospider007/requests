@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
-	"log"
 	"math"
 	"net"
 	"strconv"
@@ -158,16 +157,26 @@ func (c *UDPConn) WriteTo(p []byte, addr net.Addr) (n int, err error) {
 }
 
 func (c *UDPConn) SetReadBuffer(i int) error {
-	return c.PacketConn.(*net.UDPConn).SetReadBuffer(i)
+	if f, ok := c.PacketConn.(interface {
+		SetReadBuffer(int) error
+	}); ok {
+		return f.SetReadBuffer(i)
+	}
+	return nil
 }
 func (c *UDPConn) SetWriteBuffer(i int) error {
-	return c.PacketConn.(*net.UDPConn).SetWriteBuffer(i)
+	if f, ok := c.PacketConn.(interface {
+		SetWriteBuffer(int) error
+	}); ok {
+		return f.SetWriteBuffer(i)
+	}
+	return nil
 }
+
 func (c *UDPConn) SetTcpCloseFunc(f func(error)) {
 	c.tcpCloseFunc = f
 }
 func (c *UDPConn) Close() error {
-	log.Print("正在关闭tcp")
 	c.tcpConn.Close()
 	return c.PacketConn.Close()
 }

@@ -4,23 +4,25 @@ go 1.24.0
 
 require (
 	github.com/golang/snappy v1.0.0
+	github.com/gorilla/websocket v1.5.3
 	github.com/gospider007/bar v0.0.0-20250217074946-47896d8de2ba
 	github.com/gospider007/bs4 v0.0.0-20250413121342-fed910fb00c9
 	github.com/gospider007/gson v0.0.0-20250630120534-cce6e3c6756d
 	github.com/gospider007/gtls v0.0.0-20250630120509-4e99c91661ee
-	github.com/gospider007/http2 v0.0.0-20250630120519-3f59fca61c88
+	github.com/gospider007/http2 v0.0.0-20250711035043-daabc8e205b3
 	github.com/gospider007/http3 v0.0.0-20250630120526-1066890881e5
 	github.com/gospider007/ja3 v0.0.0-20250627013834-1d2966014638
 	github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c
 	github.com/gospider007/tools v0.0.0-20250630120304-b22c2ddf35b5
 	github.com/gospider007/websocket v0.0.0-20250630120328-1ec26253d082
 	github.com/klauspost/compress v1.18.0
+	github.com/minio/minlz v1.0.1
 	github.com/quic-go/quic-go v0.53.0
 	github.com/refraction-networking/uquic v0.0.6
 	github.com/refraction-networking/utls v1.7.4-0.20250621163342-5abccec539e6
 	github.com/txthinking/socks5 v0.0.0-20230325130024-4230056ae301
-	golang.org/x/crypto v0.39.0
-	golang.org/x/net v0.41.0
+	golang.org/x/crypto v0.40.0
+	golang.org/x/net v0.42.0
 	gopkg.in/errgo.v2 v2.1.0
 )
 
@@ -43,7 +45,7 @@ require (
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.4.0 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
-	github.com/google/pprof v0.0.0-20250629210550-e611ec304b22 // indirect
+	github.com/google/pprof v0.0.0-20250630185457-6e76a2b096b5 // indirect
 	github.com/gospider007/blog v0.0.0-20250302134054-8afc12c2a9a7 // indirect
 	github.com/gospider007/kinds v0.0.0-20250217075226-10f199f7215d // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
@@ -54,9 +56,8 @@ require (
 	github.com/libdns/libdns v1.1.0 // indirect
 	github.com/mholt/acmez/v3 v3.1.2 // indirect
 	github.com/mholt/archives v0.1.3 // indirect
-	github.com/miekg/dns v1.1.66 // indirect
+	github.com/miekg/dns v1.1.67 // indirect
 	github.com/mikelolasagasti/xz v1.0.1 // indirect
-	github.com/minio/minlz v1.0.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/nwaples/rardecode/v2 v2.1.1 // indirect
@@ -81,10 +82,10 @@ require (
 	go.uber.org/zap/exp v0.3.0 // indirect
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b // indirect
-	golang.org/x/image v0.28.0 // indirect
-	golang.org/x/mod v0.25.0 // indirect
-	golang.org/x/sync v0.15.0 // indirect
-	golang.org/x/sys v0.33.0 // indirect
-	golang.org/x/text v0.26.0 // indirect
+	golang.org/x/image v0.29.0 // indirect
+	golang.org/x/mod v0.26.0 // indirect
+	golang.org/x/sync v0.16.0 // indirect
+	golang.org/x/sys v0.34.0 // indirect
+	golang.org/x/text v0.27.0 // indirect
 	golang.org/x/tools v0.34.0 // indirect
 )

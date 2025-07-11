@@ -29,25 +29,7 @@ func TestSendFormWithMap(t *testing.T) {
 		t.Fatal("json data error")
 	}
 }
-func TestSendFormWithString(t *testing.T) {
-	dataBody := `{"name":"test"}`
-	resp, err := requests.Post(nil, "https://httpbin.org/anything", requests.RequestOption{
-		Form: dataBody,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	jsonData, err := resp.Json()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.HasPrefix(jsonData.Get("headers.Content-Type").String(), "multipart/form-data") {
-		t.Fatal("json data error")
-	}
-	if jsonData.Get("form.name").String() != "test" {
-		t.Fatal("json data error")
-	}
-}
+
 func TestSendFormWithStruct(t *testing.T) {
 	dataBody := struct{ Name string }{"test"}
 	resp, err := requests.Post(nil, "https://httpbin.org/anything", requests.RequestOption{

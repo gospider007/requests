@@ -81,28 +81,35 @@ func (obj *connPool) taskMain(conn *connecotr, task *reqTask) (err error) {
 			}
 		}
 		if err == nil {
-			task.cnl(errNoErr)
+			task.cnl(tools.ErrNoErr)
 		} else {
 			task.cnl(err)
 		}
-		if err == nil && task.reqCtx.response != nil && task.reqCtx.response.Body != nil {
+		if err == nil && task.reqCtx.response != nil && task.reqCtx.response.Body != nil && task.bodyCtx != nil {
 			select {
 			case <-conn.forceCtx.Done():
 				err = context.Cause(conn.forceCtx)
 			case <-task.reqCtx.Context().Done():
-				if context.Cause(task.reqCtx.Context()) != errNoErr {
+				if context.Cause(task.reqCtx.Context()) != tools.ErrNoErr {
 					err = context.Cause(task.reqCtx.Context())
 				}
+				if err == nil && task.reqCtx.response.StatusCode == 101 {
+					select {
+					case <-conn.forceCtx.Done():
+						err = context.Cause(conn.forceCtx)
+					case <-task.bodyCtx.Done():
+						if context.Cause(task.bodyCtx) != tools.ErrNoErr {
+							err = context.Cause(task.bodyCtx)
+						}
+					}
+				}
 			case <-task.bodyCtx.Done():
-				if context.Cause(task.bodyCtx) != errNoErr {
+				if context.Cause(task.bodyCtx) != tools.ErrNoErr {
 					err = context.Cause(task.bodyCtx)
 				}
 			}
 		}
 		if err != nil {
-			if errors.Is(err, errLastTaskRuning) {
-				task.isNotice = true
-			}
 			conn.CloseWithError(tools.WrapError(err, "taskMain close with error"))
 		}
 	}()

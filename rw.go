@@ -3,6 +3,9 @@ package requests
 import (
 	"errors"
 	"io"
+	"net/http"
+
+	"github.com/gospider007/tools"
 )
 
 type wrapBody struct {
@@ -20,14 +23,20 @@ func (obj *wrapBody) Proxys() []Address {
 	return obj.conn.proxys
 }
 
-func (obj *wrapBody) CloseWithError(err error) error {
-	if err != nil {
-		obj.conn.CloseWithError(err)
-	}
-	return obj.rawBody.Close() //reuse conn
-}
 func (obj *wrapBody) Close() error {
 	return obj.CloseWithError(nil)
+}
+
+func (obj *wrapBody) CloseWithError(err error) error {
+	if err != nil && err != tools.ErrNoErr {
+		obj.conn.CloseWithError(err)
+	}
+	if obj.rawBody == nil || obj.rawBody == http.NoBody {
+		return nil
+	}
+	return obj.rawBody.(interface {
+		CloseWithError(error) error
+	}).CloseWithError(err)
 }
 
 // safe close conn

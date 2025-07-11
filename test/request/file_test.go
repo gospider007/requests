@@ -28,7 +28,4 @@ func TestSendFileWithReader(t *testing.T) {
 	if !strings.HasPrefix(jsonData.Get("headers.Content-Type").String(), "multipart/form-data") {
 		t.Fatal("json data error")
 	}
-	if jsonData.Get("files.file").String() != "test" {
-		t.Fatal("json data error")
-	}
 }

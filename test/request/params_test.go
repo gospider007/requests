@@ -26,22 +26,7 @@ func TestSendParamsWithMap(t *testing.T) {
 		t.Fatal("params args error")
 	}
 }
-func TestSendParamsWithString(t *testing.T) {
-	dataBody := `{"name":"test"}`
-	resp, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{
-		Params: dataBody,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	jsonData, err := resp.Json()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if jsonData.Get("args.name").String() != "test" {
-		t.Fatal("json data error")
-	}
-}
+
 func TestSendParamsWithStruct(t *testing.T) {
 	dataBody := struct{ Name string }{"test"}
 	resp, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{

@@ -148,7 +148,7 @@ func (obj *roundTripper) ghttp3Dial(ctx *Response, remoteAddress Address, proxyA
 	}
 
 	conn = obj.newConnecotr()
-	conn.Conn, err = http3.NewClient(netConn, udpConn, func() {
+	conn.Conn = http3.NewClient(netConn, udpConn, func() {
 		conn.forceCnl(errors.New("http3 client close"))
 	})
 	if ct, ok := udpConn.(interface {
@@ -193,7 +193,7 @@ func (obj *roundTripper) uhttp3Dial(ctx *Response, remoteAddress Address, proxyA
 		return nil, err
 	}
 	conn = obj.newConnecotr()
-	conn.Conn, err = http3.NewClient(netConn, udpConn, func() {
+	conn.Conn = http3.NewClient(netConn, udpConn, func() {
 		conn.forceCnl(errors.New("http3 client close"))
 	})
 	if ct, ok := udpConn.(interface {
@@ -353,7 +353,7 @@ func (obj *roundTripper) poolRoundTrip(task *reqTask) error {
 	case connPool.tasks <- task:
 		<-task.ctx.Done()
 		err := context.Cause(task.ctx)
-		if errors.Is(err, errNoErr) {
+		if errors.Is(err, tools.ErrNoErr) {
 			err = nil
 		}
 		return err
