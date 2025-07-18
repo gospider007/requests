@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gospider007/gtls"
+	"github.com/gospider007/http1"
 	"github.com/gospider007/ja3"
 	"github.com/gospider007/tools"
 	utls "github.com/refraction-networking/utls"
@@ -547,7 +548,7 @@ func (obj *Dialer) clientVerifyHttps(ctx context.Context, conn net.Conn, proxyAd
 	}
 	connectReq.Header = hdr
 	connectReq.Host = remoteAddress.Host
-	if err = connectReq.Write(conn); err != nil {
+	if err = http1.HttpWrite(connectReq, bufio.NewWriter(conn), connectReq.Header.Clone(), nil); err != nil {
 		return err
 	}
 	resp, err := http.ReadResponse(bufio.NewReader(conn), connectReq)

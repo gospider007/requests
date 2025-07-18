@@ -7,15 +7,15 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/gospider007/bar v0.0.0-20250217074946-47896d8de2ba
 	github.com/gospider007/bs4 v0.0.0-20250413121342-fed910fb00c9
-	github.com/gospider007/gson v0.0.0-20250630120534-cce6e3c6756d
-	github.com/gospider007/gtls v0.0.0-20250630120509-4e99c91661ee
-	github.com/gospider007/http1 v0.0.0-20250717080213-6dc69bcb2a33
-	github.com/gospider007/http2 v0.0.0-20250711035043-daabc8e205b3
-	github.com/gospider007/http3 v0.0.0-20250711035127-be7539ebc56a
+	github.com/gospider007/gson v0.0.0-20250718004537-ff15820964bd
+	github.com/gospider007/gtls v0.0.0-20250718003831-90cdeb97a23f
+	github.com/gospider007/http1 v0.0.0-20250718004641-26f982c140cf
+	github.com/gospider007/http2 v0.0.0-20250718004700-7af5b064e352
+	github.com/gospider007/http3 v0.0.0-20250718004757-02ceb5fa2d6e
 	github.com/gospider007/ja3 v0.0.0-20250627013834-1d2966014638
 	github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c
-	github.com/gospider007/tools v0.0.0-20250711035142-241d6041da43
-	github.com/gospider007/websocket v0.0.0-20250630120328-1ec26253d082
+	github.com/gospider007/tools v0.0.0-20250718003809-7c62cd0ee920
+	github.com/gospider007/websocket v0.0.0-20250718010025-4c017acfd478
 	github.com/klauspost/compress v1.18.0
 	github.com/minio/minlz v1.0.1
 	github.com/quic-go/quic-go v0.53.0

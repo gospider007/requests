@@ -63,7 +63,7 @@ type Response struct {
 	response     *http.Response
 	webSocket    *websocket.Conn
 	sse          *SSE
-	cnl          context.CancelCauseFunc
+	cnl          context.CancelFunc
 	option       *RequestOption
 	client       *Client
 	encoding     string
@@ -320,22 +320,22 @@ func (obj *Response) Proxys() []Address {
 
 // close
 func (obj *Response) CloseConn() {
-	obj.Close(errors.New("response close conn"))
 	if obj.body != nil {
+		obj.body.CloseWithError(errors.New("force close conn"))
 		obj.body.CloseConn()
 	}
+	obj.cnl()
 }
 
 // close
-func (obj *Response) Close(err error) {
+func (obj *Response) CloseBody(err error) {
 	if err == nil {
 		err = tools.ErrNoErr
+	} else {
+		obj.cnl()
 	}
 	if obj.body != nil {
 		obj.body.CloseWithError(err)
-	}
-	if obj.cnl != nil {
-		obj.cnl(err)
 	}
 }
 
@@ -424,11 +424,11 @@ func (obj *body) CloseWithError(err error) error {
 		if obj.ctx.StatusCode() == 101 && obj.ctx.webSocket == nil {
 			obj.ctx.webSocket = websocket.NewConn(newFakeConn(obj.ctx.body.connStream()), func() { obj.ctx.CloseConn() }, true, obj.ctx.Headers().Get("Sec-WebSocket-Extensions"))
 		}
-		obj.ctx.Close(nil)
+		obj.ctx.CloseBody(nil)
 		return nil
 	} else {
 		obj.err = err
-		obj.ctx.Close(err)
+		obj.ctx.CloseBody(err)
 		obj.ctx.CloseConn()
 		return err
 	}
