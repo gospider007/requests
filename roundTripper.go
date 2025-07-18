@@ -11,6 +11,7 @@ import (
 
 	"net/http"
 
+	"github.com/gospider007/http1"
 	"github.com/gospider007/http2"
 	"github.com/gospider007/http3"
 	"github.com/gospider007/ja3"
@@ -292,7 +293,7 @@ func (obj *roundTripper) dialConnecotr(ctx *Response, conne *connecotr, h2 bool)
 			return err
 		}
 	} else {
-		conne.Conn = NewClientConn(conne.c, func(err error) {
+		conne.Conn = http1.NewClientConn(conne.c, func(err error) {
 			conne.forceCnl(tools.WrapError(err, "http1 client close"))
 		})
 	}
