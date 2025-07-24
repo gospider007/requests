@@ -9,9 +9,9 @@ require (
 	github.com/gospider007/bs4 v0.0.0-20250413121342-fed910fb00c9
 	github.com/gospider007/gson v0.0.0-20250718004537-ff15820964bd
 	github.com/gospider007/gtls v0.0.0-20250718003831-90cdeb97a23f
-	github.com/gospider007/http1 v0.0.0-20250718091014-9ea72dfb1370
+	github.com/gospider007/http1 v0.0.0-20250724084910-07394a59f833
 	github.com/gospider007/http2 v0.0.0-20250718004700-7af5b064e352
-	github.com/gospider007/http3 v0.0.0-20250718004757-02ceb5fa2d6e
+	github.com/gospider007/http3 v0.0.0-20250724084942-542d8ab5f9af
 	github.com/gospider007/ja3 v0.0.0-20250627013834-1d2966014638
 	github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c
 	github.com/gospider007/tools v0.0.0-20250718003809-7c62cd0ee920
@@ -62,7 +62,6 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/nwaples/rardecode/v2 v2.1.1 // indirect
 	github.com/onsi/ginkgo/v2 v2.23.4 // indirect
-	github.com/onsi/gomega v1.37.0 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/quic-go/qpack v0.5.1 // indirect
