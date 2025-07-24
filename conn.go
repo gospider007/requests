@@ -3,31 +3,19 @@ package requests
 import (
 	"context"
 	"errors"
-	"io"
-	"iter"
 	"net"
-	"net/http"
-	"sync"
-	"sync/atomic"
 	"time"
 
+	"github.com/gospider007/http1"
 	"github.com/gospider007/tools"
 )
 
-var maxRetryCount = 10
+var maxRetryCount = 5
 
-type Conn interface {
-	CloseWithError(err error) error
-	DoRequest(*http.Request, []interface {
-		Key() string
-		Val() any
-	}) (*http.Response, context.Context, error)
-	Stream() io.ReadWriteCloser
-}
 type connecotr struct {
 	forceCtx context.Context //force close
 	forceCnl context.CancelCauseFunc
-	Conn     Conn
+	Conn     http1.Conn
 	c        net.Conn
 	proxys   []Address
 }
@@ -48,11 +36,7 @@ func (obj *connecotr) CloseWithError(err error) error {
 
 func (obj *connecotr) wrapBody(task *reqTask) {
 	body := new(wrapBody)
-	if task.reqCtx.response.Body == nil {
-		task.reqCtx.response.Body = http.NoBody
-	}
-	rawBody := task.reqCtx.response.Body
-	body.rawBody = rawBody
+	body.rawBody = task.reqCtx.response.Body.(*http1.ClientBody)
 	body.conn = obj
 	task.reqCtx.response.Body = body
 	task.reqCtx.response.Request = task.reqCtx.request
@@ -60,17 +44,18 @@ func (obj *connecotr) wrapBody(task *reqTask) {
 
 func (obj *connecotr) httpReq(task *reqTask, done chan struct{}) (err error) {
 	defer close(done)
-	task.reqCtx.response, task.bodyCtx, err = obj.Conn.DoRequest(task.reqCtx.request, task.reqCtx.option.orderHeaders.Data())
-	if task.reqCtx.response != nil {
-		obj.wrapBody(task)
+	response, bodyCtx, derr := obj.Conn.DoRequest(task.reqCtx.request, &http1.Option{OrderHeaders: task.reqCtx.option.orderHeaders.Data()})
+	if derr != nil {
+		err = tools.WrapError(derr, "roundTrip error")
+		return
 	}
-	if err != nil {
-		err = tools.WrapError(err, "roundTrip error")
-	}
+	task.reqCtx.response = response
+	task.bodyCtx = bodyCtx
+	obj.wrapBody(task)
 	return
 }
 
-func (obj *connPool) taskMain(conn *connecotr, task *reqTask) (err error) {
+func (obj *connecotr) taskMain(task *reqTask) (err error) {
 	defer func() {
 		if err != nil && task.reqCtx.option.ErrCallBack != nil {
 			task.reqCtx.err = err
@@ -87,16 +72,16 @@ func (obj *connPool) taskMain(conn *connecotr, task *reqTask) (err error) {
 		}
 		if err == nil && task.reqCtx.response != nil && task.reqCtx.response.Body != nil && task.bodyCtx != nil {
 			select {
-			case <-conn.forceCtx.Done():
-				err = context.Cause(conn.forceCtx)
+			case <-obj.forceCtx.Done():
+				err = context.Cause(obj.forceCtx)
 			case <-task.reqCtx.Context().Done():
 				if context.Cause(task.reqCtx.Context()) != tools.ErrNoErr {
 					err = context.Cause(task.reqCtx.Context())
 				}
 				if err == nil && task.reqCtx.response.StatusCode == 101 {
 					select {
-					case <-conn.forceCtx.Done():
-						err = context.Cause(conn.forceCtx)
+					case <-obj.forceCtx.Done():
+						err = context.Cause(obj.forceCtx)
 					case <-task.bodyCtx.Done():
 						if context.Cause(task.bodyCtx) != tools.ErrNoErr {
 							err = context.Cause(task.bodyCtx)
@@ -110,28 +95,30 @@ func (obj *connPool) taskMain(conn *connecotr, task *reqTask) (err error) {
 			}
 		}
 		if err != nil {
-			conn.CloseWithError(tools.WrapError(err, "taskMain close with error"))
+			obj.CloseWithError(tools.WrapError(err, "taskMain close with error"))
 		}
 	}()
 	select {
-	case <-conn.forceCtx.Done(): //force conn close
-		err = context.Cause(conn.forceCtx)
+	case <-obj.forceCtx.Done(): //force conn close
+		err = context.Cause(obj.forceCtx)
 		task.enableRetry = true
 		task.isNotice = true
 		return
 	default:
 	}
 	done := make(chan struct{})
-	go conn.httpReq(task, done)
+	go func() {
+		err = obj.httpReq(task, done)
+	}()
 	select {
-	case <-conn.forceCtx.Done(): //force conn close
-		err = tools.WrapError(context.Cause(conn.forceCtx), "taskMain delete ctx error: ")
+	case <-obj.forceCtx.Done(): //force conn close
+		err = tools.WrapError(context.Cause(obj.forceCtx), "taskMain delete ctx error: ")
 	case <-time.After(task.reqCtx.option.ResponseHeaderTimeout):
 		err = errors.New("ResponseHeaderTimeout error: ")
 	case <-task.ctx.Done():
 		err = context.Cause(task.ctx)
 	case <-done:
-		if task.reqCtx.response == nil {
+		if err == nil && task.reqCtx.response == nil {
 			err = context.Cause(task.ctx)
 			if err == nil {
 				err = errors.New("body done response is nil")
@@ -149,70 +136,31 @@ func (obj *connPool) taskMain(conn *connecotr, task *reqTask) (err error) {
 	return
 }
 
-type connPool struct {
-	forceCtx  context.Context
-	forceCnl  context.CancelCauseFunc
-	tasks     chan *reqTask
-	connPools *connPools
-	connKey   string
-	total     atomic.Int64
-}
-type connPools struct {
-	connPools sync.Map
-}
-
-func newConnPools() *connPools {
-	return new(connPools)
-}
-func (obj *connPools) get(task *reqTask) *connPool {
-	val, ok := obj.connPools.Load(task.key)
-	if !ok {
-		return nil
-	}
-	return val.(*connPool)
-}
-func (obj *connPools) set(task *reqTask, pool *connPool) {
-	obj.connPools.Store(task.key, pool)
-}
-func (obj *connPools) del(key string) {
-	obj.connPools.Delete(key)
-}
-func (obj *connPools) Range() iter.Seq2[string, *connPool] {
-	return func(yield func(string, *connPool) bool) {
-		obj.connPools.Range(func(key, value any) bool {
-			return yield(key.(string), value.(*connPool))
-		})
-	}
-}
-
-func (obj *connPool) rwMain(done chan struct{}, conn *connecotr) {
-	conn.withCancel(obj.forceCtx)
+func (obj *connecotr) rwMain(ctx context.Context, done chan struct{}, tasks chan *reqTask) (err error) {
+	obj.withCancel(ctx)
 	defer func() {
-		conn.CloseWithError(errors.New("connPool rwMain close"))
-		obj.total.Add(-1)
-		if obj.total.Load() <= 0 {
-			obj.close(errors.New("conn pool close"))
+		if err != nil && err != tools.ErrNoErr {
+			obj.CloseWithError(tools.WrapError(err, "rwMain close with error"))
 		}
 	}()
 	close(done)
 	for {
 		select {
-		case <-conn.forceCtx.Done(): //force close conn
-			return
-		case task := <-obj.tasks: //recv task
+		case <-obj.forceCtx.Done(): //force close conn
+			return errors.New("connecotr force close")
+		case task := <-tasks: //recv task
 			if task == nil {
-				return
+				return errors.New("task is nil")
 			}
-			err := obj.taskMain(conn, task)
+			err = obj.taskMain(task)
 			if err != nil {
 				return
 			}
+			if task.reqCtx.response != nil && task.reqCtx.response.StatusCode == 101 {
+				return tools.ErrNoErr
+			}
 		}
 	}
-}
-func (obj *connPool) close(err error) {
-	obj.connPools.del(obj.connKey)
-	obj.forceCnl(tools.WrapError(err, "connPool close"))
 }
 
 func newSSHConn(sshCon net.Conn, rawCon net.Conn) *sshConn {

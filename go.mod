@@ -9,7 +9,7 @@ require (
 	github.com/gospider007/bs4 v0.0.0-20250413121342-fed910fb00c9
 	github.com/gospider007/gson v0.0.0-20250718004537-ff15820964bd
 	github.com/gospider007/gtls v0.0.0-20250718003831-90cdeb97a23f
-	github.com/gospider007/http1 v0.0.0-20250718004641-26f982c140cf
+	github.com/gospider007/http1 v0.0.0-20250718091014-9ea72dfb1370
 	github.com/gospider007/http2 v0.0.0-20250718004700-7af5b064e352
 	github.com/gospider007/http3 v0.0.0-20250718004757-02ceb5fa2d6e
 	github.com/gospider007/ja3 v0.0.0-20250627013834-1d2966014638
@@ -18,9 +18,9 @@ require (
 	github.com/gospider007/websocket v0.0.0-20250718010025-4c017acfd478
 	github.com/klauspost/compress v1.18.0
 	github.com/minio/minlz v1.0.1
-	github.com/quic-go/quic-go v0.53.0
+	github.com/quic-go/quic-go v0.54.0
 	github.com/refraction-networking/uquic v0.0.6
-	github.com/refraction-networking/utls v1.7.4-0.20250621163342-5abccec539e6
+	github.com/refraction-networking/utls v1.8.0
 	github.com/txthinking/socks5 v0.0.0-20230325130024-4230056ae301
 	golang.org/x/crypto v0.40.0
 	golang.org/x/net v0.42.0
@@ -37,7 +37,6 @@ require (
 	github.com/bodgit/windows v1.0.1 // indirect
 	github.com/caddyserver/certmagic v0.23.0 // indirect
 	github.com/caddyserver/zerossl v0.1.3 // indirect
-	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/dsnet/compress v0.0.2-0.20230904184137-39efe44ab707 // indirect
 	github.com/gaukas/clienthellod v0.4.2 // indirect
 	github.com/gaukas/godicttls v0.0.4 // indirect
@@ -63,6 +62,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/nwaples/rardecode/v2 v2.1.1 // indirect
 	github.com/onsi/ginkgo/v2 v2.23.4 // indirect
+	github.com/onsi/gomega v1.37.0 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/quic-go/qpack v0.5.1 // indirect
@@ -82,7 +82,7 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	go.uber.org/zap/exp v0.3.0 // indirect
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
-	golang.org/x/exp v0.0.0-20250717185816-542afb5b7346 // indirect
+	golang.org/x/exp v0.0.0-20250718183923-645b1fa84792 // indirect
 	golang.org/x/image v0.29.0 // indirect
 	golang.org/x/mod v0.26.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect

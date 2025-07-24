@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"strings"
+	"sync"
 	"time"
 
 	"net/http"
@@ -67,8 +68,9 @@ func getKey(ctx *Response) (string, error) {
 type roundTripper struct {
 	ctx       context.Context
 	cnl       context.CancelFunc
-	connPools *connPools
+	connPools sync.Map
 	dialer    *Dialer
+	lock      sync.Mutex
 }
 
 var specClient = ja3.NewClient()
@@ -79,32 +81,26 @@ func newRoundTripper(preCtx context.Context) *roundTripper {
 	}
 	ctx, cnl := context.WithCancel(preCtx)
 	return &roundTripper{
-		ctx:       ctx,
-		cnl:       cnl,
-		dialer:    new(Dialer),
-		connPools: newConnPools(),
+		ctx:    ctx,
+		cnl:    cnl,
+		dialer: new(Dialer),
 	}
 }
-func (obj *roundTripper) newConnPool(done chan struct{}, conn *connecotr, task *reqTask) *connPool {
-	pool := new(connPool)
-	pool.connKey = task.key
-	pool.forceCtx, pool.forceCnl = context.WithCancelCause(obj.ctx)
-	pool.tasks = make(chan *reqTask)
 
-	pool.connPools = obj.connPools
-	pool.total.Add(1)
-	go pool.rwMain(done, conn)
-	return pool
+func (obj *roundTripper) getConnPool(task *reqTask) chan *reqTask {
+	obj.lock.Lock()
+	defer obj.lock.Unlock()
+	val, ok := obj.connPools.Load(task.key)
+	if ok {
+		return val.(chan *reqTask)
+	}
+	tasks := make(chan *reqTask)
+	obj.connPools.Store(task.key, tasks)
+	return tasks
 }
 func (obj *roundTripper) putConnPool(task *reqTask, conn *connecotr) {
-	pool := obj.connPools.get(task)
 	done := make(chan struct{})
-	if pool != nil {
-		pool.total.Add(1)
-		go pool.rwMain(done, conn)
-	} else {
-		obj.connPools.set(task, obj.newConnPool(done, conn, task))
-	}
+	go conn.rwMain(obj.ctx, done, obj.getConnPool(task))
 	<-done
 }
 func (obj *roundTripper) newConnecotr() *connecotr {
@@ -149,7 +145,7 @@ func (obj *roundTripper) ghttp3Dial(ctx *Response, remoteAddress Address, proxyA
 	}
 
 	conn = obj.newConnecotr()
-	conn.Conn = http3.NewClient(netConn, udpConn, func() {
+	conn.Conn = http3.NewClient(conn.forceCtx, netConn, udpConn, func() {
 		conn.forceCnl(errors.New("http3 client close"))
 	})
 	if ct, ok := udpConn.(interface {
@@ -194,7 +190,7 @@ func (obj *roundTripper) uhttp3Dial(ctx *Response, remoteAddress Address, proxyA
 		return nil, err
 	}
 	conn = obj.newConnecotr()
-	conn.Conn = http3.NewClient(netConn, udpConn, func() {
+	conn.Conn = http3.NewClient(conn.forceCtx, netConn, udpConn, func() {
 		conn.forceCnl(errors.New("http3 client close"))
 	})
 	if ct, ok := udpConn.(interface {
@@ -287,13 +283,13 @@ func (obj *roundTripper) dialConnecotr(ctx *Response, conne *connecotr, h2 bool)
 		if ctx.option.gospiderSpec != nil {
 			spec = ctx.option.gospiderSpec.H2Spec
 		}
-		if conne.Conn, err = http2.NewClientConn(ctx.Context(), conne.c, spec, func(err error) {
+		if conne.Conn, err = http2.NewClientConn(conne.forceCtx, ctx.Context(), conne.c, spec, func(err error) {
 			conne.forceCnl(tools.WrapError(err, "http2 client close"))
 		}); err != nil {
 			return err
 		}
 	} else {
-		conne.Conn = http1.NewClientConn(conne.c, func(err error) {
+		conne.Conn = http1.NewClientConn(conne.forceCtx, conne.c, func(err error) {
 			conne.forceCnl(tools.WrapError(err, "http1 client close"))
 		})
 	}
@@ -345,13 +341,9 @@ func (obj *roundTripper) initProxys(ctx *Response) ([]Address, error) {
 }
 
 func (obj *roundTripper) poolRoundTrip(task *reqTask) error {
-	connPool := obj.connPools.get(task)
-	if connPool == nil {
-		return obj.newRoudTrip(task)
-	}
 	task.ctx, task.cnl = context.WithCancelCause(task.reqCtx.Context())
 	select {
-	case connPool.tasks <- task:
+	case obj.getConnPool(task) <- task:
 		<-task.ctx.Done()
 		err := context.Cause(task.ctx)
 		if errors.Is(err, tools.ErrNoErr) {
@@ -381,13 +373,6 @@ func (obj *roundTripper) newRoudTrip(task *reqTask) error {
 		err = obj.poolRoundTrip(task)
 	}
 	return err
-}
-
-func (obj *roundTripper) closeConns() {
-	for key, pool := range obj.connPools.Range() {
-		pool.close(errors.New("close all conn"))
-		obj.connPools.del(key)
-	}
 }
 
 func (obj *roundTripper) newReqTask(ctx *Response) (*reqTask, error) {

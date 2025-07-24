@@ -15,6 +15,7 @@ func TestSession(t *testing.T) {
 			t.Error(err)
 		}
 		log.Print(resp.Proto(), resp.IsNewConn())
+		resp.CloseBody(nil)
 		if i == 0 {
 			if !resp.IsNewConn() { //return is NewConn
 				t.Error("new conn error: ", i)

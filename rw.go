@@ -3,13 +3,13 @@ package requests
 import (
 	"errors"
 	"io"
-	"net/http"
 
+	"github.com/gospider007/http1"
 	"github.com/gospider007/tools"
 )
 
 type wrapBody struct {
-	rawBody io.ReadCloser
+	rawBody *http1.ClientBody
 	conn    *connecotr
 }
 
@@ -31,12 +31,7 @@ func (obj *wrapBody) CloseWithError(err error) error {
 	if err != nil && err != tools.ErrNoErr {
 		obj.conn.CloseWithError(err)
 	}
-	if obj.rawBody == nil || obj.rawBody == http.NoBody {
-		return nil
-	}
-	return obj.rawBody.(interface {
-		CloseWithError(error) error
-	}).CloseWithError(err)
+	return obj.rawBody.CloseWithError(err)
 }
 
 // safe close conn

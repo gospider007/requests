@@ -24,6 +24,7 @@ func TestH2(t *testing.T) {
 	// log.Print(resp.Text())
 	jsonData, err := resp.Json()
 	ja3 := jsonData.Get("http2.fingerprint")
+	// log.Print(ja3)
 	if !ja3.Exists() {
 		t.Fatal("not found http2")
 	}

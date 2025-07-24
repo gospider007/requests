@@ -145,7 +145,7 @@ func (obj *Client) retryRequest(ctx context.Context, option RequestOption, uhref
 		if err != nil || loc == nil {
 			return
 		}
-		response.CloseBody(nil)
+		response.closeBody(true, nil)
 		switch response.StatusCode() {
 		case 307, 308:
 			if response.Option().readOne {
@@ -354,7 +354,7 @@ func (obj *Client) request(ctx *Response) (err error) {
 		return
 	}
 	if ctx.response.Body != nil {
-		ctx.body = ctx.response.Body.(*wrapBody)
+		ctx.wrapBody = ctx.response.Body.(*wrapBody)
 	}
 	if encoding := ctx.ContentEncoding(); encoding != "" && ctx.response.Body != nil {
 		var unCompressionBody io.ReadCloser

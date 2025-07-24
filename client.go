@@ -59,13 +59,8 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	return result, err
 }
 
-func (obj *Client) CloseConns() {
-	obj.transport.closeConns()
-}
-
 // Close the client and cannot be used again after shutdown
 func (obj *Client) Close() {
 	obj.closed = true
-	obj.CloseConns()
 	obj.cnl()
 }

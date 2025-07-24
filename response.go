@@ -59,7 +59,7 @@ type Response struct {
 	err          error
 	ctx          context.Context
 	request      *http.Request
-	body         *wrapBody
+	wrapBody     *wrapBody
 	response     *http.Response
 	webSocket    *websocket.Conn
 	sse          *SSE
@@ -71,9 +71,9 @@ type Response struct {
 	requestId    string
 	content      []byte
 	proxys       []*url.URL
-	readBody     bool
 	readBodyLock sync.Mutex
 	isNewConn    bool
+	bodyErr      error
 }
 type SSE struct {
 	reader   *bufio.Reader
@@ -151,6 +151,13 @@ func (obj *SSE) Close() {
 
 // return websocket client
 func (obj *Response) WebSocket() *websocket.Conn {
+	if obj.webSocket != nil {
+		return obj.webSocket
+	}
+	if obj.StatusCode() != 101 {
+		return nil
+	}
+	obj.webSocket = websocket.NewConn(newFakeConn(obj.wrapBody.connStream()), func() { obj.CloseConn() }, true, obj.Headers().Get("Sec-WebSocket-Extensions"))
 	return obj.webSocket
 }
 
@@ -312,30 +319,40 @@ func (obj *Response) IsNewConn() bool {
 
 // conn proxy
 func (obj *Response) Proxys() []Address {
-	if obj.body != nil {
-		return obj.body.Proxys()
-	}
-	return nil
+	return obj.wrapBody.Proxys()
 }
 
 // close
 func (obj *Response) CloseConn() {
-	if obj.body != nil {
-		obj.body.CloseWithError(errors.New("force close conn"))
-		obj.body.CloseConn()
+	if obj.wrapBody != nil {
+		obj.wrapBody.CloseWithError(errors.New("force close conn"))
+		obj.wrapBody.CloseConn()
 	}
 	obj.cnl()
 }
 
 // close
 func (obj *Response) CloseBody(err error) {
+	obj.closeBody(true, err)
+}
+func (obj *Response) closeBody(i bool, err error) {
+	if obj.bodyErr != io.EOF {
+		obj.CloseConn()
+		return
+	} else if i {
+		if obj.StatusCode() == 101 && obj.webSocket == nil {
+			obj.CloseConn()
+			return
+		}
+	}
 	if err == nil {
 		err = tools.ErrNoErr
-	} else {
-		obj.cnl()
 	}
-	if obj.body != nil {
-		obj.body.CloseWithError(err)
+
+	if err == tools.ErrNoErr {
+		obj.wrapBody.CloseWithError(err)
+	} else {
+		obj.CloseConn()
 	}
 }
 
@@ -343,15 +360,14 @@ func (obj *Response) CloseBody(err error) {
 func (obj *Response) ReadBody() (err error) {
 	obj.readBodyLock.Lock()
 	defer obj.readBodyLock.Unlock()
-	if obj.readBody {
+	if obj.bodyErr != nil {
 		return nil
 	}
-	obj.readBody = true
 	bBody := bytes.NewBuffer(nil)
 	done := make(chan struct{})
 	var readErr error
 	body := obj.Body()
-	defer body.Close()
+	defer body.close(false)
 	go func() {
 		defer close(done)
 		if obj.option.Bar && obj.ContentLength() > 0 {
@@ -368,7 +384,7 @@ func (obj *Response) ReadBody() (err error) {
 	}()
 	select {
 	case <-obj.ctx.Done():
-		if readErr == nil && body.closed && body.err == nil {
+		if readErr == nil && obj.bodyErr == io.EOF && body.err == nil {
 			err = nil
 		} else {
 			err = tools.WrapError(obj.ctx.Err(), "response read ctx error")
@@ -390,48 +406,41 @@ func (obj *Response) ReadBody() (err error) {
 }
 
 type body struct {
-	ctx    *Response
-	closed bool
-	err    error
+	ctx *Response
+	err error
 }
 
 func (obj *body) Read(p []byte) (n int, err error) {
-	obj.ctx.readBody = true
-	if obj.ctx == nil || obj.ctx.response == nil || obj.ctx.response.Body == nil {
-		obj.closed = true
-		return 0, io.EOF
-	}
 	n, err = obj.ctx.response.Body.Read(p)
 	if err != nil {
-		if err != io.EOF && err != io.ErrUnexpectedEOF {
-			obj.CloseWithError(err)
+		if err == io.ErrUnexpectedEOF {
+			err = io.EOF
+		}
+		obj.ctx.bodyErr = err
+		if err != io.EOF {
+			obj.closeWithError(false, err)
 		} else {
-			obj.CloseWithError(nil)
+			obj.closeWithError(false, nil)
 		}
 	}
 	return
 }
 
 func (obj *body) Close() (err error) {
-	return obj.CloseWithError(obj.err)
+	return obj.close(true)
 }
-func (obj *body) CloseWithError(err error) error {
-	if obj.closed {
-		return obj.err
-	}
-	obj.closed = true
-	if err == nil {
-		if obj.ctx.StatusCode() == 101 && obj.ctx.webSocket == nil {
-			obj.ctx.webSocket = websocket.NewConn(newFakeConn(obj.ctx.body.connStream()), func() { obj.ctx.CloseConn() }, true, obj.ctx.Headers().Get("Sec-WebSocket-Extensions"))
-		}
-		obj.ctx.CloseBody(nil)
-		return nil
-	} else {
+func (obj *body) close(i bool) (err error) {
+	return obj.closeWithError(i, obj.err)
+}
+func (obj *body) closeWithError(i bool, err error) error {
+	if obj.err == nil {
 		obj.err = err
-		obj.ctx.CloseBody(err)
-		obj.ctx.CloseConn()
-		return err
 	}
+	obj.ctx.closeBody(i, err)
+	if err != nil {
+		obj.ctx.CloseConn()
+	}
+	return obj.err
 }
 
 func (obj *Response) Body() *body {
