@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"time"
 
 	"net/url"
 
@@ -238,10 +237,6 @@ func (obj *Client) request(ctx *Response) (err error) {
 		if err = ctx.option.OptionCallBack(ctx); err != nil {
 			return
 		}
-	}
-	//init tls timeout
-	if ctx.option.TlsHandshakeTimeout == 0 {
-		ctx.option.TlsHandshakeTimeout = time.Second * 15
 	}
 	//init proxy
 	if ctx.option.Proxy != nil {

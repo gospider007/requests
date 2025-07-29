@@ -20,13 +20,11 @@
 <h2 align="center">Requests is a fully featured HTTP client library for Golang. Network requests can be completed with just a few lines of code. Unified support for http1, http2, http3, websocket, sse, utls, uquic</h2>
 
 ## Innovative Features
-| **gospider007/requests** | **Other Request Libraries** |
-|---------------------------|----------------------------|
-| Unlimited chained proxy   | Not supported             |
-| HTTP/3 fingerprint spoofing protection | Not supported  |
-| Arbitrary closure of underlying connections | Not supported |
-| Genuine request-level proxy settings | Not supported   |
-| Unique transport layer management mechanism, fully unifying HTTP/1, HTTP/2, HTTP/3, WebSocket, SSE, UTLS, QUIC protocol handling | Not supported |
+* Unlimited chained proxy
+* HTTP/3 fingerprint spoofing protection
+* Arbitrary closure of underlying connections
+* Genuine request-level proxy settings
+* Unique transport layer management mechanism, fully unifying HTTP/1, HTTP/2, HTTP/3, WebSocket, SSE, UTLS, QUIC protocol handling
 
 ## Features
   * [Simple for settings and Request](https://github.com/gospider007/requests#quickly-send-requests)
@@ -69,7 +67,7 @@
   * [Well tested client library](https://github.com/gospider007/requests/tree/master/test)
 
 ## Supported Go Versions
-Recommended to use `go1.23.0` and above.
+Recommended to use `go1.24.0` and above.
 Initially Requests started supporting `go modules`
 
 ## Installation

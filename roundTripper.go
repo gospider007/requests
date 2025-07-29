@@ -115,6 +115,11 @@ func (obj *roundTripper) ghttp3Dial(ctx *Response, remoteAddress Address, proxyA
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		if err != nil {
+			udpConn.Close()
+		}
+	}()
 	tlsConfig := ctx.option.TlsConfig.Clone()
 	tlsConfig.NextProtos = []string{http3.NextProtoH3}
 	tlsConfig.ServerName = remoteAddress.Host
@@ -133,7 +138,6 @@ func (obj *roundTripper) ghttp3Dial(ctx *Response, remoteAddress Address, proxyA
 		return nil, err
 	}
 	cctx, ccnl := context.WithCancelCause(obj.ctx)
-	// conn = obj.newConnecotr()
 	conn = http3.NewClient(cctx, netConn, udpConn, func() {
 		ccnl(errors.New("http3 client close"))
 	})
@@ -156,6 +160,11 @@ func (obj *roundTripper) uhttp3Dial(ctx *Response, remoteAddress Address, proxyA
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		if err != nil {
+			udpConn.Close()
+		}
+	}()
 	tlsConfig := ctx.option.UtlsConfig.Clone()
 	tlsConfig.NextProtos = []string{http3.NextProtoH3}
 	tlsConfig.ServerName = remoteAddress.Host
@@ -227,18 +236,22 @@ func (obj *roundTripper) dial(ctx *Response) (conn http1.Conn, err error) {
 		}
 		rawNetConn, err = obj.dialer.DialContext(ctx, "tcp", remoteAddress)
 	}
-	defer func() {
-		if err != nil && rawNetConn != nil {
+	if err != nil {
+		if rawNetConn != nil {
 			rawNetConn.Close()
 		}
-	}()
-	if err != nil {
 		return nil, err
 	}
 	var h2 bool
 	var rawConn net.Conn
 	if ctx.request.URL.Scheme == "https" {
-		rawConn, h2, err = obj.dialAddTls(ctx.option, ctx.request, rawNetConn)
+		if ctx.option.TlsHandshakeTimeout > 0 {
+			tlsCtx, tlsCnl := context.WithTimeout(ctx.Context(), ctx.option.TlsHandshakeTimeout)
+			rawConn, h2, err = obj.dialAddTls(tlsCtx, ctx.option, ctx.request, rawNetConn)
+			tlsCnl()
+		} else {
+			rawConn, h2, err = obj.dialAddTls(ctx.Context(), ctx.option, ctx.request, rawNetConn)
+		}
 		if ctx.option.Logger != nil {
 			ctx.option.Logger(Log{
 				Id:   ctx.requestId,
@@ -247,17 +260,23 @@ func (obj *roundTripper) dial(ctx *Response) (conn http1.Conn, err error) {
 				Msg:  fmt.Sprintf("host:%s,  h2:%t", getHost(ctx.request), h2),
 			})
 		}
-		if err != nil {
-			return nil, err
-		}
 	} else {
 		rawConn = rawNetConn
 	}
+	if err != nil {
+		if rawConn != nil {
+			rawConn.Close()
+		}
+		return nil, err
+	}
 	if arch != nil {
 		rawConn, err = NewCompressionConn(rawConn, arch)
-		if err != nil {
-			return nil, err
+	}
+	if err != nil {
+		if rawConn != nil {
+			rawConn.Close()
 		}
+		return nil, err
 	}
 	return obj.dialConnecotr(ctx, rawConn, h2)
 }
@@ -278,9 +297,7 @@ func (obj *roundTripper) dialConnecotr(ctx *Response, rawCon net.Conn, h2 bool) 
 	}
 	return
 }
-func (obj *roundTripper) dialAddTls(option *RequestOption, req *http.Request, netConn net.Conn) (net.Conn, bool, error) {
-	ctx, cnl := context.WithTimeout(req.Context(), option.TlsHandshakeTimeout)
-	defer cnl()
+func (obj *roundTripper) dialAddTls(ctx context.Context, option *RequestOption, req *http.Request, netConn net.Conn) (net.Conn, bool, error) {
 	if option.gospiderSpec != nil && option.gospiderSpec.TLSSpec != nil {
 		if tlsConn, err := obj.dialer.addJa3Tls(ctx, netConn, getHost(req), option.gospiderSpec.TLSSpec, option.UtlsConfig.Clone(), option.ForceHttp1); err != nil {
 			return tlsConn, false, tools.WrapError(err, "add ja3 tls error")
@@ -345,6 +362,9 @@ func (obj *roundTripper) newRoundTrip(task *reqTask) error {
 	task.reqCtx.isNewConn = true
 	conn, err := obj.dial(task.reqCtx)
 	if err != nil {
+		if conn != nil {
+			conn.CloseWithError(err)
+		}
 		err = tools.WrapError(err, "newRoudTrip dial error")
 		if task.reqCtx.option.ErrCallBack != nil {
 			task.reqCtx.err = err
@@ -362,9 +382,6 @@ func (obj *roundTripper) newRoundTrip(task *reqTask) error {
 }
 
 func (obj *roundTripper) newReqTask(ctx *Response) (*reqTask, error) {
-	if ctx.option.ResponseHeaderTimeout == 0 {
-		ctx.option.ResponseHeaderTimeout = time.Second * 300
-	}
 	task := new(reqTask)
 	task.reqCtx = ctx
 	task.reqCtx.response = nil

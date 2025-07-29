@@ -62,28 +62,41 @@ func taskMain(conn http1.Conn, task *reqTask) (err error) {
 		defer close(done)
 		response, derr = conn.DoRequest(task.reqCtx.request, &http1.Option{OrderHeaders: task.reqCtx.option.orderHeaders.Data()})
 	}()
-	select {
-	case <-conn.Context().Done(): //force conn close
-		err = tools.WrapError(context.Cause(conn.Context()), "taskMain delete ctx error: ")
-	case <-time.After(task.reqCtx.option.ResponseHeaderTimeout):
-		err = errors.New("ResponseHeaderTimeout error: ")
-	case <-task.ctx.Done():
-		err = context.Cause(task.ctx)
-	case <-done:
-		if derr != nil {
-			err = tools.WrapError(derr, "roundTrip error")
-		} else {
-			task.reqCtx.response = response
-			task.reqCtx.response.Request = task.reqCtx.request
+	if task.reqCtx.option.ResponseHeaderTimeout > 0 {
+		select {
+		case <-conn.Context().Done(): //force conn close
+			err = tools.WrapError(context.Cause(conn.Context()), "taskMain delete ctx error: ")
+		case <-time.After(task.reqCtx.option.ResponseHeaderTimeout):
+			err = errors.New("ResponseHeaderTimeout error: ")
+		case <-task.ctx.Done():
+			err = context.Cause(task.ctx)
+		case <-done:
 		}
-		if task.reqCtx.option.Logger != nil {
-			task.reqCtx.option.Logger(Log{
-				Id:   task.reqCtx.requestId,
-				Time: time.Now(),
-				Type: LogType_ResponseHeader,
-				Msg:  "response header",
-			})
+	} else {
+		select {
+		case <-conn.Context().Done(): //force conn close
+			err = tools.WrapError(context.Cause(conn.Context()), "taskMain delete ctx error: ")
+		case <-task.ctx.Done():
+			err = context.Cause(task.ctx)
+		case <-done:
 		}
+	}
+
+	if err != nil {
+		err = tools.WrapError(err, "roundTrip error")
+	} else if derr != nil {
+		err = tools.WrapError(derr, "roundTrip error")
+	} else {
+		task.reqCtx.response = response
+		task.reqCtx.response.Request = task.reqCtx.request
+	}
+	if task.reqCtx.option.Logger != nil {
+		task.reqCtx.option.Logger(Log{
+			Id:   task.reqCtx.requestId,
+			Time: time.Now(),
+			Type: LogType_ResponseHeader,
+			Msg:  "response header",
+		})
 	}
 	return
 }

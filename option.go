@@ -54,8 +54,8 @@ type ClientOption struct {
 	MaxRetries            int           //try num
 	MaxRedirect           int           //redirect num ,<0 no redirect,==0 no limit
 	Timeout               time.Duration //request timeout
-	ResponseHeaderTimeout time.Duration //ResponseHeaderTimeout ,default:300
-	TlsHandshakeTimeout   time.Duration //tls timeout,default:15
+	ResponseHeaderTimeout time.Duration //ResponseHeaderTimeout
+	TlsHandshakeTimeout   time.Duration //tls timeout
 	ForceHttp3            bool          //force  use http3 send requests
 	ForceHttp1            bool          //force  use http1 send requests
 	DisCookie             bool          //disable cookies
@@ -85,8 +85,8 @@ type RequestOption struct {
 	MaxRetries            int           //try num
 	MaxRedirect           int           //redirect num ,<0 no redirect,==0 no limit
 	Timeout               time.Duration //request timeout
-	ResponseHeaderTimeout time.Duration //ResponseHeaderTimeout ,default:300
-	TlsHandshakeTimeout   time.Duration //tls timeout,default:15
+	ResponseHeaderTimeout time.Duration //ResponseHeaderTimeout
+	TlsHandshakeTimeout   time.Duration //tls timeout
 	ForceHttp3            bool          //force  use http3 send requests
 	ForceHttp1            bool          //force  use http1 send requests
 	DisCookie             bool          //disable cookies
@@ -201,10 +201,9 @@ func merge(option *RequestOption, clientOption *ClientOption) {
 		option.Bar = clientOption.Bar
 	}
 }
+
 func (obj *Client) newRequestOption(option RequestOption) (RequestOption, error) {
-	// err := tools.Merge(&option, obj.ClientOption)
 	merge(&option, obj.ClientOption)
-	//end
 	if option.MaxRetries < 0 {
 		option.MaxRetries = 0
 	}

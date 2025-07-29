@@ -27,8 +27,9 @@ func TestStream(t *testing.T) {
 	}
 }
 func TestStreamWithConn(t *testing.T) {
+	session, _ := requests.NewClient(nil)
 	for i := 0; i < 2; i++ {
-		resp, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{Stream: true})
+		resp, err := session.Get(nil, "https://httpbin.org/anything", requests.RequestOption{Stream: true})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -52,8 +53,9 @@ func TestStreamWithConn(t *testing.T) {
 }
 
 func TestStreamWithConn2(t *testing.T) {
+	session, _ := requests.NewClient(nil)
 	for i := 0; i < 2; i++ {
-		resp, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{Stream: true})
+		resp, err := session.Get(nil, "https://httpbin.org/anything", requests.RequestOption{Stream: true})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -77,8 +79,9 @@ func TestStreamWithConn2(t *testing.T) {
 }
 
 func TestStreamWithConn3(t *testing.T) {
+	session, _ := requests.NewClient(nil)
 	for i := 0; i < 2; i++ {
-		resp, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{Stream: true})
+		resp, err := session.Get(nil, "https://httpbin.org/anything", requests.RequestOption{Stream: true})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -102,8 +105,9 @@ func TestStreamWithConn3(t *testing.T) {
 }
 
 func TestStreamWithConn4(t *testing.T) {
+	session, _ := requests.NewClient(nil)
 	for i := 0; i < 2; i++ {
-		resp, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{Stream: true})
+		resp, err := session.Get(nil, "https://httpbin.org/anything", requests.RequestOption{Stream: true})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -129,8 +133,9 @@ func TestStreamWithConn4(t *testing.T) {
 	}
 }
 func TestStreamWithConn5(t *testing.T) {
+	session, _ := requests.NewClient(nil)
 	for i := 0; i < 2; i++ {
-		resp, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{Stream: true})
+		resp, err := session.Get(nil, "https://httpbin.org/anything", requests.RequestOption{Stream: true})
 		if err != nil {
 			t.Fatal(err)
 		}

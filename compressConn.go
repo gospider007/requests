@@ -220,11 +220,11 @@ func NewReaderCompression(conn io.Reader, arch Compression) (*ReaderCompression,
 func NewCompressionConn(conn net.Conn, arch Compression) (net.Conn, error) {
 	w, err := NewWriterCompression(conn, arch)
 	if err != nil {
-		return nil, err
+		return conn, err
 	}
 	r, err := NewReaderCompression(conn, arch)
 	if err != nil {
-		return nil, err
+		return conn, err
 	}
 	ccon := &CompressionConn{
 		conn: conn,
