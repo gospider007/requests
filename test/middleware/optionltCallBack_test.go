@@ -8,12 +8,9 @@ import (
 
 func TestOptionCallBack(t *testing.T) {
 	resp, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{
-		ClientOption: requests.ClientOption{
-
-			OptionCallBack: func(ctx *requests.Response) error {
-				ctx.Option().Params = map[string]string{"name": "test"}
-				return nil
-			},
+		OptionCallBack: func(ctx *requests.Response) error {
+			ctx.Option().Params = map[string]string{"name": "test"}
+			return nil
 		},
 	})
 	if err != nil {

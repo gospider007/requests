@@ -16,6 +16,7 @@ import (
 	"github.com/gospider007/bar"
 	"github.com/gospider007/bs4"
 	"github.com/gospider007/gson"
+	"github.com/gospider007/http1"
 	"github.com/gospider007/re"
 	"github.com/gospider007/tools"
 	"github.com/gospider007/websocket"
@@ -59,7 +60,7 @@ type Response struct {
 	err          error
 	ctx          context.Context
 	request      *http.Request
-	wrapBody     *wrapBody
+	rawBody      *http1.Body
 	response     *http.Response
 	webSocket    *websocket.Conn
 	sse          *SSE
@@ -157,7 +158,7 @@ func (obj *Response) WebSocket() *websocket.Conn {
 	if obj.StatusCode() != 101 {
 		return nil
 	}
-	obj.webSocket = websocket.NewConn(newFakeConn(obj.wrapBody.connStream()), func() { obj.CloseConn() }, true, obj.Headers().Get("Sec-WebSocket-Extensions"))
+	obj.webSocket = websocket.NewConn(newFakeConn(obj.rawBody.Stream()), func() { obj.CloseConn() }, true, obj.Headers().Get("Sec-WebSocket-Extensions"))
 	return obj.webSocket
 }
 
@@ -317,16 +318,10 @@ func (obj *Response) IsNewConn() bool {
 	return obj.isNewConn
 }
 
-// conn proxy
-func (obj *Response) Proxys() []Address {
-	return obj.wrapBody.Proxys()
-}
-
 // close
 func (obj *Response) CloseConn() {
-	if obj.wrapBody != nil {
-		obj.wrapBody.CloseWithError(errors.New("force close conn"))
-		obj.wrapBody.CloseConn()
+	if obj.rawBody != nil {
+		obj.rawBody.CloseWithError(errors.New("force close conn"))
 	}
 	obj.cnl()
 }
@@ -350,7 +345,7 @@ func (obj *Response) closeBody(i bool, err error) {
 	}
 
 	if err == tools.ErrNoErr {
-		obj.wrapBody.CloseWithError(err)
+		obj.rawBody.CloseWithError(err)
 	} else {
 		obj.CloseConn()
 	}
@@ -445,4 +440,12 @@ func (obj *body) closeWithError(i bool, err error) error {
 
 func (obj *Response) Body() *body {
 	return &body{ctx: obj}
+}
+
+func (obj *Client) newResponse(ctx context.Context, option RequestOption, uhref *url.URL, requestId string) *Response {
+	option.Url = cloneUrl(uhref)
+	response := NewResponse(ctx, option)
+	response.client = obj
+	response.requestId = requestId
+	return response
 }

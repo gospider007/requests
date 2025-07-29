@@ -9,16 +9,13 @@ import (
 
 func TestHttp1(t *testing.T) {
 	resp, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{
-		ClientOption: requests.ClientOption{
-
-			ForceHttp1: true,
-			Logger: func(l requests.Log) {
-				log.Print(l)
-			},
-			ErrCallBack: func(ctx *requests.Response) error {
-				log.Print(ctx.Err())
-				return nil
-			},
+		ForceHttp1: true,
+		Logger: func(l requests.Log) {
+			log.Print(l)
+		},
+		ErrCallBack: func(ctx *requests.Response) error {
+			log.Print(ctx.Err())
+			return nil
 		},
 	})
 	if err != nil {

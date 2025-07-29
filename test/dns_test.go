@@ -9,12 +9,10 @@ import (
 
 func TestDns(t *testing.T) {
 	resp, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{
-		ClientOption: requests.ClientOption{
-			DialOption: requests.DialOption{
-				Dns: &net.UDPAddr{ //set dns server
-					IP:   net.ParseIP("223.5.5.5"),
-					Port: 53,
-				},
+		DialOption: &requests.DialOption{
+			Dns: &net.UDPAddr{ //set dns server
+				IP:   net.ParseIP("223.5.5.5"),
+				Port: 53,
 			},
 		},
 	})

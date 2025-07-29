@@ -26,15 +26,12 @@ var (
 func client() {
 	for range 5 {
 		resp, err := requests.Post(nil, "https://"+remoteHost, requests.RequestOption{
-			ClientOption: requests.ClientOption{
-
-				ForceHttp3: true,
-				Logger: func(l requests.Log) {
-					log.Print(l)
-				},
-				Proxy: "socks5://" + proxyHost,
+			ForceHttp3: true,
+			Logger: func(l requests.Log) {
+				log.Print(l)
 			},
-			Body: []byte("hello, server!"),
+			Proxy: "socks5://" + proxyHost,
+			Body:  []byte("hello, server!"),
 		})
 		if err != nil {
 			fmt.Println(err)
@@ -50,15 +47,13 @@ func client2() {
 	for range 5 {
 		resp, err := requests.Post(nil, "https://"+remoteHost, requests.RequestOption{
 
-			ClientOption: requests.ClientOption{
-				ForceHttp3: true,
-				Logger: func(l requests.Log) {
-					log.Print(l)
-				},
-				Proxy: []string{
-					"http://" + proxyHost,
-					"socks5://" + proxyHost,
-				},
+			ForceHttp3: true,
+			Logger: func(l requests.Log) {
+				log.Print(l)
+			},
+			Proxy: []string{
+				"http://" + proxyHost,
+				"socks5://" + proxyHost,
 			},
 			Body: []byte("hello, server!"),
 		})
@@ -121,16 +116,14 @@ func TestHttp3Proxy2(t *testing.T) {
 	for range 5 {
 		resp, err := requests.Get(context.TODO(), "https://cloudflare-quic.com/", requests.RequestOption{
 
-			ClientOption: requests.ClientOption{
-				USpec:      true,
-				ForceHttp3: true,
-				// Logger: func(l requests.Log) {
-				// 	log.Print(l)
-				// },
-				Proxy: []string{
-					// "http://" + proxyHost,
-					"socks5://" + proxyHost,
-				},
+			USpec:      true,
+			ForceHttp3: true,
+			// Logger: func(l requests.Log) {
+			// 	log.Print(l)
+			// },
+			Proxy: []string{
+				// "http://" + proxyHost,
+				"socks5://" + proxyHost,
 			},
 			Body: []byte("hello, server!"),
 		})

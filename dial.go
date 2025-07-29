@@ -53,7 +53,11 @@ func (d *myDialer) LookupIPAddr(ctx context.Context, host string) ([]net.IPAddr,
 	return d.dialer.Resolver.LookupIPAddr(ctx, host)
 }
 
-func newDialer(option DialOption) dialer {
+func newDialer(dialOption *DialOption) dialer {
+	var option DialOption
+	if dialOption != nil {
+		option = *dialOption
+	}
 	if option.KeepAlive == 0 {
 		option.KeepAlive = time.Second * 5
 	}
@@ -267,7 +271,7 @@ func (obj *Dialer) verifyProxyToRemote(ctx *Response, conn net.Conn, proxyTlsCon
 	}
 }
 
-func (obj *Dialer) loadHost(ctx context.Context, host string, option DialOption) (net.IP, error) {
+func (obj *Dialer) loadHost(ctx context.Context, host string, option *DialOption) (net.IP, error) {
 	msgDataAny, ok := obj.dnsIpData.Load(host)
 	if ok {
 		msgdata := msgDataAny.(msgClient)
@@ -280,10 +284,12 @@ func (obj *Dialer) loadHost(ctx context.Context, host string, option DialOption)
 		return ip, nil
 	}
 	var addrType gtls.AddrType
-	if option.AddrType != 0 {
-		addrType = option.AddrType
-	} else if option.GetAddrType != nil {
-		addrType = option.GetAddrType(host)
+	if option != nil {
+		if option.AddrType != 0 {
+			addrType = option.AddrType
+		} else if option.GetAddrType != nil {
+			addrType = option.GetAddrType(host)
+		}
 	}
 	ips, err := newDialer(option).LookupIPAddr(ctx, host)
 	if err != nil {
@@ -334,7 +340,7 @@ func readUdpAddr(r io.Reader) (Address, error) {
 	UdpAddress.Port = int(binary.BigEndian.Uint16(port[:]))
 	return UdpAddress, nil
 }
-func (obj *Dialer) ReadUdpAddr(ctx context.Context, r io.Reader, option DialOption) (Address, error) {
+func (obj *Dialer) ReadUdpAddr(ctx context.Context, r io.Reader, option *DialOption) (Address, error) {
 	udpAddress, err := readUdpAddr(r)
 	if err != nil {
 		return udpAddress, err

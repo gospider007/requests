@@ -12,6 +12,7 @@ import (
 
 	"net/http"
 
+	"github.com/gospider007/http1"
 	"github.com/gospider007/re"
 	"github.com/gospider007/tools"
 	"github.com/gospider007/websocket"
@@ -354,7 +355,7 @@ func (obj *Client) request(ctx *Response) (err error) {
 		return
 	}
 	if ctx.response.Body != nil {
-		ctx.wrapBody = ctx.response.Body.(*wrapBody)
+		ctx.rawBody = ctx.response.Body.(*http1.Body)
 	}
 	if encoding := ctx.ContentEncoding(); encoding != "" && ctx.response.Body != nil {
 		var unCompressionBody io.ReadCloser

@@ -12,7 +12,7 @@ type Client struct {
 	ctx          context.Context
 	transport    *roundTripper
 	cnl          context.CancelFunc
-	ClientOption ClientOption
+	ClientOption *ClientOption
 	closed       bool
 }
 
@@ -30,7 +30,7 @@ func NewClient(preCtx context.Context, options ...ClientOption) (*Client, error)
 	result := new(Client)
 	result.ctx, result.cnl = context.WithCancel(preCtx)
 	result.transport = newRoundTripper(result.ctx)
-	result.ClientOption = option
+	result.ClientOption = &option
 	if result.ClientOption.TlsConfig == nil {
 		result.ClientOption.TlsConfig = &tls.Config{
 			InsecureSkipVerify: true,

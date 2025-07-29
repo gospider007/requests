@@ -10,16 +10,13 @@ import (
 func TestMaxRetries(t *testing.T) {
 	n := 0
 	resp, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{
-		ClientOption: requests.ClientOption{
-
-			MaxRetries: 3,
-			ResultCallBack: func(ctx *requests.Response) error {
-				if n == 0 {
-					n++
-					return errors.New("try")
-				}
-				return nil
-			},
+		MaxRetries: 3,
+		ResultCallBack: func(ctx *requests.Response) error {
+			if n == 0 {
+				n++
+				return errors.New("try")
+			}
+			return nil
 		},
 	})
 	if err != nil {

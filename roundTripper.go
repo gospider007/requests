@@ -22,7 +22,6 @@ import (
 )
 
 type reqTask struct {
-	bodyCtx     context.Context
 	ctx         context.Context
 	cnl         context.CancelCauseFunc
 	reqCtx      *Response
@@ -98,16 +97,6 @@ func (obj *roundTripper) getConnPool(task *reqTask) chan *reqTask {
 	obj.connPools.Store(task.key, tasks)
 	return tasks
 }
-func (obj *roundTripper) putConnPool(task *reqTask, conn *connecotr) {
-	done := make(chan struct{})
-	go conn.rwMain(obj.ctx, done, obj.getConnPool(task))
-	<-done
-}
-func (obj *roundTripper) newConnecotr() *connecotr {
-	conne := new(connecotr)
-	conne.withCancel(obj.ctx)
-	return conne
-}
 
 func (obj *roundTripper) http3Dial(ctx *Response, remtoeAddress Address, proxyAddress ...Address) (udpConn net.PacketConn, err error) {
 	if len(proxyAddress) > 0 {
@@ -121,7 +110,7 @@ func (obj *roundTripper) http3Dial(ctx *Response, remtoeAddress Address, proxyAd
 	}
 	return
 }
-func (obj *roundTripper) ghttp3Dial(ctx *Response, remoteAddress Address, proxyAddress ...Address) (conn *connecotr, err error) {
+func (obj *roundTripper) ghttp3Dial(ctx *Response, remoteAddress Address, proxyAddress ...Address) (conn http1.Conn, err error) {
 	udpConn, err := obj.http3Dial(ctx, remoteAddress, proxyAddress...)
 	if err != nil {
 		return nil, err
@@ -143,22 +132,22 @@ func (obj *roundTripper) ghttp3Dial(ctx *Response, remoteAddress Address, proxyA
 	if err != nil {
 		return nil, err
 	}
-
-	conn = obj.newConnecotr()
-	conn.Conn = http3.NewClient(conn.forceCtx, netConn, udpConn, func() {
-		conn.forceCnl(errors.New("http3 client close"))
+	cctx, ccnl := context.WithCancelCause(obj.ctx)
+	// conn = obj.newConnecotr()
+	conn = http3.NewClient(cctx, netConn, udpConn, func() {
+		ccnl(errors.New("http3 client close"))
 	})
 	if ct, ok := udpConn.(interface {
 		SetTcpCloseFunc(f func(error))
 	}); ok {
 		ct.SetTcpCloseFunc(func(err error) {
-			conn.forceCnl(errors.New("http3 client close with udp"))
+			ccnl(errors.New("http3 client close with udp"))
 		})
 	}
 	return
 }
 
-func (obj *roundTripper) uhttp3Dial(ctx *Response, remoteAddress Address, proxyAddress ...Address) (conn *connecotr, err error) {
+func (obj *roundTripper) uhttp3Dial(ctx *Response, remoteAddress Address, proxyAddress ...Address) (conn http1.Conn, err error) {
 	spec, err := ja3.CreateUSpec(ctx.option.USpec)
 	if err != nil {
 		return nil, err
@@ -189,21 +178,21 @@ func (obj *roundTripper) uhttp3Dial(ctx *Response, remoteAddress Address, proxyA
 	if err != nil {
 		return nil, err
 	}
-	conn = obj.newConnecotr()
-	conn.Conn = http3.NewClient(conn.forceCtx, netConn, udpConn, func() {
-		conn.forceCnl(errors.New("http3 client close"))
+	cctx, ccnl := context.WithCancelCause(obj.ctx)
+	conn = http3.NewClient(cctx, netConn, udpConn, func() {
+		ccnl(errors.New("http3 client close"))
 	})
 	if ct, ok := udpConn.(interface {
 		SetTcpCloseFunc(f func(error))
 	}); ok {
 		ct.SetTcpCloseFunc(func(err error) {
-			conn.forceCnl(errors.New("uhttp3 client close with udp"))
+			ccnl(errors.New("uhttp3 client close with udp"))
 		})
 	}
 	return
 }
 
-func (obj *roundTripper) dial(ctx *Response) (conn *connecotr, err error) {
+func (obj *roundTripper) dial(ctx *Response) (conn http1.Conn, err error) {
 	proxys, err := obj.initProxys(ctx)
 	if err != nil {
 		return nil, err
@@ -247,10 +236,9 @@ func (obj *roundTripper) dial(ctx *Response) (conn *connecotr, err error) {
 		return nil, err
 	}
 	var h2 bool
-	conne := obj.newConnecotr()
-	conne.proxys = proxys
+	var rawConn net.Conn
 	if ctx.request.URL.Scheme == "https" {
-		conne.c, h2, err = obj.dialAddTls(ctx.option, ctx.request, rawNetConn)
+		rawConn, h2, err = obj.dialAddTls(ctx.option, ctx.request, rawNetConn)
 		if ctx.option.Logger != nil {
 			ctx.option.Logger(Log{
 				Id:   ctx.requestId,
@@ -263,37 +251,32 @@ func (obj *roundTripper) dial(ctx *Response) (conn *connecotr, err error) {
 			return nil, err
 		}
 	} else {
-		conne.c = rawNetConn
+		rawConn = rawNetConn
 	}
 	if arch != nil {
-		conne.c, err = NewCompressionConn(conne.c, arch)
+		rawConn, err = NewCompressionConn(rawConn, arch)
 		if err != nil {
 			return nil, err
 		}
 	}
-	err = obj.dialConnecotr(ctx, conne, h2)
-	if err != nil {
-		return nil, err
-	}
-	return conne, err
+	return obj.dialConnecotr(ctx, rawConn, h2)
 }
-func (obj *roundTripper) dialConnecotr(ctx *Response, conne *connecotr, h2 bool) (err error) {
+func (obj *roundTripper) dialConnecotr(ctx *Response, rawCon net.Conn, h2 bool) (conn http1.Conn, err error) {
+	cctx, ccnl := context.WithCancelCause(obj.ctx)
 	if h2 {
 		var spec *http2.Spec
 		if ctx.option.gospiderSpec != nil {
 			spec = ctx.option.gospiderSpec.H2Spec
 		}
-		if conne.Conn, err = http2.NewClientConn(conne.forceCtx, ctx.Context(), conne.c, spec, func(err error) {
-			conne.forceCnl(tools.WrapError(err, "http2 client close"))
-		}); err != nil {
-			return err
-		}
+		conn, err = http2.NewClientConn(cctx, ctx.Context(), rawCon, spec, func(err error) {
+			ccnl(tools.WrapError(err, "http2 client close"))
+		})
 	} else {
-		conne.Conn = http1.NewClientConn(conne.forceCtx, conne.c, func(err error) {
-			conne.forceCnl(tools.WrapError(err, "http1 client close"))
+		conn = http1.NewClientConn(cctx, rawCon, func(err error) {
+			ccnl(tools.WrapError(err, "http1 client close"))
 		})
 	}
-	return err
+	return
 }
 func (obj *roundTripper) dialAddTls(option *RequestOption, req *http.Request, netConn net.Conn) (net.Conn, bool, error) {
 	ctx, cnl := context.WithTimeout(req.Context(), option.TlsHandshakeTimeout)
@@ -340,22 +323,25 @@ func (obj *roundTripper) initProxys(ctx *Response) ([]Address, error) {
 	return proxys, nil
 }
 
+func (obj *roundTripper) waitTask(task *reqTask) error {
+	<-task.ctx.Done()
+	err := context.Cause(task.ctx)
+	if errors.Is(err, tools.ErrNoErr) {
+		err = nil
+	}
+	return err
+}
 func (obj *roundTripper) poolRoundTrip(task *reqTask) error {
 	task.ctx, task.cnl = context.WithCancelCause(task.reqCtx.Context())
 	select {
 	case obj.getConnPool(task) <- task:
-		<-task.ctx.Done()
-		err := context.Cause(task.ctx)
-		if errors.Is(err, tools.ErrNoErr) {
-			err = nil
-		}
-		return err
+		return obj.waitTask(task)
 	default:
-		return obj.newRoudTrip(task)
+		return obj.newRoundTrip(task)
 	}
 }
 
-func (obj *roundTripper) newRoudTrip(task *reqTask) error {
+func (obj *roundTripper) newRoundTrip(task *reqTask) error {
 	task.reqCtx.isNewConn = true
 	conn, err := obj.dial(task.reqCtx)
 	if err != nil {
@@ -369,8 +355,8 @@ func (obj *roundTripper) newRoudTrip(task *reqTask) error {
 		task.enableRetry = true
 	}
 	if err == nil {
-		obj.putConnPool(task, conn)
-		err = obj.poolRoundTrip(task)
+		go rwMain(conn, task, obj.getConnPool(task))
+		return obj.waitTask(task)
 	}
 	return err
 }

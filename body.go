@@ -3,6 +3,7 @@ package requests
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"net/textproto"
 	"net/url"
 	"sort"
+	"strings"
 
 	"github.com/gospider007/gson"
 	"github.com/gospider007/tools"
@@ -319,4 +321,124 @@ func (obj *OrderData) parseText() (io.Reader, error) {
 		return nil, err
 	}
 	return bytes.NewReader(con), nil
+}
+
+// Upload files with form-data,
+type File struct {
+	Content     any
+	FileName    string
+	ContentType string
+}
+
+func randomBoundary() (string, string) {
+	var buf [30]byte
+	io.ReadFull(rand.Reader, buf[:])
+	boundary := fmt.Sprintf("%x", buf[:])
+	if strings.ContainsAny(boundary, `()<>@,;:\"/[]?= `) {
+		boundary = `"` + boundary + `"`
+	}
+	return "multipart/form-data; boundary=" + boundary, boundary
+}
+
+func (obj *RequestOption) initBody(ctx context.Context) (io.Reader, error) {
+	if obj.Body != nil {
+		body, orderData, err := obj.newBody(obj.Body)
+		if err != nil {
+			return nil, err
+		}
+		if body != nil {
+			return body, nil
+		}
+		con, err := orderData.MarshalJSON()
+		if err != nil {
+			return nil, err
+		}
+		return bytes.NewReader(con), nil
+	} else if obj.Form != nil {
+		var boundary string
+		if obj.ContentType == "" {
+			obj.ContentType, boundary = randomBoundary()
+		}
+		body, orderData, err := obj.newBody(obj.Form)
+		if err != nil {
+			return nil, err
+		}
+		if body != nil {
+			return body, nil
+		}
+		body, once, err := orderData.parseForm(ctx, boundary)
+		if err != nil {
+			return nil, err
+		}
+		obj.readOne = once
+		return body, err
+	} else if obj.Data != nil {
+		if obj.ContentType == "" {
+			obj.ContentType = "application/x-www-form-urlencoded"
+		}
+		body, orderData, err := obj.newBody(obj.Data)
+		if err != nil {
+			return nil, err
+		}
+		if body != nil {
+			return body, nil
+		}
+		return orderData.parseData(), nil
+	} else if obj.Json != nil {
+		if obj.ContentType == "" {
+			obj.ContentType = "application/json"
+		}
+		body, orderData, err := obj.newBody(obj.Json)
+		if err != nil {
+			return nil, err
+		}
+		if body != nil {
+			return body, nil
+		}
+		return orderData.parseJson()
+	} else if obj.Text != nil {
+		if obj.ContentType == "" {
+			obj.ContentType = "text/plain"
+		}
+		body, orderData, err := obj.newBody(obj.Text)
+		if err != nil {
+			return nil, err
+		}
+		if body != nil {
+			return body, nil
+		}
+		return orderData.parseText()
+	} else {
+		return nil, nil
+	}
+}
+func (obj *RequestOption) initParams() (*url.URL, error) {
+	baseUrl := cloneUrl(obj.Url)
+	if obj.Params == nil {
+		return baseUrl, nil
+	}
+	body, dataData, err := obj.newBody(obj.Params)
+	if err != nil {
+		return nil, err
+	}
+	var query string
+	if body != nil {
+		paramsBytes, err := io.ReadAll(body)
+		if err != nil {
+			return nil, err
+		}
+		query = tools.BytesToString(paramsBytes)
+	} else {
+		query = dataData.parseParams().String()
+	}
+	if query == "" {
+		return baseUrl, nil
+	}
+	pquery := baseUrl.Query().Encode()
+	if pquery == "" {
+		baseUrl.RawQuery = query
+	} else {
+		baseUrl.RawQuery = pquery + "&" + query
+	}
+	return baseUrl, nil
 }

@@ -9,11 +9,10 @@ import (
 
 func TestLocalAddr(t *testing.T) {
 	resp, err := requests.Get(nil, "https://httpbin.org/anything", requests.RequestOption{
-		ClientOption: requests.ClientOption{
-			DialOption: requests.DialOption{
-				LocalAddr: &net.TCPAddr{ //set dns server
-					IP: net.ParseIP("192.168.1.239"),
-				},
+
+		DialOption: &requests.DialOption{
+			LocalAddr: &net.TCPAddr{ //set dns server
+				IP: net.ParseIP("192.168.1.239"),
 			},
 		},
 	})

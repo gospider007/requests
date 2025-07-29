@@ -34,11 +34,9 @@ func TestHttp2(t *testing.T) {
 	}
 	resp, err = session.Post(context.TODO(), "https://mp.weixin.qq.com", requests.RequestOption{
 		Body: "fasfasfsdfdssdsfasdfasdfsadfsdf对方是大翻身大翻身大翻身对方的身份",
-		ClientOption: requests.ClientOption{
-			ErrCallBack: func(ctx *requests.Response) error {
-				log.Print(ctx.Err())
-				return nil
-			},
+		ErrCallBack: func(ctx *requests.Response) error {
+			log.Print(ctx.Err())
+			return nil
 		},
 	})
 	if err != nil {

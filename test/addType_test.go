@@ -9,7 +9,7 @@ import (
 
 func TestAddType(t *testing.T) {
 	session, _ := requests.NewClient(nil, requests.ClientOption{
-		DialOption: requests.DialOption{
+		DialOption: &requests.DialOption{
 			AddrType: gtls.Ipv4,
 		},
 	})

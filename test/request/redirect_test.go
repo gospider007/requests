@@ -9,13 +9,11 @@ import (
 func TestRedirectBreakWitRequest(t *testing.T) {
 	href := "https://httpbin.co/absolute-redirect/2"
 	resp, err := requests.Get(nil, href, requests.RequestOption{
-		ClientOption: requests.ClientOption{
-			RequestCallBack: func(ctx *requests.Response) error {
-				if ctx.Response() != nil {
-					return requests.ErrUseLastResponse
-				}
-				return nil
-			},
+		RequestCallBack: func(ctx *requests.Response) error {
+			if ctx.Response() != nil {
+				return requests.ErrUseLastResponse
+			}
+			return nil
 		},
 	})
 	if err != nil {
@@ -29,13 +27,11 @@ func TestRedirectWithRequest(t *testing.T) {
 	href := "https://httpbin.co/absolute-redirect/2"
 	n := 0
 	resp, err := requests.Get(nil, href, requests.RequestOption{
-		ClientOption: requests.ClientOption{
-			RequestCallBack: func(ctx *requests.Response) error {
-				if ctx.Response() == nil {
-					n++
-				}
-				return nil
-			},
+		RequestCallBack: func(ctx *requests.Response) error {
+			if ctx.Response() == nil {
+				n++
+			}
+			return nil
 		},
 	})
 	if err != nil {

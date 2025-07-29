@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"net/http"
 	"time"
 
 	"github.com/gospider007/http1"
@@ -12,50 +13,7 @@ import (
 
 var maxRetryCount = 5
 
-type connecotr struct {
-	forceCtx context.Context //force close
-	forceCnl context.CancelCauseFunc
-	Conn     http1.Conn
-	c        net.Conn
-	proxys   []Address
-}
-
-func (obj *connecotr) withCancel(forceCtx context.Context) {
-	obj.forceCtx, obj.forceCnl = context.WithCancelCause(forceCtx)
-}
-func (obj *connecotr) Close() error {
-	return obj.CloseWithError(errors.New("connecotr Close close"))
-}
-func (obj *connecotr) CloseWithError(err error) error {
-	err = obj.Conn.CloseWithError(err)
-	if obj.c != nil {
-		return obj.c.Close()
-	}
-	return err
-}
-
-func (obj *connecotr) wrapBody(task *reqTask) {
-	body := new(wrapBody)
-	body.rawBody = task.reqCtx.response.Body.(*http1.ClientBody)
-	body.conn = obj
-	task.reqCtx.response.Body = body
-	task.reqCtx.response.Request = task.reqCtx.request
-}
-
-func (obj *connecotr) httpReq(task *reqTask, done chan struct{}) (err error) {
-	defer close(done)
-	response, bodyCtx, derr := obj.Conn.DoRequest(task.reqCtx.request, &http1.Option{OrderHeaders: task.reqCtx.option.orderHeaders.Data()})
-	if derr != nil {
-		err = tools.WrapError(derr, "roundTrip error")
-		return
-	}
-	task.reqCtx.response = response
-	task.bodyCtx = bodyCtx
-	obj.wrapBody(task)
-	return
-}
-
-func (obj *connecotr) taskMain(task *reqTask) (err error) {
+func taskMain(conn http1.Conn, task *reqTask) (err error) {
 	defer func() {
 		if err != nil && task.reqCtx.option.ErrCallBack != nil {
 			task.reqCtx.err = err
@@ -70,59 +28,53 @@ func (obj *connecotr) taskMain(task *reqTask) (err error) {
 		} else {
 			task.cnl(err)
 		}
-		if err == nil && task.reqCtx.response != nil && task.reqCtx.response.Body != nil && task.bodyCtx != nil {
-			select {
-			case <-obj.forceCtx.Done():
-				err = context.Cause(obj.forceCtx)
-			case <-task.reqCtx.Context().Done():
-				if context.Cause(task.reqCtx.Context()) != tools.ErrNoErr {
-					err = context.Cause(task.reqCtx.Context())
-				}
-				if err == nil && task.reqCtx.response.StatusCode == 101 {
-					select {
-					case <-obj.forceCtx.Done():
-						err = context.Cause(obj.forceCtx)
-					case <-task.bodyCtx.Done():
-						if context.Cause(task.bodyCtx) != tools.ErrNoErr {
-							err = context.Cause(task.bodyCtx)
-						}
+
+		if err == nil && task.reqCtx.response != nil && task.reqCtx.response.Body != nil {
+			if bodyCtx := task.reqCtx.response.Body.(*http1.Body).Context(); bodyCtx != nil {
+				select {
+				case <-task.reqCtx.Context().Done():
+					if context.Cause(task.reqCtx.Context()) != tools.ErrNoErr {
+						err = context.Cause(task.reqCtx.Context())
 					}
-				}
-			case <-task.bodyCtx.Done():
-				if context.Cause(task.bodyCtx) != tools.ErrNoErr {
-					err = context.Cause(task.bodyCtx)
+				case <-bodyCtx.Done():
+					if context.Cause(bodyCtx) != tools.ErrNoErr {
+						err = context.Cause(bodyCtx)
+					}
 				}
 			}
 		}
 		if err != nil {
-			obj.CloseWithError(tools.WrapError(err, "taskMain close with error"))
+			conn.CloseWithError(tools.WrapError(err, "taskMain close with error"))
 		}
 	}()
 	select {
-	case <-obj.forceCtx.Done(): //force conn close
-		err = context.Cause(obj.forceCtx)
+	case <-conn.Context().Done(): //force conn close
+		err = context.Cause(conn.Context())
 		task.enableRetry = true
 		task.isNotice = true
 		return
 	default:
 	}
 	done := make(chan struct{})
+	var derr error
+	var response *http.Response
 	go func() {
-		err = obj.httpReq(task, done)
+		defer close(done)
+		response, derr = conn.DoRequest(task.reqCtx.request, &http1.Option{OrderHeaders: task.reqCtx.option.orderHeaders.Data()})
 	}()
 	select {
-	case <-obj.forceCtx.Done(): //force conn close
-		err = tools.WrapError(context.Cause(obj.forceCtx), "taskMain delete ctx error: ")
+	case <-conn.Context().Done(): //force conn close
+		err = tools.WrapError(context.Cause(conn.Context()), "taskMain delete ctx error: ")
 	case <-time.After(task.reqCtx.option.ResponseHeaderTimeout):
 		err = errors.New("ResponseHeaderTimeout error: ")
 	case <-task.ctx.Done():
 		err = context.Cause(task.ctx)
 	case <-done:
-		if err == nil && task.reqCtx.response == nil {
-			err = context.Cause(task.ctx)
-			if err == nil {
-				err = errors.New("body done response is nil")
-			}
+		if derr != nil {
+			err = tools.WrapError(derr, "roundTrip error")
+		} else {
+			task.reqCtx.response = response
+			task.reqCtx.response.Request = task.reqCtx.request
 		}
 		if task.reqCtx.option.Logger != nil {
 			task.reqCtx.option.Logger(Log{
@@ -136,28 +88,36 @@ func (obj *connecotr) taskMain(task *reqTask) (err error) {
 	return
 }
 
-func (obj *connecotr) rwMain(ctx context.Context, done chan struct{}, tasks chan *reqTask) (err error) {
-	obj.withCancel(ctx)
+func taskM(conn http1.Conn, task *reqTask) error {
+	err := taskMain(conn, task)
+	if err != nil {
+		return err
+	}
+	if task.reqCtx.response != nil && task.reqCtx.response.StatusCode == 101 {
+		return tools.ErrNoErr
+	}
+	return err
+}
+func rwMain(conn http1.Conn, task *reqTask, tasks chan *reqTask) (err error) {
 	defer func() {
 		if err != nil && err != tools.ErrNoErr {
-			obj.CloseWithError(tools.WrapError(err, "rwMain close with error"))
+			conn.CloseWithError(tools.WrapError(err, "rwMain close with error"))
 		}
 	}()
-	close(done)
+	if err = taskM(conn, task); err != nil {
+		return
+	}
 	for {
 		select {
-		case <-obj.forceCtx.Done(): //force close conn
+		case <-conn.Context().Done(): //force close conn
 			return errors.New("connecotr force close")
 		case task := <-tasks: //recv task
 			if task == nil {
 				return errors.New("task is nil")
 			}
-			err = obj.taskMain(task)
+			err = taskM(conn, task)
 			if err != nil {
 				return
-			}
-			if task.reqCtx.response != nil && task.reqCtx.response.StatusCode == 101 {
-				return tools.ErrNoErr
 			}
 		}
 	}

@@ -17,10 +17,7 @@ func TestOrderHeaders(t *testing.T) {
 	}
 
 	resp, err := requests.Get(nil, "https://tools.scrapfly.io/api/fp/anything", requests.RequestOption{
-		ClientOption: requests.ClientOption{
-			OrderHeaders: orderKeys,
-			// Headers: headers,
-		},
+		OrderHeaders: orderKeys,
 		// ForceHttp1: true,
 	})
 	if err != nil {

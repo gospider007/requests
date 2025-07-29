@@ -13,10 +13,7 @@ import (
 
 func TestHttp3(t *testing.T) {
 	resp, err := requests.Get(context.TODO(), "https://cloudflare-quic.com/", requests.RequestOption{
-		ClientOption: requests.ClientOption{
-
-			ForceHttp3: true,
-		},
+		ForceHttp3: true,
 	},
 	)
 	if err != nil {
@@ -45,17 +42,15 @@ func TestHttp3Proxy(t *testing.T) {
 
 	resp, err := requests.Get(context.Background(), href,
 		requests.RequestOption{
-			ClientOption: requests.ClientOption{
-				DialOption: requests.DialOption{
-					// AddrType: gtls.Ipv4,
-					GetAddrType: func(host string) gtls.AddrType {
-						log.Print("我开始喽")
-						return gtls.Ipv4
-					},
+			DialOption: &requests.DialOption{
+				// AddrType: gtls.Ipv4,
+				GetAddrType: func(host string) gtls.AddrType {
+					log.Print("我开始喽")
+					return gtls.Ipv4
 				},
-				Proxy: "socks5://" + proxyAddress,
-				// ForceHttp3: true,
 			},
+			Proxy: "socks5://" + proxyAddress,
+			// ForceHttp3: true,
 		})
 	if err != nil {
 		log.Panic(err)
