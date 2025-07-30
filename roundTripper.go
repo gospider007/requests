@@ -22,21 +22,16 @@ import (
 )
 
 type reqTask struct {
-	ctx         context.Context
-	cnl         context.CancelCauseFunc
-	reqCtx      *Response
-	enableRetry bool
-	disRetry    bool
-	isNotice    bool
-	key         string
+	ctx      context.Context
+	cnl      context.CancelCauseFunc
+	reqCtx   *Response
+	disRetry bool
+	key      string
 }
 
 func (obj *reqTask) suppertRetry() bool {
 	if obj.disRetry {
 		return false
-	}
-	if obj.enableRetry {
-		return true
 	}
 	if obj.reqCtx.request.Body == nil {
 		return true
@@ -348,15 +343,6 @@ func (obj *roundTripper) waitTask(task *reqTask) error {
 	}
 	return err
 }
-func (obj *roundTripper) poolRoundTrip(task *reqTask) error {
-	task.ctx, task.cnl = context.WithCancelCause(task.reqCtx.Context())
-	select {
-	case obj.getConnPool(task) <- task:
-		return obj.waitTask(task)
-	default:
-		return obj.newRoundTrip(task)
-	}
-}
 
 func (obj *roundTripper) newRoundTrip(task *reqTask) error {
 	task.reqCtx.isNewConn = true
@@ -372,7 +358,6 @@ func (obj *roundTripper) newRoundTrip(task *reqTask) error {
 				err = err2
 			}
 		}
-		task.enableRetry = true
 	}
 	if err == nil {
 		go rwMain(conn, task, obj.getConnPool(task))
@@ -405,9 +390,8 @@ func (obj *roundTripper) RoundTrip(ctx *Response) (err error) {
 			return err
 		}
 	}
-	currentRetry := 0
 	var task *reqTask
-	for ; currentRetry <= maxRetryCount; currentRetry++ {
+	for send := true; send; {
 		select {
 		case <-ctx.Context().Done():
 			return context.Cause(ctx.Context())
@@ -417,13 +401,18 @@ func (obj *roundTripper) RoundTrip(ctx *Response) (err error) {
 		if err != nil {
 			return err
 		}
-		err = obj.poolRoundTrip(task)
-		if err == nil || !task.suppertRetry() {
+		task.ctx, task.cnl = context.WithCancelCause(task.reqCtx.Context())
+		select {
+		case obj.getConnPool(task) <- task:
+			err = obj.waitTask(task)
+		default:
+			err = obj.newRoundTrip(task)
+			task.disRetry = true
+		}
+		if err == nil {
 			break
 		}
-		if task.isNotice {
-			currentRetry--
-		}
+		send = task.suppertRetry()
 	}
 	if err == nil && ctx.option.RequestCallBack != nil {
 		if err2 := ctx.option.RequestCallBack(ctx); err2 != nil {

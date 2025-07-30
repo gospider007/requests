@@ -48,19 +48,22 @@ type ClientOption struct {
 	UtlsConfig            *utls.Config
 	QuicConfig            *quic.Config
 	UquicConfig           *uquic.Config
-	USpec                 any           //support ja3.USpec,uquic.QUICID,bool
-	UserAgent             string        //headers User-Agent value
-	Proxy                 any           //strong or []string, ,support https,http,socks5
-	MaxRetries            int           //try num
-	MaxRedirect           int           //redirect num ,<0 no redirect,==0 no limit
-	Timeout               time.Duration //request timeout
-	ResponseHeaderTimeout time.Duration //ResponseHeaderTimeout
-	TlsHandshakeTimeout   time.Duration //tls timeout
-	ForceHttp3            bool          //force  use http3 send requests
-	ForceHttp1            bool          //force  use http1 send requests
-	DisCookie             bool          //disable cookies
-	DisDecode             bool          //disable auto decode
-	Bar                   bool          ////enable bar display
+	USpec                 any               //support ja3.USpec,uquic.QUICID,bool
+	UserAgent             string            //headers User-Agent value
+	Proxy                 any               //strong or []string, ,support https,http,socks5
+	MaxRetries            int               //try num
+	MaxRedirect           int               //redirect num ,<0 no redirect,==0 no limit
+	Timeout               time.Duration     //request timeout
+	ResponseHeaderTimeout time.Duration     //ResponseHeaderTimeout
+	TlsHandshakeTimeout   time.Duration     //tls timeout
+	ForceHttp3            bool              //force  use http3 send requests
+	ForceHttp1            bool              //force  use http1 send requests
+	DisCookie             bool              //disable cookies
+	DisDecode             bool              //disable auto decode
+	Bar                   bool              ////enable bar display
+	Headers               any               //default headers
+	WsOption              *websocket.Option //websocket option
+	Stream                bool              //disable auto read
 }
 
 // Options for sending requests
@@ -79,37 +82,37 @@ type RequestOption struct {
 	UtlsConfig            *utls.Config
 	QuicConfig            *quic.Config
 	UquicConfig           *uquic.Config
-	USpec                 any           //support ja3.USpec,uquic.QUICID,bool
-	UserAgent             string        //headers User-Agent value
-	Proxy                 any           //strong or []string, ,support https,http,socks5
-	MaxRetries            int           //try num
-	MaxRedirect           int           //redirect num ,<0 no redirect,==0 no limit
-	Timeout               time.Duration //request timeout
-	ResponseHeaderTimeout time.Duration //ResponseHeaderTimeout
-	TlsHandshakeTimeout   time.Duration //tls timeout
-	ForceHttp3            bool          //force  use http3 send requests
-	ForceHttp1            bool          //force  use http1 send requests
-	DisCookie             bool          //disable cookies
-	DisDecode             bool          //disable auto decode
-	Bar                   bool          ////enable bar display
+	USpec                 any               //support ja3.USpec,uquic.QUICID,bool
+	UserAgent             string            //headers User-Agent value
+	Proxy                 any               //strong or []string, ,support https,http,socks5
+	MaxRetries            int               //try num
+	MaxRedirect           int               //redirect num ,<0 no redirect,==0 no limit
+	Timeout               time.Duration     //request timeout
+	ResponseHeaderTimeout time.Duration     //ResponseHeaderTimeout
+	TlsHandshakeTimeout   time.Duration     //tls timeout
+	ForceHttp3            bool              //force  use http3 send requests
+	ForceHttp1            bool              //force  use http1 send requests
+	DisCookie             bool              //disable cookies
+	DisDecode             bool              //disable auto decode
+	Bar                   bool              ////enable bar display
+	Headers               any               //default headers
+	WsOption              *websocket.Option //websocket option
+	Stream                bool              //disable auto read
 	//分割线
 	//以下为请求参数
-	Headers  any              //default headers
-	WsOption websocket.Option //websocket option
-	Cookies  any              // cookies,support :json,map,str，http.Header
-	Params   any              //url params，join url query,json,map
-	Json     any              //send application/json,support io.Reader,：string,[]bytes,json,map
-	Data     any              //send application/x-www-form-urlencoded, support io.Reader, string,[]bytes,json,map
-	Form     any              //send multipart/form-data,file upload,support io.Reader, json,map
-	Text     any              //send text/xml,support: io.Reader, string,[]bytes,json,map
-	Body     any              //not setting context-type,support io.Reader, string,[]bytes,json,map
-	Url      *url.URL
+	Cookies any // cookies,support :json,map,str，http.Header
+	Params  any //url params，join url query,json,map
+	Json    any //send application/json,support io.Reader,：string,[]bytes,json,map
+	Data    any //send application/x-www-form-urlencoded, support io.Reader, string,[]bytes,json,map
+	Form    any //send multipart/form-data,file upload,support io.Reader, json,map
+	Text    any //send text/xml,support: io.Reader, string,[]bytes,json,map
+	Body    any //not setting context-type,support io.Reader, string,[]bytes,json,map
+	Url     *url.URL
 	// other option
 	Method      string //method
 	Host        string
 	Referer     string //set headers referer value
 	ContentType string //headers Content-Type value
-	Stream      bool   //disable auto read
 	DisProxy    bool   //force disable proxy
 
 	readOne      bool
@@ -121,6 +124,12 @@ type RequestOption struct {
 func merge(option *RequestOption, clientOption *ClientOption) {
 	if option.Spec == "" {
 		option.Spec = clientOption.Spec
+	}
+	if option.WsOption == nil {
+		option.WsOption = clientOption.WsOption
+	}
+	if option.Headers == nil {
+		option.Headers = clientOption.Headers
 	}
 	if option.OrderHeaders == nil {
 		option.OrderHeaders = clientOption.OrderHeaders
@@ -199,6 +208,9 @@ func merge(option *RequestOption, clientOption *ClientOption) {
 	}
 	if !option.Bar {
 		option.Bar = clientOption.Bar
+	}
+	if !option.Stream {
+		option.Stream = clientOption.Stream
 	}
 }
 

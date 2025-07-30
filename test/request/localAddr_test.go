@@ -12,7 +12,7 @@ func TestLocalAddr(t *testing.T) {
 
 		DialOption: &requests.DialOption{
 			LocalAddr: &net.TCPAddr{ //set dns server
-				IP: net.ParseIP("192.168.1.239"),
+				// IP: net.ParseIP("192.168.1.239"),
 			},
 		},
 	})

@@ -11,14 +11,11 @@ import (
 	"github.com/gospider007/tools"
 )
 
-var maxRetryCount = 5
-
 func taskMain(conn http1.Conn, task *reqTask) (err error) {
 	defer func() {
 		if err != nil && task.reqCtx.option.ErrCallBack != nil {
 			task.reqCtx.err = err
 			if err2 := task.reqCtx.option.ErrCallBack(task.reqCtx); err2 != nil {
-				task.isNotice = false
 				task.disRetry = true
 				err = err2
 			}
@@ -50,8 +47,6 @@ func taskMain(conn http1.Conn, task *reqTask) (err error) {
 	select {
 	case <-conn.Context().Done(): //force conn close
 		err = context.Cause(conn.Context())
-		task.enableRetry = true
-		task.isNotice = true
 		return
 	default:
 	}
@@ -65,7 +60,7 @@ func taskMain(conn http1.Conn, task *reqTask) (err error) {
 	if task.reqCtx.option.ResponseHeaderTimeout > 0 {
 		select {
 		case <-conn.Context().Done(): //force conn close
-			err = tools.WrapError(context.Cause(conn.Context()), "taskMain delete ctx error: ")
+			err = tools.WrapError(context.Cause(conn.Context()), "taskMain delete ctx error")
 		case <-time.After(task.reqCtx.option.ResponseHeaderTimeout):
 			err = errors.New("ResponseHeaderTimeout error: ")
 		case <-task.ctx.Done():
@@ -75,7 +70,7 @@ func taskMain(conn http1.Conn, task *reqTask) (err error) {
 	} else {
 		select {
 		case <-conn.Context().Done(): //force conn close
-			err = tools.WrapError(context.Cause(conn.Context()), "taskMain delete ctx error: ")
+			err = tools.WrapError(context.Cause(conn.Context()), "taskMain delete ctx error")
 		case <-task.ctx.Done():
 			err = context.Cause(task.ctx)
 		case <-done:
