@@ -14,8 +14,8 @@ require (
 	github.com/gospider007/http3 v0.0.0-20250729013804-e1c3cbcf998f
 	github.com/gospider007/ja3 v0.0.0-20250724085013-aa7e0a527d6c
 	github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c
-	github.com/gospider007/tools v0.0.0-20250718003809-7c62cd0ee920
-	github.com/gospider007/websocket v0.0.0-20250718010025-4c017acfd478
+	github.com/gospider007/tools v0.0.0-20250730001814-2c13a4717064
+	github.com/gospider007/websocket v0.0.0-20250730001828-b2c8c6bef799
 	github.com/klauspost/compress v1.18.0
 	github.com/minio/minlz v1.0.1
 	github.com/quic-go/quic-go v0.54.0

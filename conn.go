@@ -50,37 +50,16 @@ func taskMain(conn http1.Conn, task *reqTask) (err error) {
 		return
 	default:
 	}
-	done := make(chan struct{})
-	var derr error
 	var response *http.Response
-	go func() {
-		defer close(done)
-		response, derr = conn.DoRequest(task.reqCtx.request, &http1.Option{OrderHeaders: task.reqCtx.option.orderHeaders.Data()})
-	}()
 	if task.reqCtx.option.ResponseHeaderTimeout > 0 {
-		select {
-		case <-conn.Context().Done(): //force conn close
-			err = tools.WrapError(context.Cause(conn.Context()), "taskMain delete ctx error")
-		case <-time.After(task.reqCtx.option.ResponseHeaderTimeout):
-			err = errors.New("ResponseHeaderTimeout error: ")
-		case <-task.ctx.Done():
-			err = context.Cause(task.ctx)
-		case <-done:
-		}
+		ctx, cnl := context.WithTimeout(task.reqCtx.Context(), task.reqCtx.option.ResponseHeaderTimeout)
+		response, err = conn.DoRequest(ctx, task.reqCtx.request, &http1.Option{OrderHeaders: task.reqCtx.option.orderHeaders.Data()})
+		cnl()
 	} else {
-		select {
-		case <-conn.Context().Done(): //force conn close
-			err = tools.WrapError(context.Cause(conn.Context()), "taskMain delete ctx error")
-		case <-task.ctx.Done():
-			err = context.Cause(task.ctx)
-		case <-done:
-		}
+		response, err = conn.DoRequest(task.reqCtx.Context(), task.reqCtx.request, &http1.Option{OrderHeaders: task.reqCtx.option.orderHeaders.Data()})
 	}
-
 	if err != nil {
 		err = tools.WrapError(err, "roundTrip error")
-	} else if derr != nil {
-		err = tools.WrapError(derr, "roundTrip error")
 	} else {
 		task.reqCtx.response = response
 		task.reqCtx.response.Request = task.reqCtx.request

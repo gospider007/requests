@@ -126,10 +126,10 @@ github.com/gospider007/kinds v0.0.0-20250217075226-10f199f7215d h1:+Fih572EdNmYC
 github.com/gospider007/kinds v0.0.0-20250217075226-10f199f7215d/go.mod h1:3u6J+nbdWhCNJGiQjq/hKSukn2k6ebjd98rd2+fzKNo=
 github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c h1:8/Cf+c2680tkWJ+ueZ9RLLK5R5R8nhE8pNBUPHjkvkM=
 github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c/go.mod h1:dd8aDIUG1vDPP5r+vHBtiUK0Zn6uk3SsWt1ZvmCCHLs=
-github.com/gospider007/tools v0.0.0-20250718003809-7c62cd0ee920 h1:WZof+Xg/syAFRGHTPa9Cct6OLrtx8wHcAgGOC6ggFT4=
-github.com/gospider007/tools v0.0.0-20250718003809-7c62cd0ee920/go.mod h1:i0V5k/zJW/ghTLLWY40pwTVuwa/Gxm2Q1IP1vQYHBX8=
-github.com/gospider007/websocket v0.0.0-20250718010025-4c017acfd478 h1:tVIWVD9oHdmIIA506SQ7qbx4vTlckxzk/JKhuDCzkHw=
-github.com/gospider007/websocket v0.0.0-20250718010025-4c017acfd478/go.mod h1:okAxHf/CcV7d+iCl9dYRpe1rIyaOcR/DxIDj2KAzFDk=
+github.com/gospider007/tools v0.0.0-20250730001814-2c13a4717064 h1:zmdLFUzG87xgpDp6JnTr73t1f+LtOLufiL7dPT2nPVQ=
+github.com/gospider007/tools v0.0.0-20250730001814-2c13a4717064/go.mod h1:i0V5k/zJW/ghTLLWY40pwTVuwa/Gxm2Q1IP1vQYHBX8=
+github.com/gospider007/websocket v0.0.0-20250730001828-b2c8c6bef799 h1:xOjIXygt5inFogiC0BVHFQlUZ3j8d5q7jHy3C4Isv2w=
+github.com/gospider007/websocket v0.0.0-20250730001828-b2c8c6bef799/go.mod h1:mzusKGPxNYnxJBWJZp/uME5LmlIk3VROPMg7Q+v81mI=
 github.com/hashicorp/golang-lru v0.5.0/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
 github.com/hashicorp/golang-lru v0.5.1/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
 github.com/hashicorp/golang-lru/v2 v2.0.7 h1:a+bsQ5rvGLjzHuww6tVxozPZFVghXaHOwFs4luLUK2k=
