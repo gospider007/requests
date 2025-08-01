@@ -20,14 +20,15 @@ func taskMain(conn http1.Conn, task *reqTask) (err error) {
 				err = err2
 			}
 		}
-		if err == nil {
-			task.cnl(tools.ErrNoErr)
-		} else {
+		if err != nil {
 			task.cnl(err)
-		}
-
-		if err == nil && task.reqCtx.response != nil && task.reqCtx.response.Body != nil {
-			if bodyCtx := task.reqCtx.response.Body.(*http1.Body).Context(); bodyCtx != nil {
+		} else {
+			var bodyCtx context.Context
+			if task.reqCtx.response != nil && task.reqCtx.response.Body != nil {
+				bodyCtx = task.reqCtx.response.Body.(*http1.Body).Context()
+			}
+			task.cnl(tools.ErrNoErr)
+			if bodyCtx != nil {
 				select {
 				case <-task.reqCtx.Context().Done():
 					if context.Cause(task.reqCtx.Context()) != tools.ErrNoErr {
