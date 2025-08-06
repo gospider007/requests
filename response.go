@@ -334,7 +334,7 @@ func (obj *Response) closeBody(i bool, err error) {
 	if obj.bodyErr != io.EOF {
 		obj.CloseConn()
 		return
-	} else if i {
+	} else if i { //用户主动调用
 		if obj.StatusCode() == 101 && obj.webSocket == nil {
 			obj.CloseConn()
 			return
@@ -343,7 +343,6 @@ func (obj *Response) closeBody(i bool, err error) {
 	if err == nil {
 		err = tools.ErrNoErr
 	}
-
 	if err == tools.ErrNoErr {
 		obj.rawBody.CloseWithError(err)
 	} else {

@@ -554,10 +554,10 @@ func (obj *Dialer) clientVerifyHttps(ctx context.Context, conn net.Conn, proxyAd
 	}
 	connectReq.Header = hdr
 	connectReq.Host = remoteAddress.Host
-	if err = http1.HttpWrite(connectReq, bufio.NewWriter(conn), connectReq.Header.Clone(), nil); err != nil {
+	if err = http1.WriteRequest(connectReq, bufio.NewWriter(conn), connectReq.Header.Clone(), nil); err != nil {
 		return err
 	}
-	resp, err := http.ReadResponse(bufio.NewReader(conn), connectReq)
+	resp, err := http1.ReadResponse(bufio.NewReader(conn))
 	if err != nil {
 		return err
 	}

@@ -8,10 +8,10 @@ require (
 	github.com/gospider007/bar v0.0.0-20250217074946-47896d8de2ba
 	github.com/gospider007/bs4 v0.0.0-20250413121342-fed910fb00c9
 	github.com/gospider007/gson v0.0.0-20250718004537-ff15820964bd
-	github.com/gospider007/gtls v0.0.0-20250718003831-90cdeb97a23f
-	github.com/gospider007/http1 v0.0.0-20250730005050-515977c5b07d
-	github.com/gospider007/http2 v0.0.0-20250730005104-4aba01b5e597
-	github.com/gospider007/http3 v0.0.0-20250730005159-34228fdf579f
+	github.com/gospider007/gtls v0.0.0-20250801033740-1ebcdc3aaa9a
+	github.com/gospider007/http1 v0.0.0-20250805100128-e9ba2032d57d
+	github.com/gospider007/http2 v0.0.0-20250805092410-87c07ed55dc7
+	github.com/gospider007/http3 v0.0.0-20250805092453-0bfc34e041e4
 	github.com/gospider007/ja3 v0.0.0-20250724085013-aa7e0a527d6c
 	github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c
 	github.com/gospider007/tools v0.0.0-20250730001814-2c13a4717064
@@ -21,7 +21,7 @@ require (
 	github.com/quic-go/quic-go v0.54.0
 	github.com/refraction-networking/uquic v0.0.6
 	github.com/refraction-networking/utls v1.8.0
-	github.com/txthinking/socks5 v0.0.0-20230325130024-4230056ae301
+	github.com/txthinking/socks5 v0.0.0-20250803014457-d3594b14cf12
 	golang.org/x/crypto v0.40.0
 	golang.org/x/net v0.42.0
 	gopkg.in/errgo.v2 v2.1.0
@@ -35,7 +35,7 @@ require (
 	github.com/bodgit/plumbing v1.3.0 // indirect
 	github.com/bodgit/sevenzip v1.6.1 // indirect
 	github.com/bodgit/windows v1.0.1 // indirect
-	github.com/caddyserver/certmagic v0.23.0 // indirect
+	github.com/caddyserver/certmagic v0.24.0 // indirect
 	github.com/caddyserver/zerossl v0.1.3 // indirect
 	github.com/dsnet/compress v0.0.2-0.20230904184137-39efe44ab707 // indirect
 	github.com/gaukas/clienthellod v0.4.2 // indirect
@@ -56,7 +56,7 @@ require (
 	github.com/libdns/libdns v1.1.0 // indirect
 	github.com/mholt/acmez/v3 v3.1.2 // indirect
 	github.com/mholt/archives v0.1.3 // indirect
-	github.com/miekg/dns v1.1.67 // indirect
+	github.com/miekg/dns v1.1.68 // indirect
 	github.com/mikelolasagasti/xz v1.0.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect

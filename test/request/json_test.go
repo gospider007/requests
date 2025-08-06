@@ -87,6 +87,7 @@ func TestSendJsonWithGson(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// log.Print(resp.Text())
 	jsonData, err := resp.Json()
 	if err != nil {
 		t.Fatal(err)

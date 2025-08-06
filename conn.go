@@ -81,7 +81,7 @@ func taskM(conn http1.Conn, task *reqTask) error {
 	if err != nil {
 		return err
 	}
-	if task.reqCtx.response != nil && task.reqCtx.response.StatusCode == 101 {
+	if task.reqCtx.response != nil && task.reqCtx.response.Close {
 		return tools.ErrNoErr
 	}
 	return err
