@@ -11,7 +11,7 @@ require (
 	github.com/gospider007/gtls v0.0.0-20250801033740-1ebcdc3aaa9a
 	github.com/gospider007/http1 v0.0.0-20250806001143-d0669acd99ef
 	github.com/gospider007/http2 v0.0.0-20250805092410-87c07ed55dc7
-	github.com/gospider007/http3 v0.0.0-20250805092453-0bfc34e041e4
+	github.com/gospider007/http3 v0.0.0-20250811065920-4ec9b14f9686
 	github.com/gospider007/ja3 v0.0.0-20250724085013-aa7e0a527d6c
 	github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c
 	github.com/gospider007/tools v0.0.0-20250730001814-2c13a4717064
@@ -22,8 +22,8 @@ require (
 	github.com/refraction-networking/uquic v0.0.6
 	github.com/refraction-networking/utls v1.8.0
 	github.com/txthinking/socks5 v0.0.0-20250803014457-d3594b14cf12
-	golang.org/x/crypto v0.40.0
-	golang.org/x/net v0.42.0
+	golang.org/x/crypto v0.41.0
+	golang.org/x/net v0.43.0
 	gopkg.in/errgo.v2 v2.1.0
 )
 
@@ -81,11 +81,11 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	go.uber.org/zap/exp v0.3.0 // indirect
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
-	golang.org/x/exp v0.0.0-20250718183923-645b1fa84792 // indirect
-	golang.org/x/image v0.29.0 // indirect
-	golang.org/x/mod v0.26.0 // indirect
+	golang.org/x/exp v0.0.0-20250808145144-a408d31f581a // indirect
+	golang.org/x/image v0.30.0 // indirect
+	golang.org/x/mod v0.27.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/sys v0.34.0 // indirect
-	golang.org/x/text v0.27.0 // indirect
-	golang.org/x/tools v0.35.0 // indirect
+	golang.org/x/sys v0.35.0 // indirect
+	golang.org/x/text v0.28.0 // indirect
+	golang.org/x/tools v0.36.0 // indirect
 )

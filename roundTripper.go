@@ -213,15 +213,9 @@ func (obj *roundTripper) dial(ctx *Response) (conn http1.Conn, err error) {
 		}
 	}
 	var rawNetConn net.Conn
-	var arch Compression
+	var arch string
 	if len(proxys) > 0 {
-		comp := proxys[len(proxys)-1]
-		if comp.Compression != "" {
-			arch, err = NewCompression(comp.Compression)
-			if err != nil {
-				return nil, err
-			}
-		}
+		arch = proxys[len(proxys)-1].Compression
 		_, rawNetConn, err = obj.dialer.DialProxyContext(ctx, "tcp", ctx.option.TlsConfig.Clone(), append(proxys, remoteAddress)...)
 	} else {
 		var remoteAddress Address
@@ -264,7 +258,7 @@ func (obj *roundTripper) dial(ctx *Response) (conn http1.Conn, err error) {
 		}
 		return nil, err
 	}
-	if arch != nil {
+	if arch != "" {
 		rawConn, err = NewCompressionConn(rawConn, arch)
 	}
 	if err != nil {

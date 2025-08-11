@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"testing"
 
 	"github.com/gospider007/requests"
@@ -20,6 +21,7 @@ func TestRedirectCallBack(t *testing.T) {
 		t.Error(err)
 	}
 	if response.StatusCode() != 302 {
+		log.Print(response.StatusCode())
 		t.Error("redirect failed")
 	}
 }
