@@ -14,38 +14,38 @@ import (
 
 var wsOk bool
 
-func websocketServer() {
-	if wsOk {
-		return
-	}
+func websocketServer(addr string) {
 	var upgrader = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
 			return true // 允许跨域
 		},
 	}
-	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		conn, err := upgrader.Upgrade(w, r, nil)
-		if err != nil {
-			return
-		}
-		defer conn.Close()
+	if !wsOk {
 
-		for {
-			messageType, message, err := conn.ReadMessage()
+		http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+			conn, err := upgrader.Upgrade(w, r, nil)
 			if err != nil {
-				break
+				return
 			}
-			conn.WriteMessage(messageType, []byte("服务端回复："+string(message)))
-		}
-	})
-	log.Println("WebSocket 服务器启动于 ws://localhost:8080/ws")
+			defer conn.Close()
+
+			for {
+				messageType, message, err := conn.ReadMessage()
+				if err != nil {
+					break
+				}
+				conn.WriteMessage(messageType, []byte("服务端回复："+string(message)))
+			}
+		})
+	}
 	wsOk = true
-	log.Fatal(http.ListenAndServe(":8800", nil))
+	log.Printf("WebSocket 服务器启动于 ws://127.0.0.1%s/ws", addr)
+	log.Fatal(http.ListenAndServe(addr, nil))
 }
 func TestWebSocket(t *testing.T) {
-	go websocketServer()
+	go websocketServer(":8806")
 	time.Sleep(time.Second * 1)                                                                          // Send WebSocket request
-	response, err := requests.Get(nil, "ws://localhost:8800/ws", requests.RequestOption{DisProxy: true}) // Send WebSocket request
+	response, err := requests.Get(nil, "ws://127.0.0.1:8806/ws", requests.RequestOption{DisProxy: true}) // Send WebSocket request
 	if err != nil {
 		log.Panic(err)
 	}
@@ -80,9 +80,10 @@ func TestWebSocket(t *testing.T) {
 	}
 }
 func TestWebSocketClose(t *testing.T) {
-	go websocketServer()
-	time.Sleep(time.Second * 1)                                                                                        // Send WebSocket request
-	response, err := requests.Get(nil, "ws://localhost:8800/ws", requests.RequestOption{DisProxy: true, Stream: true}) // Send WebSocket request
+	time.Sleep(time.Second * 1) // Send WebSocket request
+	go websocketServer(":8809")
+	time.Sleep(time.Second * 5)                                                                                        // Send WebSocket request
+	response, err := requests.Get(nil, "ws://127.0.0.1:8809/ws", requests.RequestOption{DisProxy: true, Stream: true}) // Send WebSocket request
 	if err != nil {
 		log.Panic(err)
 	}
@@ -101,9 +102,9 @@ func TestWebSocketClose(t *testing.T) {
 	}
 }
 func TestWebSocketClose2(t *testing.T) {
-	go websocketServer()
+	go websocketServer(":8802")
 	time.Sleep(time.Second * 1)                                                                                        // Send WebSocket request
-	response, err := requests.Get(nil, "ws://localhost:8800/ws", requests.RequestOption{DisProxy: true, Stream: true}) // Send WebSocket request
+	response, err := requests.Get(nil, "ws://127.0.0.1:8802/ws", requests.RequestOption{DisProxy: true, Stream: true}) // Send WebSocket request
 	if err != nil {
 		log.Panic(err)
 	}
@@ -124,9 +125,9 @@ func TestWebSocketClose2(t *testing.T) {
 	}
 }
 func TestWebSocketClose3(t *testing.T) {
-	go websocketServer()
+	go websocketServer(":8803")
 	time.Sleep(time.Second * 1)                                                                                        // Send WebSocket request
-	response, err := requests.Get(nil, "ws://localhost:8800/ws", requests.RequestOption{DisProxy: true, Stream: true}) // Send WebSocket request
+	response, err := requests.Get(nil, "ws://127.0.0.1:8803/ws", requests.RequestOption{DisProxy: true, Stream: true}) // Send WebSocket request
 	if err != nil {
 		log.Panic(err)
 	}

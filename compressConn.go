@@ -50,29 +50,6 @@ func GetCompressionByte(decode string) (byte, error) {
 	}
 }
 
-var compressionData = map[byte]compression{
-	40: {
-		name:       "zstd",
-		openReader: newZstdReader,
-		openWriter: newZstdWriter,
-	},
-	255: {
-		name:       "s2",
-		openReader: newSnappyReader,
-		openWriter: newSnappyWriter,
-	},
-	92: {
-		name:       "flate",
-		openReader: newFlateReader,
-		openWriter: newFlateWriter,
-	},
-	93: {
-		name:       "minlz",
-		openReader: newMinlzReader,
-		openWriter: newMinlzWriter,
-	},
-}
-
 func NewCompressionWithByte(b byte) (Compression, error) {
 	c, ok := compressionData[b]
 	if !ok {
@@ -106,7 +83,7 @@ func NewCompressionWithByte(b byte) (Compression, error) {
 func NewCompression(decode string) (Compression, error) {
 	decode = strings.ToLower(decode)
 	for b, c := range compressionData {
-		if c.String() == decode {
+		if c.name == decode {
 			return NewCompressionWithByte(b)
 		}
 	}
@@ -140,7 +117,10 @@ func (obj *CompressionConn) Write(b []byte) (n int, err error) {
 	return obj.w.Write(b)
 }
 func (obj *CompressionConn) Close() error {
-	return obj.conn.Close()
+	err := obj.conn.Close()
+	obj.w.Close()
+	obj.r.Close()
+	return err
 }
 
 func (obj *CompressionConn) LocalAddr() net.Addr {

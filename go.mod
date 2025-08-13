@@ -9,12 +9,12 @@ require (
 	github.com/gospider007/bs4 v0.0.0-20250413121342-fed910fb00c9
 	github.com/gospider007/gson v0.0.0-20250718004537-ff15820964bd
 	github.com/gospider007/gtls v0.0.0-20250801033740-1ebcdc3aaa9a
-	github.com/gospider007/http1 v0.0.0-20250806001143-d0669acd99ef
-	github.com/gospider007/http2 v0.0.0-20250805092410-87c07ed55dc7
+	github.com/gospider007/http1 v0.0.0-20250811065845-3171c31c920d
+	github.com/gospider007/http2 v0.0.0-20250813025441-3ca7313b9015
 	github.com/gospider007/http3 v0.0.0-20250811065920-4ec9b14f9686
 	github.com/gospider007/ja3 v0.0.0-20250724085013-aa7e0a527d6c
 	github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c
-	github.com/gospider007/tools v0.0.0-20250730001814-2c13a4717064
+	github.com/gospider007/tools v0.0.0-20250811070046-82a1a8f96823
 	github.com/gospider007/websocket v0.0.0-20250730005216-580a061173b9
 	github.com/klauspost/compress v1.18.0
 	github.com/minio/minlz v1.0.1
@@ -81,7 +81,7 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	go.uber.org/zap/exp v0.3.0 // indirect
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
-	golang.org/x/exp v0.0.0-20250808145144-a408d31f581a // indirect
+	golang.org/x/exp v0.0.0-20250811191247-51f88131bc50 // indirect
 	golang.org/x/image v0.30.0 // indirect
 	golang.org/x/mod v0.27.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect

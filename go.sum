@@ -114,10 +114,10 @@ github.com/gospider007/gson v0.0.0-20250718004537-ff15820964bd h1:aby4HnAGVJt5pI
 github.com/gospider007/gson v0.0.0-20250718004537-ff15820964bd/go.mod h1:GxCATDh+u/TLHTAI9p1kXfaGUkVNjHuY+Mhxdo4l5k8=
 github.com/gospider007/gtls v0.0.0-20250801033740-1ebcdc3aaa9a h1:FdBSNOy8cLM4WYkvWgQJVoi++OwkNtsipuRcxyb5d9Q=
 github.com/gospider007/gtls v0.0.0-20250801033740-1ebcdc3aaa9a/go.mod h1:iTnRK0DU3YH7MlZZ9VdT5gQAFPKzHRtFi3EXpnosOAM=
-github.com/gospider007/http1 v0.0.0-20250806001143-d0669acd99ef h1:Ag8TrazSH1sVxVMjCOY3laRcorBiceseB3PcNvqJDbE=
-github.com/gospider007/http1 v0.0.0-20250806001143-d0669acd99ef/go.mod h1:fnyx2omi7IYVdfKxfkAUR240Au/EKZ+HruhXw2EOrdg=
-github.com/gospider007/http2 v0.0.0-20250805092410-87c07ed55dc7 h1:o0S6ZZwnTrDwuDnRZkA0dIPsRuBe9vTlazb6+j/taR0=
-github.com/gospider007/http2 v0.0.0-20250805092410-87c07ed55dc7/go.mod h1:9heGY5Ue/tgXRZWbPYjP7+0ccZcv+4FBH1gKANCy5Q4=
+github.com/gospider007/http1 v0.0.0-20250811065845-3171c31c920d h1:Yc8WmHlw6LMUz7AGOq9OmoZtj+yCFLpUZpACuRrKn4s=
+github.com/gospider007/http1 v0.0.0-20250811065845-3171c31c920d/go.mod h1:3dzikZkFrwB7IZVxAPikUjvlnArjxIREskI75fXpMW0=
+github.com/gospider007/http2 v0.0.0-20250813025441-3ca7313b9015 h1:w4iI0F5Di8sfa0YPHBBqmEdbwh8AuSv5aUmoIcTDLgk=
+github.com/gospider007/http2 v0.0.0-20250813025441-3ca7313b9015/go.mod h1:YgO4bbAuSaSLzLeugPzEplsQ649pv/GsahWLiWRARBg=
 github.com/gospider007/http3 v0.0.0-20250811065920-4ec9b14f9686 h1:1DgqAbiUoZueBEO4Ti5uqqKE60SagebEzKNh1tzpWcI=
 github.com/gospider007/http3 v0.0.0-20250811065920-4ec9b14f9686/go.mod h1:g5v7nxLoHAXT5FMbU+m2Q43oiNiAp0MDdcI+lqb2+vs=
 github.com/gospider007/ja3 v0.0.0-20250724085013-aa7e0a527d6c h1:Ksw8S50iGK0dqYmScPRn/oOuKegHJ2j9DupSURZZmoI=
@@ -126,8 +126,8 @@ github.com/gospider007/kinds v0.0.0-20250217075226-10f199f7215d h1:+Fih572EdNmYC
 github.com/gospider007/kinds v0.0.0-20250217075226-10f199f7215d/go.mod h1:3u6J+nbdWhCNJGiQjq/hKSukn2k6ebjd98rd2+fzKNo=
 github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c h1:8/Cf+c2680tkWJ+ueZ9RLLK5R5R8nhE8pNBUPHjkvkM=
 github.com/gospider007/re v0.0.0-20250217075352-bcb79f285d6c/go.mod h1:dd8aDIUG1vDPP5r+vHBtiUK0Zn6uk3SsWt1ZvmCCHLs=
-github.com/gospider007/tools v0.0.0-20250730001814-2c13a4717064 h1:zmdLFUzG87xgpDp6JnTr73t1f+LtOLufiL7dPT2nPVQ=
-github.com/gospider007/tools v0.0.0-20250730001814-2c13a4717064/go.mod h1:i0V5k/zJW/ghTLLWY40pwTVuwa/Gxm2Q1IP1vQYHBX8=
+github.com/gospider007/tools v0.0.0-20250811070046-82a1a8f96823 h1:ZjQlAF1MyaX3gLwJy3sfiS3p90nlaQ7gGlEimBX/Nws=
+github.com/gospider007/tools v0.0.0-20250811070046-82a1a8f96823/go.mod h1:49t4VTyJasJTs7SR2SyhkXkB7VctL9VE1TCY10fqlH0=
 github.com/gospider007/websocket v0.0.0-20250730005216-580a061173b9 h1:wr8I0a7B39o4TsKthOlA/hKeCkKntToIxyRsEqbcmDo=
 github.com/gospider007/websocket v0.0.0-20250730005216-580a061173b9/go.mod h1:tV+/Xly2dOtGs8J5FfJRKD8NA5YTkVe78uKytVuhs58=
 github.com/hashicorp/golang-lru v0.5.0/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
@@ -285,8 +285,8 @@ golang.org/x/exp v0.0.0-20191030013958-a1ab85dbe136/go.mod h1:JXzH8nQsPlswgeRAPE
 golang.org/x/exp v0.0.0-20191129062945-2f5052295587/go.mod h1:2RIsYlXP63K8oxa1u096TMicItID8zy7Y6sNkU49FU4=
 golang.org/x/exp v0.0.0-20191227195350-da58074b4299/go.mod h1:2RIsYlXP63K8oxa1u096TMicItID8zy7Y6sNkU49FU4=
 golang.org/x/exp v0.0.0-20200207192155-f17229e696bd/go.mod h1:J/WKrq2StrnmMY6+EHIKF9dgMWnmCNThgcyBT1FY9mM=
-golang.org/x/exp v0.0.0-20250808145144-a408d31f581a h1:Y+7uR/b1Mw2iSXZ3G//1haIiSElDQZ8KWh0h+sZPG90=
-golang.org/x/exp v0.0.0-20250808145144-a408d31f581a/go.mod h1:rT6SFzZ7oxADUDx58pcaKFTcZ+inxAa9fTrYx/uVYwg=
+golang.org/x/exp v0.0.0-20250811191247-51f88131bc50 h1:3yiSh9fhy5/RhCSntf4Sy0Tnx50DmMpQ4MQdKKk4yg4=
+golang.org/x/exp v0.0.0-20250811191247-51f88131bc50/go.mod h1:rT6SFzZ7oxADUDx58pcaKFTcZ+inxAa9fTrYx/uVYwg=
 golang.org/x/image v0.0.0-20190227222117-0694c2d4d067/go.mod h1:kZ7UVZpmo3dzQBMxlp+ypCbDeSB+sBbTgSJuh5dn5js=
 golang.org/x/image v0.0.0-20190802002840-cff245a6509b/go.mod h1:FeLwcggjj3mMvU+oOTbSwawSJRM1uh48EjtB4UJZlP0=
 golang.org/x/image v0.30.0 h1:jD5RhkmVAnjqaCUXfbGBrn3lpxbknfN9w2UhHHU+5B4=

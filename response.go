@@ -158,7 +158,7 @@ func (obj *Response) WebSocket() *websocket.Conn {
 	if obj.StatusCode() != 101 {
 		return nil
 	}
-	obj.webSocket = websocket.NewConn(newFakeConn(obj.rawBody.Stream()), func() { obj.CloseConn() }, true, obj.Headers().Get("Sec-WebSocket-Extensions"))
+	obj.webSocket = websocket.NewConn(newFakeConn(obj.rawBody.Stream()), true, obj.Headers().Get("Sec-WebSocket-Extensions"))
 	return obj.webSocket
 }
 

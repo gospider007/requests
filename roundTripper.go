@@ -132,17 +132,7 @@ func (obj *roundTripper) ghttp3Dial(ctx *Response, remoteAddress Address, proxyA
 	if err != nil {
 		return nil, err
 	}
-	cctx, ccnl := context.WithCancelCause(obj.ctx)
-	conn = http3.NewConn(cctx, netConn, udpConn, func() {
-		ccnl(errors.New("http3 client close"))
-	})
-	if ct, ok := udpConn.(interface {
-		SetTcpCloseFunc(f func(error))
-	}); ok {
-		ct.SetTcpCloseFunc(func(err error) {
-			ccnl(errors.New("http3 client close with udp"))
-		})
-	}
+	conn = http3.NewConn(obj.ctx, netConn, udpConn)
 	return
 }
 
@@ -182,17 +172,7 @@ func (obj *roundTripper) uhttp3Dial(ctx *Response, remoteAddress Address, proxyA
 	if err != nil {
 		return nil, err
 	}
-	cctx, ccnl := context.WithCancelCause(obj.ctx)
-	conn = http3.NewConn(cctx, netConn, udpConn, func() {
-		ccnl(errors.New("http3 client close"))
-	})
-	if ct, ok := udpConn.(interface {
-		SetTcpCloseFunc(f func(error))
-	}); ok {
-		ct.SetTcpCloseFunc(func(err error) {
-			ccnl(errors.New("uhttp3 client close with udp"))
-		})
-	}
+	conn = http3.NewConn(obj.ctx, netConn, udpConn)
 	return
 }
 
@@ -270,19 +250,14 @@ func (obj *roundTripper) dial(ctx *Response) (conn http1.Conn, err error) {
 	return obj.dialConnecotr(ctx, rawConn, h2)
 }
 func (obj *roundTripper) dialConnecotr(ctx *Response, rawCon net.Conn, h2 bool) (conn http1.Conn, err error) {
-	cctx, ccnl := context.WithCancelCause(obj.ctx)
 	if h2 {
 		var spec *http2.Spec
 		if ctx.option.gospiderSpec != nil {
 			spec = ctx.option.gospiderSpec.H2Spec
 		}
-		conn, err = http2.NewConn(cctx, ctx.Context(), rawCon, spec, func(err error) {
-			ccnl(tools.WrapError(err, "http2 client close"))
-		})
+		conn, err = http2.NewConn(obj.ctx, ctx.Context(), rawCon, spec)
 	} else {
-		conn = http1.NewConn(cctx, rawCon, func(err error) {
-			ccnl(tools.WrapError(err, "http1 client close"))
-		})
+		conn = http1.NewConn(obj.ctx, rawCon)
 	}
 	return
 }

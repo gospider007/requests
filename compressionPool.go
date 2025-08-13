@@ -10,130 +10,191 @@ import (
 	"github.com/minio/minlz"
 )
 
-// zstd pool
-var zstdWriterPool = sync.Pool{
-	New: func() any {
-		c, _ := zstd.NewWriter(nil, zstd.WithWindowSize(32*1024))
-		return c
-	},
+type compreData struct {
+	rpool      *sync.Pool
+	wpool      *sync.Pool
+	name       string
+	openReader func(r io.Reader) (io.ReadCloser, error)
+	openWriter func(w io.Writer) (io.WriteCloser, error)
+}
+
+var compressionData map[byte]compreData
+
+func init() {
+	compressionData = map[byte]compreData{
+		40: {
+			name:       "zstd",
+			rpool:      &sync.Pool{New: func() any { return nil }},
+			wpool:      &sync.Pool{New: func() any { return nil }},
+			openReader: newZstdReader,
+			openWriter: newZstdWriter,
+		},
+		255: {
+			name:       "s2",
+			rpool:      &sync.Pool{New: func() any { return nil }},
+			wpool:      &sync.Pool{New: func() any { return nil }},
+			openReader: newSnappyReader,
+			openWriter: newSnappyWriter,
+		},
+		92: {
+			name:       "flate",
+			rpool:      &sync.Pool{New: func() any { return nil }},
+			wpool:      &sync.Pool{New: func() any { return nil }},
+			openReader: newFlateReader,
+			openWriter: newFlateWriter,
+		},
+		93: {
+			name:       "minlz",
+			rpool:      &sync.Pool{New: func() any { return nil }},
+			wpool:      &sync.Pool{New: func() any { return nil }},
+			openReader: newMinlzReader,
+			openWriter: newMinlzWriter,
+		},
+	}
 }
 
 func newZstdWriter(w io.Writer) (io.WriteCloser, error) {
-	z := zstdWriterPool.Get().(*zstd.Encoder)
-	z.Reset(w)
+	pool := compressionData[40].wpool
+	cp := pool.Get()
+	var z *zstd.Encoder
+	var err error
+	if cp == nil {
+		z, err = zstd.NewWriter(w, zstd.WithWindowSize(32*1024))
+	} else {
+		z = cp.(*zstd.Encoder)
+		z.Reset(w)
+	}
+	if err != nil {
+		return nil, err
+	}
 	return newWriterCompression(z, func() {
 		z.Reset(nil)
-		zstdWriterPool.Put(z)
+		pool.Put(z)
 	}), nil
 }
-
-var zstdReaderPool = sync.Pool{
-	New: func() any {
-		w, _ := zstd.NewReader(nil)
-		return w
-	},
-}
-
 func newZstdReader(w io.Reader) (io.ReadCloser, error) {
-	z := zstdReaderPool.Get().(*zstd.Decoder)
-	z.Reset(w)
+	pool := compressionData[40].rpool
+	cp := pool.Get()
+	var z *zstd.Decoder
+	var err error
+	if cp == nil {
+		z, err = zstd.NewReader(w)
+	} else {
+		z = cp.(*zstd.Decoder)
+		z.Reset(w)
+	}
+	if err != nil {
+		return nil, err
+	}
 	return newReaderCompression(io.NopCloser(z), func() {
 		z.Reset(nil)
-		zstdReaderPool.Put(z)
+		pool.Put(z)
 	}), nil
 }
 
 // snappy pool
-var snappyWriterPool = sync.Pool{
-	New: func() any {
-		return snappy.NewBufferedWriter(nil)
-	},
-}
 
 func newSnappyWriter(w io.Writer) (io.WriteCloser, error) {
-	s := snappyWriterPool.Get().(*snappy.Writer)
-	s.Reset(w)
-	return newWriterCompression(s, func() {
-		s.Reset(nil)
-		snappyWriterPool.Put(s)
+	pool := compressionData[255].wpool
+	cp := pool.Get()
+	var z *snappy.Writer
+	if cp == nil {
+		z = snappy.NewBufferedWriter(w)
+	} else {
+		z = cp.(*snappy.Writer)
+		z.Reset(w)
+	}
+	return newWriterCompression(z, func() {
+		z.Reset(nil)
+		pool.Put(z)
 	}), nil
 }
-
-var snappyReaderPool = sync.Pool{
-	New: func() any {
-		return snappy.NewReader(nil)
-	},
-}
-
 func newSnappyReader(w io.Reader) (io.ReadCloser, error) {
-	s := snappyReaderPool.Get().(*snappy.Reader)
-	s.Reset(w)
-	return newReaderCompression(io.NopCloser(s), func() {
-		s.Reset(nil)
-		snappyReaderPool.Put(s)
+	pool := compressionData[255].rpool
+	cp := pool.Get()
+	var z *snappy.Reader
+	if cp == nil {
+		z = snappy.NewReader(w)
+	} else {
+		z = cp.(*snappy.Reader)
+		z.Reset(w)
+	}
+	return newReaderCompression(io.NopCloser(z), func() {
+		z.Reset(nil)
+		pool.Put(z)
 	}), nil
 }
 
 // flate pool
-var flateWriterPool = sync.Pool{
-	New: func() any {
-		w, _ := flate.NewWriter(nil, flate.DefaultCompression)
-		return w
-	},
-}
-
 func newFlateWriter(w io.Writer) (io.WriteCloser, error) {
-	f := flateWriterPool.Get().(*flate.Writer)
-	f.Reset(w)
-	return newWriterCompression(f, func() {
-		f.Reset(nil)
-		flateWriterPool.Put(f)
+	pool := compressionData[92].wpool
+	cp := pool.Get()
+	var z *flate.Writer
+	var err error
+	if cp == nil {
+		z, err = flate.NewWriter(w, flate.DefaultCompression)
+	} else {
+		z = cp.(*flate.Writer)
+		z.Reset(w)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return newWriterCompression(z, func() {
+		z.Reset(nil)
+		pool.Put(z)
 	}), nil
-}
-
-var flateReaderPool = sync.Pool{
-	New: func() any {
-		return flate.NewReader(nil)
-	},
 }
 
 func newFlateReader(w io.Reader) (io.ReadCloser, error) {
-	r := flateReaderPool.Get().(io.ReadCloser)
-	f := r.(flate.Resetter)
-	err := f.Reset(w, nil)
-	return newReaderCompression(r, func() {
+	pool := compressionData[92].rpool
+	cp := pool.Get()
+	var z io.ReadCloser
+	var f flate.Resetter
+	if cp == nil {
+		z = flate.NewReader(w)
+		f = z.(flate.Resetter)
+	} else {
+		z = cp.(io.ReadCloser)
+		f = z.(flate.Resetter)
+		f.Reset(w, nil)
+	}
+	return newReaderCompression(z, func() {
 		f.Reset(nil, nil)
-		flateReaderPool.Put(r)
-	}), err
-}
-
-// minlz pool
-var minlzWriterPool = sync.Pool{
-	New: func() any {
-		return minlz.NewWriter(nil, minlz.WriterBlockSize(32*1024))
-	},
-}
-
-func newMinlzWriter(w io.Writer) (io.WriteCloser, error) {
-	m := minlzWriterPool.Get().(*minlz.Writer)
-	m.Reset(w)
-	return newWriterCompression(m, func() {
-		m.Reset(nil)
-		minlzWriterPool.Put(m)
+		pool.Put(z)
 	}), nil
 }
 
-var minlzReaderPool = sync.Pool{
-	New: func() any {
-		return minlz.NewReader(nil, minlz.ReaderMaxBlockSize(32*1024))
-	},
+// minlz pool
+
+func newMinlzWriter(w io.Writer) (io.WriteCloser, error) {
+	pool := compressionData[93].wpool
+	cp := pool.Get()
+	var z *minlz.Writer
+	if cp == nil {
+		z = minlz.NewWriter(w, minlz.WriterBlockSize(32*1024))
+	} else {
+		z = cp.(*minlz.Writer)
+		z.Reset(w)
+	}
+	return newWriterCompression(z, func() {
+		z.Reset(nil)
+		pool.Put(z)
+	}), nil
 }
 
 func newMinlzReader(w io.Reader) (io.ReadCloser, error) {
-	m := minlzReaderPool.Get().(*minlz.Reader)
-	m.Reset(w)
-	return newReaderCompression(io.NopCloser(m), func() {
-		m.Reset(nil)
-		minlzReaderPool.Put(m)
+	pool := compressionData[93].rpool
+	cp := pool.Get()
+	var z *minlz.Reader
+	if cp == nil {
+		z = minlz.NewReader(w, minlz.ReaderMaxBlockSize(32*1024))
+	} else {
+		z = cp.(*minlz.Reader)
+		z.Reset(w)
+	}
+	return newReaderCompression(io.NopCloser(z), func() {
+		z.Reset(nil)
+		pool.Put(z)
 	}), nil
 }

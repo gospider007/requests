@@ -101,7 +101,6 @@ type UDPConn struct {
 	bufWrite      [MaxUdpPacket]byte
 	proxyAddress  net.Addr
 	remoteAddress Address
-	tcpCloseFunc  func(error)
 }
 
 func NewUDPConn(tcpConn net.Conn, packConn net.PacketConn, proxyAddress net.Addr, remoteAddress Address) *UDPConn {
@@ -113,10 +112,8 @@ func NewUDPConn(tcpConn net.Conn, packConn net.PacketConn, proxyAddress net.Addr
 		prefix:        []byte{0, 0, 0},
 	}
 	go func() {
-		_, err := tools.Copy(io.Discard, tcpConn)
-		if ucon.tcpCloseFunc != nil {
-			ucon.tcpCloseFunc(err)
-		}
+		tools.Copy(io.Discard, tcpConn)
+		ucon.Close()
 	}()
 	return ucon
 }
@@ -173,9 +170,6 @@ func (c *UDPConn) SetWriteBuffer(i int) error {
 	return nil
 }
 
-func (c *UDPConn) SetTcpCloseFunc(f func(error)) {
-	c.tcpCloseFunc = f
-}
 func (c *UDPConn) Close() error {
 	c.tcpConn.Close()
 	return c.PacketConn.Close()
