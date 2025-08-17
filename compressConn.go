@@ -147,13 +147,14 @@ type ReaderCompression struct {
 	closeFunc func()
 }
 
-func (obj *ReaderCompression) Read(p []byte) (int, error) {
+func (obj *ReaderCompression) Read(p []byte) (n int, err error) {
 	obj.lock.Lock()
 	defer obj.lock.Unlock()
 	if obj.closed {
-		return 0, errors.New("closed")
+		return 0, errors.New("read closed")
 	}
-	return obj.c.Read(p)
+	n, err = obj.c.Read(p)
+	return
 }
 func (obj *ReaderCompression) Close() error {
 	obj.lock.Lock()
@@ -179,7 +180,7 @@ func (obj *WriterCompression) Write(p []byte) (int, error) {
 	obj.lock.Lock()
 	defer obj.lock.Unlock()
 	if obj.closed {
-		return 0, errors.New("closed")
+		return 0, errors.New("write closed")
 	}
 	n, err := obj.c.Write(p)
 	if err != nil {
