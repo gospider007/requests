@@ -87,9 +87,10 @@ func server() {
 	server := http3.Server{
 		Addr:    "0.0.0.0:8080",
 		Handler: mux,
-		TLSConfig: gtls.GetCertConfigForClient(&tls.Config{
-			NextProtos: []string{"http3-echo-example"},
-		}),
+		TLSConfig: &tls.Config{
+			GetCertificate: gtls.GetCertificate,
+			NextProtos:     []string{"http3-echo-example"},
+		},
 	}
 	fmt.Println("Server is listening...")
 	fmt.Println(server.ListenAndServe())
