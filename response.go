@@ -348,6 +348,7 @@ func (obj *Response) closeBody(i bool, err error) {
 	} else {
 		obj.CloseConn()
 	}
+	obj.cnl()
 }
 
 // read body

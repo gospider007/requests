@@ -61,7 +61,6 @@ func getKey(ctx *Response) (string, error) {
 
 type roundTripper struct {
 	ctx       context.Context
-	cnl       context.CancelFunc
 	connPools sync.Map
 	dialer    *Dialer
 	lock      sync.Mutex
@@ -73,10 +72,8 @@ func newRoundTripper(preCtx context.Context) *roundTripper {
 	if preCtx == nil {
 		preCtx = context.TODO()
 	}
-	ctx, cnl := context.WithCancel(preCtx)
 	return &roundTripper{
-		ctx:    ctx,
-		cnl:    cnl,
+		ctx:    preCtx,
 		dialer: new(Dialer),
 	}
 }
@@ -346,6 +343,7 @@ func (obj *roundTripper) newReqTask(ctx *Response) (*reqTask, error) {
 	task.key = key
 	return task, nil
 }
+
 func (obj *roundTripper) RoundTrip(ctx *Response) (err error) {
 	if ctx.option.RequestCallBack != nil {
 		if err = ctx.option.RequestCallBack(ctx); err != nil {
@@ -378,6 +376,7 @@ func (obj *roundTripper) RoundTrip(ctx *Response) (err error) {
 			err = obj.newRoundTrip(task)
 			task.disRetry = true
 		}
+		task.cnl(err)
 		if err == nil {
 			break
 		}
