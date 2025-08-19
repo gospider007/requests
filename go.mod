@@ -3,7 +3,6 @@ module github.com/gospider007/requests
 go 1.25
 
 require (
-	github.com/golang/snappy v1.0.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/gospider007/bar v0.0.0-20250815030902-4f5b5d6312cf
 	github.com/gospider007/bs4 v0.0.0-20250815030800-a352d3ad57ee
@@ -14,10 +13,8 @@ require (
 	github.com/gospider007/http3 v0.0.0-20250817123336-07d66db6dbb3
 	github.com/gospider007/ja3 v0.0.0-20250815031055-0948dc3bbe0b
 	github.com/gospider007/re v0.0.0-20250815031101-a57caeff73bf
-	github.com/gospider007/tools v0.0.0-20250815031258-8a81d680917c
-	github.com/gospider007/websocket v0.0.0-20250815031315-cde1470d5ace
-	github.com/klauspost/compress v1.18.0
-	github.com/minio/minlz v1.0.1
+	github.com/gospider007/tools v0.0.0-20250819094836-a81233312764
+	github.com/gospider007/websocket v0.0.0-20250819094917-c00c0a99815f
 	github.com/quic-go/quic-go v0.54.0
 	github.com/refraction-networking/uquic v0.0.6
 	github.com/refraction-networking/utls v1.8.0
@@ -45,12 +42,14 @@ require (
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.4.0 // indirect
+	github.com/golang/snappy v1.0.0 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/google/pprof v0.0.0-20250630185457-6e76a2b096b5 // indirect
 	github.com/gospider007/blog v0.0.0-20250815030743-f2af6b9013ab // indirect
 	github.com/gospider007/kinds v0.0.0-20250815031133-b2282666f69c // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
@@ -59,6 +58,7 @@ require (
 	github.com/mholt/archives v0.1.3 // indirect
 	github.com/miekg/dns v1.1.68 // indirect
 	github.com/mikelolasagasti/xz v1.0.1 // indirect
+	github.com/minio/minlz v1.0.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/nwaples/rardecode/v2 v2.1.1 // indirect
@@ -89,4 +89,5 @@ require (
 	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
 	golang.org/x/tools v0.36.0 // indirect
+	google.golang.org/protobuf v1.36.7 // indirect
 )

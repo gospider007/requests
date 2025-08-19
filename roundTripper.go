@@ -215,7 +215,7 @@ func (obj *roundTripper) dial(ctx *Response) (conn http1.Conn, err error) {
 		rawConn = rawNetConn
 	}
 	if arch != "" {
-		rawConn, err = NewCompressionConn(rawConn, arch)
+		rawConn, err = tools.NewCompressionConn(rawConn, arch)
 	}
 	if err != nil {
 		if rawConn != nil {

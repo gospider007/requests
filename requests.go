@@ -349,19 +349,20 @@ func (obj *Client) request(ctx *Response) (err error) {
 		err = errors.New("send req response is nil")
 		return
 	}
-	if ctx.response.Body != nil {
-		ctx.rawBody = ctx.response.Body.(*http1.Body)
-	}
+	ctx.rawBody = ctx.response.Body.(*http1.Body)
 	if encoding := ctx.ContentEncoding(); encoding != "" && ctx.response.Body != nil {
-		var unCompressionBody io.ReadCloser
-		unCompressionBody, err = tools.CompressionHeadersDecode(ctx.Context(), ctx.response.Body, encoding)
-		if err != nil {
-			if err != io.ErrUnexpectedEOF && err != io.EOF {
-				return
+		arch, cerr := tools.NewRawCompression(encoding)
+		if cerr != nil {
+			return cerr
+		}
+		unCompressionBody, cerr := arch.OpenReader(ctx.rawBody.GetReader())
+		if cerr != nil {
+			if cerr != io.ErrUnexpectedEOF && cerr != io.EOF {
+				return cerr
 			}
 		}
 		if unCompressionBody != nil {
-			ctx.response.Body = unCompressionBody
+			ctx.rawBody.SetReader(unCompressionBody)
 		}
 	}
 	if strings.Contains(ctx.response.Header.Get("Content-Type"), "text/event-stream") {

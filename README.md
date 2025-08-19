@@ -19,6 +19,10 @@
 
 <h2 align="center">Requests is a fully featured HTTP client library for Golang. Network requests can be completed with just a few lines of code. Unified support for http1, http2, http3, websocket, sse, utls, uquic</h2>
 
+
+## If you want to use a multilingual version, please use the project at [fingerproxy](https://github.com/gospider007/fingerproxy). It is a crawler-focused forward proxy with fingerprint spoofing.
+
+
 ## Innovative Features
 * Unlimited chained proxy
 * HTTP/3 fingerprint spoofing protection
