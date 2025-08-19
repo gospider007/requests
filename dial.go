@@ -95,7 +95,7 @@ func newDialer(dialOption *DialOption) dialer {
 	dialer.dialer.SetMultipathTCP(true)
 	return &dialer
 }
-func (obj *Dialer) dialContext(ctx *Response, network string, addr Address, isProxy bool) (net.Conn, error) {
+func (obj *Dialer) dialContext(ctx *Response, network string, addr Address) (net.Conn, error) {
 	var err error
 	if addr.Port == 0 {
 		return nil, errors.New("port is nil")
@@ -104,72 +104,49 @@ func (obj *Dialer) dialContext(ctx *Response, network string, addr Address, isPr
 		addr.IP, err = obj.loadHost(ctx.Context(), addr.Host, ctx.option.DialOption)
 	}
 	if ctx.option != nil && ctx.option.Logger != nil {
-		if isProxy {
-			ctx.option.Logger(Log{
-				Id:   ctx.requestId,
-				Time: time.Now(),
-				Type: LogType_ProxyDNSLookup,
-				Msg:  addr.Host,
-			})
-		} else {
-			ctx.option.Logger(Log{
-				Id:   ctx.requestId,
-				Time: time.Now(),
-				Type: LogType_DNSLookup,
-				Msg:  addr.Host,
-			})
-		}
+		ctx.option.Logger(Log{
+			Id:   ctx.requestId,
+			Time: time.Now(),
+			Type: LogType_DNSLookup,
+			Msg:  addr.Host,
+		})
 	}
 	if err != nil {
 		return nil, err
 	}
 	con, err := newDialer(ctx.option.DialOption).DialContext(ctx.Context(), network, addr.String())
 	if ctx.option != nil && ctx.option.Logger != nil {
-		if isProxy {
-			ctx.option.Logger(Log{
-				Id:   ctx.requestId,
-				Time: time.Now(),
-				Type: LogType_ProxyTCPConnect,
-				Msg:  addr,
-			})
-		} else {
-			ctx.option.Logger(Log{
-				Id:   ctx.requestId,
-				Time: time.Now(),
-				Type: LogType_TCPConnect,
-				Msg:  addr,
-			})
-		}
+		ctx.option.Logger(Log{
+			Id:   ctx.requestId,
+			Time: time.Now(),
+			Type: LogType_TCPConnect,
+			Msg:  addr,
+		})
+	}
+	if err != nil && con != nil {
+		con.Close()
 	}
 	return con, err
 }
-func (obj *Dialer) DialContext(ctx *Response, network string, addr Address) (net.Conn, error) {
-	conn, err := obj.dialContext(ctx, network, addr, false)
-	if err != nil {
-		err = tools.WrapError(err, "DialContext error")
-	}
-	return conn, err
-}
-func (obj *Dialer) ProxyDialContext(ctx *Response, network string, addr Address) (net.Conn, error) {
-	conn, err := obj.dialContext(ctx, network, addr, true)
-	if err != nil {
-		err = tools.WrapError(err, "ProxyDialContext error")
-	}
-	return conn, err
-}
+
 func (obj *Dialer) DialProxyContext(ctx *Response, network string, proxyTlsConfig *tls.Config, proxyUrls ...Address) (net.PacketConn, net.Conn, error) {
 	proxyLen := len(proxyUrls)
-	if proxyLen < 2 {
+	if proxyLen < 1 {
 		return nil, nil, errors.New("proxyUrls is nil")
 	}
 	var conn net.Conn
 	var err error
+	if proxyLen == 1 {
+		conn, err = obj.dialContext(ctx, network, proxyUrls[0])
+		return nil, conn, err
+	}
 	var packCon net.PacketConn
 	for index := range proxyLen - 1 {
 		oneProxy := proxyUrls[index]
 		remoteUrl := proxyUrls[index+1]
 		if index == 0 {
-			if conn, err = obj.dialProxyContext(ctx, network, oneProxy); err != nil {
+			_, conn, err = obj.DialProxyContext(ctx, network, nil, oneProxy)
+			if err != nil {
 				break
 			}
 		}
@@ -188,11 +165,13 @@ func (obj *Dialer) DialProxyContext(ctx *Response, network string, proxyTlsConfi
 	}
 	return packCon, conn, err
 }
-func (obj *Dialer) dialProxyContext(ctx *Response, network string, proxyUrl Address) (net.Conn, error) {
-	return obj.ProxyDialContext(ctx, network, proxyUrl)
-}
 
-func (obj *Dialer) verifySSH(ctx *Response, conn net.Conn, proxyAddress Address, remoteAddress Address) (net.Conn, error) {
+func (obj *Dialer) verifySSH(ctx *Response, conn net.Conn, proxyAddress Address, remoteAddress Address) (sshConn net.Conn, err error) {
+	defer func() {
+		if err != nil {
+			conn.Close()
+		}
+	}()
 	if proxyAddress.User == "" || proxyAddress.Password == "" {
 		return conn, errors.New("ssh proxy user or password is nil")
 	}
@@ -213,20 +192,20 @@ func (obj *Dialer) verifySSH(ctx *Response, conn net.Conn, proxyAddress Address,
 }
 func (obj *Dialer) verifyProxyToRemote(ctx *Response, conn net.Conn, proxyTlsConfig *tls.Config, proxyAddress Address, remoteAddress Address, isLast bool, forceHttp1 bool) (net.PacketConn, net.Conn, error) {
 	var err error
-	var packCon net.PacketConn
 	if proxyAddress.Scheme == "https" {
 		if conn, err = obj.addTls(ctx.Context(), conn, proxyAddress.Host, proxyTlsConfig, forceHttp1); err != nil {
-			return packCon, conn, err
+			return nil, conn, err
 		}
 		if ctx.option.Logger != nil {
 			ctx.option.Logger(Log{
 				Id:   ctx.requestId,
 				Time: time.Now(),
-				Type: LogType_ProxyTLSHandshake,
+				Type: LogType_TLSHandshake,
 				Msg:  proxyAddress.String(),
 			})
 		}
 	}
+	var packCon net.PacketConn
 	done := make(chan struct{})
 	go func() {
 		switch proxyAddress.Scheme {
@@ -242,7 +221,6 @@ func (obj *Dialer) verifyProxyToRemote(ctx *Response, conn net.Conn, proxyTlsCon
 			}
 		case "ssh":
 			conn, err = obj.verifySSH(ctx, conn, proxyAddress, remoteAddress)
-			// log.Print("verify ssh", remoteAddress.String(), err)
 		case "socks5":
 			if isLast && ctx.option.ForceHttp3 {
 				packCon, err = obj.verifyUDPSocks5(ctx, conn, proxyAddress, remoteAddress)
@@ -262,6 +240,7 @@ func (obj *Dialer) verifyProxyToRemote(ctx *Response, conn net.Conn, proxyTlsCon
 	}()
 	select {
 	case <-ctx.Context().Done():
+		conn.Close()
 		return packCon, conn, context.Cause(ctx.Context())
 	case <-done:
 		if err != nil {
@@ -393,17 +372,24 @@ func (obj *Dialer) verifySocks5(ctx *Response, conn net.Conn, network string, pr
 }
 func (obj *Dialer) verifyTCPSocks5(ctx *Response, conn net.Conn, proxyAddr Address, remoteAddr Address) (err error) {
 	_, err = obj.verifySocks5(ctx, conn, "tcp", proxyAddr, remoteAddr)
+	if err != nil {
+		conn.Close()
+	}
 	return
 }
 func (obj *Dialer) verifyUDPSocks5(ctx *Response, conn net.Conn, proxyAddr Address, remoteAddr Address) (wrapConn net.PacketConn, err error) {
 	remoteAddr.NetWork = "udp"
 	proxyAddress, err := obj.verifySocks5(ctx, conn, "udp", proxyAddr, remoteAddr)
 	if err != nil {
+		conn.Close()
 		return
 	}
 	var listener net.ListenConfig
 	wrapConn, err = listener.ListenPacket(ctx.Context(), "udp", ":0")
 	if err != nil {
+		if wrapConn != nil {
+			wrapConn.Close()
+		}
 		return
 	}
 	wrapConn = NewUDPConn(conn, wrapConn, &net.UDPAddr{IP: proxyAddress.IP, Port: proxyAddress.Port}, remoteAddr)
@@ -487,15 +473,11 @@ func (obj *Dialer) addTls(ctx context.Context, conn net.Conn, host string, tlsCo
 func (obj *Dialer) addJa3Tls(ctx context.Context, conn net.Conn, host string, spec *ja3.Spec, tlsConfig *utls.Config, forceHttp1 bool) (*utls.UConn, error) {
 	return specClient.Client(ctx, conn, spec, tlsConfig, gtls.GetServerName(host), forceHttp1)
 }
-func (obj *Dialer) Socks5TcpProxy(ctx *Response, proxyAddr Address, remoteAddr Address) (conn net.Conn, err error) {
-	if conn, err = obj.DialContext(ctx, "tcp", proxyAddr); err != nil {
-		return
+func (obj *Dialer) Socks5TcpProxy(ctx *Response, proxyAddr Address, remoteAddr Address) (net.Conn, error) {
+	_, conn, err := obj.DialProxyContext(ctx, "tcp", nil, proxyAddr)
+	if err != nil {
+		return conn, err
 	}
-	defer func() {
-		if err != nil && conn != nil {
-			conn.Close()
-		}
-	}()
 	didVerify := make(chan struct{})
 	go func() {
 		defer close(didVerify)
@@ -503,27 +485,19 @@ func (obj *Dialer) Socks5TcpProxy(ctx *Response, proxyAddr Address, remoteAddr A
 	}()
 	select {
 	case <-ctx.Context().Done():
+		conn.Close()
 		return conn, context.Cause(ctx.Context())
 	case <-didVerify:
-		return
+		return conn, err
 	}
 }
-func (obj *Dialer) Socks5UdpProxy(ctx *Response, proxyAddress Address, remoteAddress Address) (udpConn net.PacketConn, err error) {
-	conn, err := obj.ProxyDialContext(ctx, "tcp", proxyAddress)
+func (obj *Dialer) Socks5UdpProxy(ctx *Response, proxyAddress Address, remoteAddress Address) (net.PacketConn, error) {
+	_, conn, err := obj.DialProxyContext(ctx, "tcp", nil, proxyAddress)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err != nil {
-			if conn != nil {
-				conn.Close()
-			}
-			if udpConn != nil {
-				udpConn.Close()
-			}
-		}
-	}()
 	didVerify := make(chan struct{})
+	var udpConn net.PacketConn
 	go func() {
 		defer close(didVerify)
 		udpConn, err = obj.verifyUDPSocks5(ctx, conn, proxyAddress, remoteAddress)
@@ -538,12 +512,18 @@ func (obj *Dialer) Socks5UdpProxy(ctx *Response, proxyAddress Address, remoteAdd
 	}()
 	select {
 	case <-ctx.Context().Done():
+		conn.Close()
 		return udpConn, context.Cause(ctx.Context())
 	case <-didVerify:
-		return
+		return udpConn, err
 	}
 }
 func (obj *Dialer) clientVerifyHttps(ctx context.Context, conn net.Conn, proxyAddress Address, remoteAddress Address) (err error) {
+	defer func() {
+		if err != nil {
+			conn.Close()
+		}
+	}()
 	hdr := make(http.Header)
 	if proxyAddress.User != "" && proxyAddress.Password != "" {
 		hdr.Set("Proxy-Authorization", "Basic "+tools.Base64Encode(proxyAddress.User+":"+proxyAddress.Password))

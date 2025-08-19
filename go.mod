@@ -8,7 +8,7 @@ require (
 	github.com/gospider007/bar v0.0.0-20250815030902-4f5b5d6312cf
 	github.com/gospider007/bs4 v0.0.0-20250815030800-a352d3ad57ee
 	github.com/gospider007/gson v0.0.0-20250815030832-fa016f03a353
-	github.com/gospider007/gtls v0.0.0-20250818024401-0d7bcb040679
+	github.com/gospider007/gtls v0.0.0-20250818100212-f466fa4cc860
 	github.com/gospider007/http1 v0.0.0-20250817122009-0b953c2c8efa
 	github.com/gospider007/http2 v0.0.0-20250817122534-76043412544d
 	github.com/gospider007/http3 v0.0.0-20250817123336-07d66db6dbb3
@@ -28,6 +28,7 @@ require (
 )
 
 require (
+	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/PuerkitoBio/goquery v1.10.3 // indirect
 	github.com/STARRY-S/zip v0.2.3 // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect
@@ -61,7 +62,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/nwaples/rardecode/v2 v2.1.1 // indirect
-	github.com/onsi/ginkgo/v2 v2.23.4 // indirect
+	github.com/onsi/ginkgo/v2 v2.24.0 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/quic-go/qpack v0.5.1 // indirect
@@ -76,7 +77,7 @@ require (
 	github.com/zeebo/blake3 v0.2.4 // indirect
 	go.mongodb.org/mongo-driver v1.17.4 // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
-	go.uber.org/mock v0.5.2 // indirect
+	go.uber.org/mock v0.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	go.uber.org/zap/exp v0.3.0 // indirect

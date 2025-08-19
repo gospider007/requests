@@ -14,15 +14,14 @@ import (
 type LogType string
 
 const (
-	LogType_DNSLookup          LogType = "DNSLookup"
-	LogType_TCPConnect         LogType = "TCPConnect"
-	LogType_TLSHandshake       LogType = "TLSHandshake"
-	LogType_ProxyDNSLookup     LogType = "ProxyDNSLookup"
-	LogType_ProxyTCPConnect    LogType = "ProxyTCPConnect"
-	LogType_ProxyTLSHandshake  LogType = "ProxyTLSHandshake"
+	LogType_DNSLookup    LogType = "DNSLookup"
+	LogType_TCPConnect   LogType = "TCPConnect"
+	LogType_TLSHandshake LogType = "TLSHandshake"
+
 	LogType_ProxyConnectRemote LogType = "ProxyConnectRemote"
-	LogType_ResponseHeader     LogType = "ResponseHeader"
-	LogType_ResponseBody       LogType = "ResponseBody"
+
+	LogType_ResponseHeader LogType = "ResponseHeader"
+	LogType_ResponseBody   LogType = "ResponseBody"
 )
 
 type Log struct {

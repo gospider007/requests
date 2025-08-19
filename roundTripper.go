@@ -100,6 +100,9 @@ func (obj *roundTripper) http3Dial(ctx *Response, remtoeAddress Address, proxyAd
 	} else {
 		udpConn, err = net.ListenUDP("udp", nil)
 	}
+	if err != nil && udpConn != nil {
+		udpConn.Close()
+	}
 	return
 }
 func (obj *roundTripper) ghttp3Dial(ctx *Response, remoteAddress Address, proxyAddress ...Address) (conn http1.Conn, err error) {
@@ -195,13 +198,9 @@ func (obj *roundTripper) dial(ctx *Response) (conn http1.Conn, err error) {
 		arch = proxys[len(proxys)-1].Compression
 		_, rawNetConn, err = obj.dialer.DialProxyContext(ctx, "tcp", ctx.option.TlsConfig.Clone(), append(proxys, remoteAddress)...)
 	} else {
-		var remoteAddress Address
-		remoteAddress, err = GetAddressWithUrl(ctx.request.URL)
-		if err != nil {
-			return nil, err
-		}
-		rawNetConn, err = obj.dialer.DialContext(ctx, "tcp", remoteAddress)
+		_, rawNetConn, err = obj.dialer.DialProxyContext(ctx, "tcp", nil, remoteAddress)
 	}
+
 	if err != nil {
 		if rawNetConn != nil {
 			rawNetConn.Close()
@@ -211,29 +210,9 @@ func (obj *roundTripper) dial(ctx *Response) (conn http1.Conn, err error) {
 	var h2 bool
 	var rawConn net.Conn
 	if ctx.request.URL.Scheme == "https" {
-		if ctx.option.TlsHandshakeTimeout > 0 {
-			tlsCtx, tlsCnl := context.WithTimeout(ctx.Context(), ctx.option.TlsHandshakeTimeout)
-			rawConn, h2, err = obj.dialAddTls(tlsCtx, ctx.option, ctx.request, rawNetConn)
-			tlsCnl()
-		} else {
-			rawConn, h2, err = obj.dialAddTls(ctx.Context(), ctx.option, ctx.request, rawNetConn)
-		}
-		if ctx.option.Logger != nil {
-			ctx.option.Logger(Log{
-				Id:   ctx.requestId,
-				Time: time.Now(),
-				Type: LogType_TLSHandshake,
-				Msg:  fmt.Sprintf("host:%s,  h2:%t", getHost(ctx.request), h2),
-			})
-		}
+		rawConn, h2, err = obj.dialAddTlsWithResponse(ctx, rawNetConn)
 	} else {
 		rawConn = rawNetConn
-	}
-	if err != nil {
-		if rawConn != nil {
-			rawConn.Close()
-		}
-		return nil, err
 	}
 	if arch != "" {
 		rawConn, err = NewCompressionConn(rawConn, arch)
@@ -257,6 +236,27 @@ func (obj *roundTripper) dialConnecotr(ctx *Response, rawCon net.Conn, h2 bool) 
 		conn = http1.NewConn(obj.ctx, rawCon)
 	}
 	return
+}
+func (obj *roundTripper) dialAddTlsWithResponse(ctx *Response, rawNetConn net.Conn) (tlsConn net.Conn, h2 bool, err error) {
+	if ctx.option.TlsHandshakeTimeout > 0 {
+		tlsCtx, tlsCnl := context.WithTimeout(ctx.Context(), ctx.option.TlsHandshakeTimeout)
+		tlsConn, h2, err = obj.dialAddTls(tlsCtx, ctx.option, ctx.request, rawNetConn)
+		tlsCnl()
+	} else {
+		tlsConn, h2, err = obj.dialAddTls(ctx.Context(), ctx.option, ctx.request, rawNetConn)
+	}
+	if ctx.option.Logger != nil {
+		ctx.option.Logger(Log{
+			Id:   ctx.requestId,
+			Time: time.Now(),
+			Type: LogType_TLSHandshake,
+			Msg:  fmt.Sprintf("host:%s,  h2:%t", getHost(ctx.request), h2),
+		})
+	}
+	if err != nil && tlsConn != nil {
+		tlsConn.Close()
+	}
+	return tlsConn, h2, err
 }
 func (obj *roundTripper) dialAddTls(ctx context.Context, option *RequestOption, req *http.Request, netConn net.Conn) (net.Conn, bool, error) {
 	if option.gospiderSpec != nil && option.gospiderSpec.TLSSpec != nil {

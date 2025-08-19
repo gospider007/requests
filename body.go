@@ -287,8 +287,8 @@ func (obj *OrderData) parseForm(ctx context.Context, boundary string) (io.Reader
 			stop := context.AfterFunc(ctx, func() {
 				pw.CloseWithError(ctx.Err())
 			})
-			defer stop()
 			pw.CloseWithError(obj.formWriteMain(writer))
+			stop()
 		}()
 		return pr, true, nil
 	}
