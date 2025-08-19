@@ -21,7 +21,7 @@
 
 
 ## If you want to use a multilingual version, please use the project at [fingerproxy](https://github.com/gospider007/fingerproxy). It is a crawler-focused forward proxy with fingerprint spoofing.
-
+## The fingerprints used in the project are generated from: [fp](https://github.com/gospider007/fp)
 
 ## Innovative Features
 * Unlimited chained proxy
