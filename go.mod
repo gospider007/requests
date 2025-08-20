@@ -6,11 +6,11 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/gospider007/bar v0.0.0-20250815030902-4f5b5d6312cf
 	github.com/gospider007/bs4 v0.0.0-20250815030800-a352d3ad57ee
-	github.com/gospider007/gson v0.0.0-20250815030832-fa016f03a353
+	github.com/gospider007/gson v0.0.0-20250819094627-31f516e714bd
 	github.com/gospider007/gtls v0.0.0-20250818100212-f466fa4cc860
-	github.com/gospider007/http1 v0.0.0-20250817122009-0b953c2c8efa
-	github.com/gospider007/http2 v0.0.0-20250817122534-76043412544d
-	github.com/gospider007/http3 v0.0.0-20250817123336-07d66db6dbb3
+	github.com/gospider007/http1 v0.0.0-20250819094554-40921c3867a9
+	github.com/gospider007/http2 v0.0.0-20250819094600-afc71e3c25e5
+	github.com/gospider007/http3 v0.0.0-20250819094613-7dfd55495d56
 	github.com/gospider007/ja3 v0.0.0-20250815031055-0948dc3bbe0b
 	github.com/gospider007/re v0.0.0-20250815031101-a57caeff73bf
 	github.com/gospider007/tools v0.0.0-20250819094836-a81233312764
@@ -82,12 +82,11 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	go.uber.org/zap/exp v0.3.0 // indirect
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
-	golang.org/x/exp v0.0.0-20250813145105-42675adae3e6 // indirect
+	golang.org/x/exp v0.0.0-20250819193227-8b4c13bb791b // indirect
 	golang.org/x/image v0.30.0 // indirect
 	golang.org/x/mod v0.27.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect
 	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
 	golang.org/x/tools v0.36.0 // indirect
-	google.golang.org/protobuf v1.36.7 // indirect
 )
