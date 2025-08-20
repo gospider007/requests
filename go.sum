@@ -116,10 +116,10 @@ github.com/gospider007/gson v0.0.0-20250819094627-31f516e714bd h1:glQmHO1YxJ+dPC
 github.com/gospider007/gson v0.0.0-20250819094627-31f516e714bd/go.mod h1:WAsyRFl9Ehb1Pl2Tg7bqvbE+qAjuRdljGfzxvGnBWlY=
 github.com/gospider007/gtls v0.0.0-20250818100212-f466fa4cc860 h1:1+GNYHU9fFkIGk67Ssgc9xDdY8X1DbbCNek++XA6B/c=
 github.com/gospider007/gtls v0.0.0-20250818100212-f466fa4cc860/go.mod h1:Np1+9Lmsm3g1LtDl3C8OOsMXfHRdOwyd7olW8YJMGLo=
-github.com/gospider007/http1 v0.0.0-20250819094554-40921c3867a9 h1:nKk6gWaVquoKgSfjx514Ct1IjwgYPwqtkXGhgm0yUE4=
-github.com/gospider007/http1 v0.0.0-20250819094554-40921c3867a9/go.mod h1:2KmewDOljCqfLfbSiIzuohAHvivZwj9pSd25pGEVvfE=
-github.com/gospider007/http2 v0.0.0-20250819094600-afc71e3c25e5 h1:Q9Hc87L6ZgBsV2QJDYP2ReVZ/tJ6RBVbUFU3M8fKGjE=
-github.com/gospider007/http2 v0.0.0-20250819094600-afc71e3c25e5/go.mod h1:WkDpj+14r8R4x9gI/5eDypW/MptO5dwoK9ZzbGFwXTg=
+github.com/gospider007/http1 v0.0.0-20250820001757-7e2103027e4b h1:uuPDoNcnWUAlKSEjQ9d8tiQwVXnQ56ahJEbaaVZeibc=
+github.com/gospider007/http1 v0.0.0-20250820001757-7e2103027e4b/go.mod h1:SX5Ely+axEItPLrKM6IMeZd5/md9IdJJXoqMdjlkpnA=
+github.com/gospider007/http2 v0.0.0-20250820001924-b6e8432bd4b1 h1:Z/XBKm9wLp4NvtjskzvhFyewPPT0EVcqgjR48l9fhFw=
+github.com/gospider007/http2 v0.0.0-20250820001924-b6e8432bd4b1/go.mod h1:0XYLpyiEfL9X5gsgjDX8ygftOkCL1ZvzbUkV6wGmlkc=
 github.com/gospider007/http3 v0.0.0-20250819094613-7dfd55495d56 h1:/0LlX2DHVVqPQvAXDtpPaaK52wdTt8EWCuT2y/e1wOg=
 github.com/gospider007/http3 v0.0.0-20250819094613-7dfd55495d56/go.mod h1:YvnqTQahyjng+BqchoNzYz8Uc/m01jLj+W5gveeBNp8=
 github.com/gospider007/ja3 v0.0.0-20250815031055-0948dc3bbe0b h1:5KIC/KDX6/gqOLpFD/ZaHGjqEh5UcBWhqmS9EQVUmX8=
@@ -237,8 +237,8 @@ github.com/txthinking/runnergroup v0.0.0-20250224021307-5864ffeb65ae/go.mod h1:c
 github.com/txthinking/socks5 v0.0.0-20250803014457-d3594b14cf12 h1:L09KVukszx1o8Riju6mJZqEhcf3+9hifSU/tk60oSro=
 github.com/txthinking/socks5 v0.0.0-20250803014457-d3594b14cf12/go.mod h1:ntmMHL/xPq1WLeKiw8p/eRATaae6PiVRNipHFJxI8PM=
 github.com/ulikunitz/xz v0.5.8/go.mod h1:nbz6k7qbPmH4IRqmfOplQw/tblSgqTqBwxkY0oWt/14=
-github.com/ulikunitz/xz v0.5.12 h1:37Nm15o69RwBkXM0J6A5OlE67RZTfzUxTj8fB3dfcsc=
-github.com/ulikunitz/xz v0.5.12/go.mod h1:nbz6k7qbPmH4IRqmfOplQw/tblSgqTqBwxkY0oWt/14=
+github.com/ulikunitz/xz v0.5.13 h1:ar98gWrjf4H1ev05fYP/o29PDZw9DrI3niHtnEqyuXA=
+github.com/ulikunitz/xz v0.5.13/go.mod h1:nbz6k7qbPmH4IRqmfOplQw/tblSgqTqBwxkY0oWt/14=
 github.com/xyproto/randomstring v1.0.5 h1:YtlWPoRdgMu3NZtP45drfy1GKoojuR7hmRcnhZqKjWU=
 github.com/xyproto/randomstring v1.0.5/go.mod h1:rgmS5DeNXLivK7YprL0pY+lTuhNQW3iGxZ18UQApw/E=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=

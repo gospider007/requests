@@ -8,8 +8,8 @@ require (
 	github.com/gospider007/bs4 v0.0.0-20250815030800-a352d3ad57ee
 	github.com/gospider007/gson v0.0.0-20250819094627-31f516e714bd
 	github.com/gospider007/gtls v0.0.0-20250818100212-f466fa4cc860
-	github.com/gospider007/http1 v0.0.0-20250819094554-40921c3867a9
-	github.com/gospider007/http2 v0.0.0-20250819094600-afc71e3c25e5
+	github.com/gospider007/http1 v0.0.0-20250820001757-7e2103027e4b
+	github.com/gospider007/http2 v0.0.0-20250820001924-b6e8432bd4b1
 	github.com/gospider007/http3 v0.0.0-20250819094613-7dfd55495d56
 	github.com/gospider007/ja3 v0.0.0-20250815031055-0948dc3bbe0b
 	github.com/gospider007/re v0.0.0-20250815031101-a57caeff73bf
@@ -73,7 +73,7 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/txthinking/runnergroup v0.0.0-20250224021307-5864ffeb65ae // indirect
-	github.com/ulikunitz/xz v0.5.12 // indirect
+	github.com/ulikunitz/xz v0.5.13 // indirect
 	github.com/zeebo/blake3 v0.2.4 // indirect
 	go.mongodb.org/mongo-driver v1.17.4 // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
