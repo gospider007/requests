@@ -50,9 +50,9 @@ func TestSession2(t *testing.T) {
 func TestSession3(t *testing.T) {
 	session, _ := requests.NewClient(nil)
 	for i := 0; i < 2; i++ {
-		resp, err := session.Get(nil, "https://cloudflare-quic.com/", requests.RequestOption{ForceHttp3: true})
+		resp, err := session.Get(nil, "https://quic.nginx.org/", requests.RequestOption{ForceHttp3: true})
 		if err != nil {
-			t.Error(err)
+			log.Panic(err)
 		}
 		log.Print(resp.Proto(), resp.IsNewConn())
 		if i == 0 {

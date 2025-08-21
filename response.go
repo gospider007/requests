@@ -73,8 +73,11 @@ type Response struct {
 	content      []byte
 	proxys       []*url.URL
 	readBodyLock sync.Mutex
+	connLock     sync.Mutex
 	isNewConn    bool
 	bodyErr      error
+	connKey      string
+	putOk        bool
 }
 type SSE struct {
 	reader   *bufio.Reader
@@ -330,28 +333,47 @@ func (obj *Response) CloseConn() {
 func (obj *Response) CloseBody(err error) {
 	obj.closeBody(true, err)
 }
-func (obj *Response) closeBody(i bool, err error) {
-	if obj.bodyErr != io.EOF {
+func (obj *Response) closeBody(i bool, err error) { // 如果关闭body，这一步几乎是必须的，body 所有情况都要考虑调用这个函数
+	if obj.bodyErr != io.EOF { //body 读取有错误
 		obj.CloseConn()
 		return
-	} else if i { //用户主动调用
-		if obj.StatusCode() == 101 && obj.webSocket == nil {
-			obj.CloseConn()
-			return
+	} else { //没有错误
+		if obj.StatusCode() == 101 { //如果为websocket
+			if i && obj.webSocket == nil { //用户没有启用websocket，则关闭连接
+				obj.CloseConn()
+				return
+			}
+		} else {
+			if obj.response.Close {
+				obj.CloseConn()
+				return
+			}
 		}
 	}
 	if err == nil {
 		err = tools.ErrNoErr
 	}
-	if err == tools.ErrNoErr {
+	if err == tools.ErrNoErr { //没有错误
 		obj.rawBody.CloseWithError(err)
-	} else {
+		if obj.StatusCode() != 101 {
+			obj.PutConn()
+		}
+	} else { //有错误
 		obj.CloseConn()
 	}
 	obj.cnl()
 }
 
 // read body
+func (obj *Response) PutConn() {
+	obj.connLock.Lock()
+	defer obj.connLock.Unlock()
+	if obj.putOk {
+		return
+	}
+	obj.putOk = true
+	obj.client.transport.putConnPool(obj.connKey, obj.rawBody.Conn())
+}
 func (obj *Response) ReadBody() (err error) {
 	obj.readBodyLock.Lock()
 	defer obj.readBodyLock.Unlock()
@@ -432,9 +454,6 @@ func (obj *body) closeWithError(i bool, err error) error {
 		obj.err = err
 	}
 	obj.ctx.closeBody(i, err)
-	if err != nil {
-		obj.ctx.CloseConn()
-	}
 	return obj.err
 }
 

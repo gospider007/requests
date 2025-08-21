@@ -117,6 +117,10 @@ func TestSendJsonWithOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if resp.StatusCode() != 200 {
+		log.Print("状态吗为：", resp.StatusCode())
+		t.Fatal("status code error")
+	}
 	jsonData, err := resp.Json()
 	if err != nil {
 		t.Fatal(err)

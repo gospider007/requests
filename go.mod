@@ -8,12 +8,12 @@ require (
 	github.com/gospider007/bs4 v0.0.0-20250815030800-a352d3ad57ee
 	github.com/gospider007/gson v0.0.0-20250819094627-31f516e714bd
 	github.com/gospider007/gtls v0.0.0-20250818100212-f466fa4cc860
-	github.com/gospider007/http1 v0.0.0-20250820001757-7e2103027e4b
-	github.com/gospider007/http2 v0.0.0-20250820001924-b6e8432bd4b1
-	github.com/gospider007/http3 v0.0.0-20250819094613-7dfd55495d56
-	github.com/gospider007/ja3 v0.0.0-20250815031055-0948dc3bbe0b
+	github.com/gospider007/http1 v0.0.0-20250820083711-1ab54092bd54
+	github.com/gospider007/http2 v0.0.0-20250820090250-584a27dfb0dc
+	github.com/gospider007/http3 v0.0.0-20250820090306-a29c4f3f6000
+	github.com/gospider007/ja3 v0.0.0-20250820090351-07b1daefd162
 	github.com/gospider007/re v0.0.0-20250815031101-a57caeff73bf
-	github.com/gospider007/tools v0.0.0-20250819094836-a81233312764
+	github.com/gospider007/tools v0.0.0-20250820090327-734cf60271ec
 	github.com/gospider007/websocket v0.0.0-20250819094917-c00c0a99815f
 	github.com/quic-go/quic-go v0.54.0
 	github.com/refraction-networking/uquic v0.0.6
@@ -44,7 +44,7 @@ require (
 	github.com/gobwas/ws v1.4.0 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
-	github.com/google/pprof v0.0.0-20250630185457-6e76a2b096b5 // indirect
+	github.com/google/pprof v0.0.0-20250820193118-f64d9cf942d6 // indirect
 	github.com/gospider007/blog v0.0.0-20250815030743-f2af6b9013ab // indirect
 	github.com/gospider007/kinds v0.0.0-20250815031133-b2282666f69c // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
@@ -62,7 +62,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/nwaples/rardecode/v2 v2.1.1 // indirect
-	github.com/onsi/ginkgo/v2 v2.24.0 // indirect
+	github.com/onsi/ginkgo/v2 v2.25.0 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/quic-go/qpack v0.5.1 // indirect

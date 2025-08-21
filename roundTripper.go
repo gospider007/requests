@@ -21,21 +21,13 @@ import (
 	uquic "github.com/refraction-networking/uquic"
 )
 
-type reqTask struct {
-	ctx      context.Context
-	cnl      context.CancelCauseFunc
-	reqCtx   *Response
-	disRetry bool
-	key      string
-}
-
-func (obj *reqTask) suppertRetry() bool {
-	if obj.disRetry {
+func (obj *Response) suppertRetry() bool {
+	if obj.isNewConn {
 		return false
 	}
-	if obj.reqCtx.request.Body == nil {
+	if obj.request.Body == nil {
 		return true
-	} else if body, ok := obj.reqCtx.request.Body.(io.Seeker); ok {
+	} else if body, ok := obj.request.Body.(io.Seeker); ok {
 		if i, err := body.Seek(0, io.SeekStart); i == 0 && err == nil {
 			return true
 		}
@@ -61,7 +53,7 @@ func getKey(ctx *Response) (string, error) {
 
 type roundTripper struct {
 	ctx       context.Context
-	connPools sync.Map
+	connPools map[string]chan http1.Conn
 	dialer    *Dialer
 	lock      sync.Mutex
 }
@@ -73,21 +65,33 @@ func newRoundTripper(preCtx context.Context) *roundTripper {
 		preCtx = context.TODO()
 	}
 	return &roundTripper{
-		ctx:    preCtx,
-		dialer: new(Dialer),
+		ctx:       preCtx,
+		connPools: make(map[string]chan http1.Conn),
+		dialer:    new(Dialer),
 	}
 }
 
-func (obj *roundTripper) getConnPool(task *reqTask) chan *reqTask {
+func (obj *roundTripper) getConnPool(key string) chan http1.Conn {
 	obj.lock.Lock()
 	defer obj.lock.Unlock()
-	val, ok := obj.connPools.Load(task.key)
+	val, ok := obj.connPools[key]
 	if ok {
-		return val.(chan *reqTask)
+		return val
 	}
-	tasks := make(chan *reqTask)
-	obj.connPools.Store(task.key, tasks)
-	return tasks
+	val = make(chan http1.Conn)
+	obj.connPools[key] = val
+	return val
+}
+func runConn(ctx context.Context, pool chan http1.Conn, conn http1.Conn) {
+	select {
+	case pool <- conn:
+	case <-conn.Context().Done():
+	case <-ctx.Done():
+		conn.CloseWithError(context.Cause(ctx))
+	}
+}
+func (obj *roundTripper) putConnPool(key string, con http1.Conn) {
+	go runConn(obj.ctx, obj.getConnPool(key), con)
 }
 
 func (obj *roundTripper) http3Dial(ctx *Response, remtoeAddress Address, proxyAddress ...Address) (udpConn net.PacketConn, err error) {
@@ -176,7 +180,12 @@ func (obj *roundTripper) uhttp3Dial(ctx *Response, remoteAddress Address, proxyA
 	return
 }
 
-func (obj *roundTripper) dial(ctx *Response) (conn http1.Conn, err error) {
+func (obj *roundTripper) newConn(ctx *Response) (conn http1.Conn, err error) {
+	defer func() {
+		if err != nil && conn != nil {
+			conn.CloseWithError(err)
+		}
+	}()
 	proxys, err := obj.initProxys(ctx)
 	if err != nil {
 		return nil, err
@@ -301,49 +310,6 @@ func (obj *roundTripper) initProxys(ctx *Response) ([]Address, error) {
 	return proxys, nil
 }
 
-func (obj *roundTripper) waitTask(task *reqTask) error {
-	<-task.ctx.Done()
-	err := context.Cause(task.ctx)
-	if errors.Is(err, tools.ErrNoErr) {
-		err = nil
-	}
-	return err
-}
-
-func (obj *roundTripper) newRoundTrip(task *reqTask) error {
-	task.reqCtx.isNewConn = true
-	conn, err := obj.dial(task.reqCtx)
-	if err != nil {
-		if conn != nil {
-			conn.CloseWithError(err)
-		}
-		err = tools.WrapError(err, "newRoudTrip dial error")
-		if task.reqCtx.option.ErrCallBack != nil {
-			task.reqCtx.err = err
-			if err2 := task.reqCtx.option.ErrCallBack(task.reqCtx); err2 != nil {
-				err = err2
-			}
-		}
-	}
-	if err == nil {
-		go rwMain(conn, task, obj.getConnPool(task))
-		return obj.waitTask(task)
-	}
-	return err
-}
-
-func (obj *roundTripper) newReqTask(ctx *Response) (*reqTask, error) {
-	task := new(reqTask)
-	task.reqCtx = ctx
-	task.reqCtx.response = nil
-	key, err := getKey(ctx)
-	if err != nil {
-		return nil, err
-	}
-	task.key = key
-	return task, nil
-}
-
 func (obj *roundTripper) RoundTrip(ctx *Response) (err error) {
 	if ctx.option.RequestCallBack != nil {
 		if err = ctx.option.RequestCallBack(ctx); err != nil {
@@ -357,30 +323,32 @@ func (obj *roundTripper) RoundTrip(ctx *Response) (err error) {
 			return err
 		}
 	}
-	var task *reqTask
+	ctx.connKey, err = getKey(ctx)
+	if err != nil {
+		return err
+	}
+	var conn http1.Conn
 	for send := true; send; {
 		select {
 		case <-ctx.Context().Done():
 			return context.Cause(ctx.Context())
 		default:
 		}
-		task, err = obj.newReqTask(ctx)
-		if err != nil {
-			return err
-		}
-		task.ctx, task.cnl = context.WithCancelCause(task.reqCtx.Context())
+		ctx.response = nil
 		select {
-		case obj.getConnPool(task) <- task:
-			err = obj.waitTask(task)
+		case conn = <-obj.getConnPool(ctx.connKey):
+			ctx.isNewConn = false
 		default:
-			err = obj.newRoundTrip(task)
-			task.disRetry = true
+			ctx.isNewConn = true
+			conn, err = obj.newConn(ctx)
 		}
-		task.cnl(err)
 		if err == nil {
-			break
+			err = ctx.doRequest(conn)
+			if err == nil {
+				break
+			}
 		}
-		send = task.suppertRetry()
+		send = ctx.suppertRetry()
 	}
 	if err == nil && ctx.option.RequestCallBack != nil {
 		if err2 := ctx.option.RequestCallBack(ctx); err2 != nil {

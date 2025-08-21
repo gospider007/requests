@@ -12,7 +12,7 @@ import (
 )
 
 func TestHttp3(t *testing.T) {
-	resp, err := requests.Get(context.TODO(), "https://cloudflare-quic.com/", requests.RequestOption{
+	resp, err := requests.Get(context.TODO(), "https://quic.nginx.org/", requests.RequestOption{
 		ForceHttp3: true,
 	},
 	)
@@ -38,7 +38,7 @@ func TestHttp3Proxy(t *testing.T) {
 
 	time.Sleep(time.Second)
 	// href := "https://google.com"
-	href := "https://cloudflare-quic.com/"
+	href := "https://quic.nginx.org/"
 
 	resp, err := requests.Get(context.Background(), href,
 		requests.RequestOption{

@@ -86,6 +86,7 @@ func TestStreamWithConn3(t *testing.T) {
 			t.Fatal(err)
 		}
 		if resp.StatusCode() != 200 {
+			log.Print("状态吗为：",resp.StatusCode())
 			t.Fatal("resp.StatusCode()!= 200")
 		}
 		// body := resp.Body()

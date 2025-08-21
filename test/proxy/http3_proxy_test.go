@@ -115,8 +115,7 @@ func TestHttp3Proxy(t *testing.T) {
 func TestHttp3Proxy2(t *testing.T) {
 	go proxyServer(proxyHost)
 	for range 5 {
-		resp, err := requests.Get(context.TODO(), "https://cloudflare-quic.com/", requests.RequestOption{
-
+		resp, err := requests.Get(context.TODO(), "https://quic.nginx.org/", requests.RequestOption{
 			USpec:      true,
 			ForceHttp3: true,
 			// Logger: func(l requests.Log) {
