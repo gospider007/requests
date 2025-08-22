@@ -58,6 +58,7 @@ func (obj *Response) Client() *Client {
 
 type Response struct {
 	err          error
+	lastResponse *http.Response
 	ctx          context.Context
 	request      *http.Request
 	rawBody      *http1.Body
@@ -380,11 +381,14 @@ func (obj *Response) ReadBody() (err error) {
 	if obj.bodyErr != nil {
 		return nil
 	}
+	body := obj.Body()
+	if body == nil {
+		return errors.New("not found body")
+	}
+	defer body.close(false)
 	bBody := bytes.NewBuffer(nil)
 	done := make(chan struct{})
 	var readErr error
-	body := obj.Body()
-	defer body.close(false)
 	go func() {
 		defer close(done)
 		if obj.option.Bar && obj.ContentLength() > 0 {
@@ -458,6 +462,9 @@ func (obj *body) closeWithError(i bool, err error) error {
 }
 
 func (obj *Response) Body() *body {
+	if obj.response == nil || obj.response.Body == nil {
+		return nil
+	}
 	return &body{ctx: obj}
 }
 

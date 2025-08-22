@@ -82,104 +82,124 @@ func (obj *roundTripper) getConnPool(key string) chan http1.Conn {
 	obj.connPools[key] = val
 	return val
 }
-func runConn(ctx context.Context, pool chan http1.Conn, conn http1.Conn) {
-	select {
-	case pool <- conn:
-	case <-conn.Context().Done():
-	case <-ctx.Done():
-		conn.CloseWithError(context.Cause(ctx))
+func (obj *roundTripper) putConnPool(key string, conn http1.Conn) {
+	if conn != nil {
+		go func() {
+			select {
+			case obj.getConnPool(key) <- conn:
+			case <-conn.Context().Done():
+			case <-obj.ctx.Done():
+				conn.CloseWithError(context.Cause(obj.ctx))
+			}
+		}()
 	}
 }
-func (obj *roundTripper) putConnPool(key string, con http1.Conn) {
-	go runConn(obj.ctx, obj.getConnPool(key), con)
-}
 
-func (obj *roundTripper) http3Dial(ctx *Response, remtoeAddress Address, proxyAddress ...Address) (udpConn net.PacketConn, err error) {
+func (obj *roundTripper) http3Dial(ctx *Response, remoteAddress Address, proxyAddress ...Address) (http1.Conn, error) {
+	var udpConn net.PacketConn
+	var err error
 	if len(proxyAddress) > 0 {
 		if proxyAddress[len(proxyAddress)-1].Scheme != "socks5" {
-			err = errors.New("http3 last proxy must socks5 proxy")
-			return
+			return nil, errors.New("http3 last proxy must socks5 proxy")
 		}
-		udpConn, _, err = obj.dialer.DialProxyContext(ctx, "tcp", ctx.option.TlsConfig.Clone(), append(proxyAddress, remtoeAddress)...)
+		udpConn, _, err = obj.dialer.DialProxyContext(ctx, "tcp", ctx.option.TlsConfig.Clone(), append(proxyAddress, remoteAddress)...)
 	} else {
 		udpConn, err = net.ListenUDP("udp", nil)
 	}
-	if err != nil && udpConn != nil {
-		udpConn.Close()
-	}
-	return
-}
-func (obj *roundTripper) ghttp3Dial(ctx *Response, remoteAddress Address, proxyAddress ...Address) (conn http1.Conn, err error) {
-	udpConn, err := obj.http3Dial(ctx, remoteAddress, proxyAddress...)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err != nil {
-			udpConn.Close()
-		}
-	}()
-	tlsConfig := ctx.option.TlsConfig.Clone()
-	tlsConfig.NextProtos = []string{http3.NextProtoH3}
-	tlsConfig.ServerName = remoteAddress.Host
 	if remoteAddress.IP == nil && len(proxyAddress) == 0 {
 		remoteAddress.IP, err = obj.dialer.loadHost(ctx.Context(), remoteAddress.Host, ctx.option.DialOption)
 		if err != nil {
 			return nil, err
 		}
 	}
+	var netConn any
+	if ctx.option.USpec != nil {
+		netConn, err = obj.newUhttp3Conn(ctx, remoteAddress, udpConn)
+	} else {
+		netConn, err = obj.newHttp3Conn(ctx, remoteAddress, udpConn)
+	}
+	if err != nil {
+		udpConn.Close()
+		return nil, err
+	}
+	return http3.NewConn(obj.ctx, netConn, udpConn), nil
+}
+
+func (obj *roundTripper) newHttp3Conn(ctx *Response, remoteAddress Address, udpConn net.PacketConn) (any, error) {
+	tlsConfig := ctx.option.TlsConfig.Clone()
+	tlsConfig.NextProtos = []string{http3.NextProtoH3}
+	tlsConfig.ServerName = remoteAddress.Host
 	var quicConfig *quic.Config
 	if ctx.option.UquicConfig != nil {
 		quicConfig = ctx.option.QuicConfig.Clone()
 	}
-	netConn, err := quic.DialEarly(ctx.Context(), udpConn, &net.UDPAddr{IP: remoteAddress.IP, Port: remoteAddress.Port}, tlsConfig, quicConfig)
-	if err != nil {
-		return nil, err
-	}
-	conn = http3.NewConn(obj.ctx, netConn, udpConn)
-	return
+	return quic.DialEarly(ctx.Context(), udpConn, &net.UDPAddr{IP: remoteAddress.IP, Port: remoteAddress.Port}, tlsConfig, quicConfig)
 }
-
-func (obj *roundTripper) uhttp3Dial(ctx *Response, remoteAddress Address, proxyAddress ...Address) (conn http1.Conn, err error) {
+func (obj *roundTripper) newUhttp3Conn(ctx *Response, remoteAddress Address, udpConn net.PacketConn) (any, error) {
 	spec, err := ja3.CreateUSpec(ctx.option.USpec)
 	if err != nil {
 		return nil, err
 	}
-	udpConn, err := obj.http3Dial(ctx, remoteAddress, proxyAddress...)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err != nil {
-			udpConn.Close()
-		}
-	}()
 	tlsConfig := ctx.option.UtlsConfig.Clone()
 	tlsConfig.NextProtos = []string{http3.NextProtoH3}
 	tlsConfig.ServerName = remoteAddress.Host
-	if remoteAddress.IP == nil && len(proxyAddress) == 0 {
-		remoteAddress.IP, err = obj.dialer.loadHost(ctx.Context(), remoteAddress.Host, ctx.option.DialOption)
-		if err != nil {
-			return nil, err
-		}
-	}
 	var quicConfig *uquic.Config
 	if ctx.option.UquicConfig != nil {
 		quicConfig = ctx.option.UquicConfig.Clone()
 	}
-	netConn, err := (&uquic.UTransport{
+	return (&uquic.UTransport{
 		Transport: &uquic.Transport{
 			Conn: udpConn,
 		},
 		QUICSpec: &spec,
 	}).DialEarly(ctx.Context(), &net.UDPAddr{IP: remoteAddress.IP, Port: remoteAddress.Port}, tlsConfig, quicConfig)
+}
+
+func (obj *roundTripper) httpDial(ctx *Response, remoteAddress Address, proxyAddress ...Address) (http1.Conn, error) {
+	var rawNetConn net.Conn
+	var arch string
+	var err error
+	if len(proxyAddress) > 0 {
+		arch = proxyAddress[len(proxyAddress)-1].Compression
+		_, rawNetConn, err = obj.dialer.DialProxyContext(ctx, "tcp", ctx.option.TlsConfig.Clone(), append(proxyAddress, remoteAddress)...)
+	} else {
+		_, rawNetConn, err = obj.dialer.DialProxyContext(ctx, "tcp", nil, remoteAddress)
+	}
 	if err != nil {
 		return nil, err
 	}
-	conn = http3.NewConn(obj.ctx, netConn, udpConn)
-	return
+	var h2 bool
+	var rawConn net.Conn
+	if ctx.request.URL.Scheme == "https" {
+		rawConn, h2, err = obj.dialAddTlsWithResponse(ctx, rawNetConn)
+	} else {
+		rawConn = rawNetConn
+	}
+	if err == nil && arch != "" {
+		rawConn, err = tools.NewCompressionConn(rawConn, arch)
+	}
+	if err != nil {
+		rawNetConn.Close()
+		return nil, err
+	}
+	if !h2 {
+		return http1.NewConn(obj.ctx, rawConn), nil
+	}
+	var spec *http2.Spec
+	if ctx.option.gospiderSpec != nil {
+		spec = ctx.option.gospiderSpec.H2Spec
+	}
+	h2conn, err := http2.NewConn(obj.ctx, ctx.Context(), rawConn, spec)
+	if err != nil {
+		rawConn.Close()
+		rawNetConn.Close()
+		return nil, err
+	}
+	return h2conn, nil
 }
-
 func (obj *roundTripper) newConn(ctx *Response) (conn http1.Conn, err error) {
 	defer func() {
 		if err != nil && conn != nil {
@@ -195,57 +215,11 @@ func (obj *roundTripper) newConn(ctx *Response) (conn http1.Conn, err error) {
 		return nil, err
 	}
 	if ctx.option.ForceHttp3 {
-		if ctx.option.USpec != nil {
-			return obj.uhttp3Dial(ctx, remoteAddress, proxys...)
-		} else {
-			return obj.ghttp3Dial(ctx, remoteAddress, proxys...)
-		}
+		return obj.http3Dial(ctx, remoteAddress, proxys...)
 	}
-	var rawNetConn net.Conn
-	var arch string
-	if len(proxys) > 0 {
-		arch = proxys[len(proxys)-1].Compression
-		_, rawNetConn, err = obj.dialer.DialProxyContext(ctx, "tcp", ctx.option.TlsConfig.Clone(), append(proxys, remoteAddress)...)
-	} else {
-		_, rawNetConn, err = obj.dialer.DialProxyContext(ctx, "tcp", nil, remoteAddress)
-	}
+	return obj.httpDial(ctx, remoteAddress, proxys...)
+}
 
-	if err != nil {
-		if rawNetConn != nil {
-			rawNetConn.Close()
-		}
-		return nil, err
-	}
-	var h2 bool
-	var rawConn net.Conn
-	if ctx.request.URL.Scheme == "https" {
-		rawConn, h2, err = obj.dialAddTlsWithResponse(ctx, rawNetConn)
-	} else {
-		rawConn = rawNetConn
-	}
-	if arch != "" {
-		rawConn, err = tools.NewCompressionConn(rawConn, arch)
-	}
-	if err != nil {
-		if rawConn != nil {
-			rawConn.Close()
-		}
-		return nil, err
-	}
-	return obj.dialConnecotr(ctx, rawConn, h2)
-}
-func (obj *roundTripper) dialConnecotr(ctx *Response, rawCon net.Conn, h2 bool) (conn http1.Conn, err error) {
-	if h2 {
-		var spec *http2.Spec
-		if ctx.option.gospiderSpec != nil {
-			spec = ctx.option.gospiderSpec.H2Spec
-		}
-		conn, err = http2.NewConn(obj.ctx, ctx.Context(), rawCon, spec)
-	} else {
-		conn = http1.NewConn(obj.ctx, rawCon)
-	}
-	return
-}
 func (obj *roundTripper) dialAddTlsWithResponse(ctx *Response, rawNetConn net.Conn) (tlsConn net.Conn, h2 bool, err error) {
 	if ctx.option.TlsHandshakeTimeout > 0 {
 		tlsCtx, tlsCnl := context.WithTimeout(ctx.Context(), ctx.option.TlsHandshakeTimeout)
@@ -314,10 +288,10 @@ func (obj *roundTripper) RoundTrip(ctx *Response) (err error) {
 	if ctx.option.RequestCallBack != nil {
 		if err = ctx.option.RequestCallBack(ctx); err != nil {
 			if err == http.ErrUseLastResponse {
-				if ctx.response == nil {
+				if ctx.lastResponse == nil {
 					return errors.New("errUseLastResponse response is nil")
 				} else {
-					return nil
+					ctx.response = ctx.lastResponse
 				}
 			}
 			return err

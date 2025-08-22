@@ -24,6 +24,7 @@ func (obj *Response) doRequest(conn http1.Conn) (err error) {
 	} else {
 		obj.response = response
 		obj.response.Request = obj.request
+		obj.rawBody = response.Body.(*http1.Body)
 	}
 	if obj.option.Logger != nil {
 		obj.option.Logger(Log{

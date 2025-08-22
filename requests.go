@@ -11,7 +11,6 @@ import (
 
 	"net/http"
 
-	"github.com/gospider007/http1"
 	"github.com/gospider007/re"
 	"github.com/gospider007/tools"
 	"github.com/gospider007/websocket"
@@ -161,7 +160,9 @@ func (obj *Client) retryRequest(ctx context.Context, option RequestOption, uhref
 					option.Headers = map[string]any{"Authorization": Authorization}
 				}
 			}
+			lastResponse := response.response
 			response = obj.newResponse(ctx, option, loc, requestId)
+			response.lastResponse = lastResponse
 		}
 	}
 }
@@ -341,15 +342,16 @@ func (obj *Client) request(ctx *Response) (err error) {
 		}
 	}
 
-	if err != nil && err != ErrUseLastResponse {
-		err = tools.WrapError(err, "client do error")
+	if err != nil {
+		if err != ErrUseLastResponse {
+			err = tools.WrapError(err, "client do error")
+		}
 		return
 	}
 	if ctx.response == nil {
 		err = errors.New("send req response is nil")
 		return
 	}
-	ctx.rawBody = ctx.response.Body.(*http1.Body)
 	if encoding := ctx.ContentEncoding(); encoding != "" && ctx.response.Body != nil {
 		arch, cerr := tools.NewRawCompression(encoding)
 		if cerr != nil {
