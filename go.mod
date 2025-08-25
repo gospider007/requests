@@ -66,7 +66,7 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/quic-go/qpack v0.5.1 // indirect
-	github.com/sorairolake/lzip-go v0.3.7 // indirect
+	github.com/sorairolake/lzip-go v0.3.8 // indirect
 	github.com/spf13/afero v1.14.0 // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
