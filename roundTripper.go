@@ -306,10 +306,6 @@ func (obj *roundTripper) RoundTrip(ctx *Response) (err error) {
 		select {
 		case <-ctx.Context().Done():
 			return context.Cause(ctx.Context())
-		default:
-		}
-		ctx.response = nil
-		select {
 		case conn = <-obj.getConnPool(ctx.connKey):
 			ctx.isNewConn = false
 		default:
@@ -317,8 +313,7 @@ func (obj *roundTripper) RoundTrip(ctx *Response) (err error) {
 			conn, err = obj.newConn(ctx)
 		}
 		if err == nil {
-			err = ctx.doRequest(conn)
-			if err == nil {
+			if err = ctx.doRequest(conn); err == nil {
 				break
 			}
 		}
